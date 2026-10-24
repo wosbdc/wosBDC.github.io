@@ -4178,7 +4178,7 @@ window.fetchMercenaryData = async () => {
     const result = {};
     const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
-    const addEntry = (gid, chiefName, isSigned, phase, difficulty, lastUpdated) => {
+    const addEntry = (gid, chiefName, isSigned, phase, difficulty, lastUpdated, scoutLevel) => {
         const cleanN = window.cleanChiefName ? window.cleanChiefName(chiefName) : chiefName;
         const existing = (gid && result[gid]) || (chiefName && result[chiefName]) || (cleanN && result[cleanN]) || {};
         const finalGid = gid || existing.gameId || '';
@@ -4188,10 +4188,21 @@ window.fetchMercenaryData = async () => {
         const finalDiff = (difficulty && typeof difficulty === 'string' && difficulty.trim()) ? difficulty.trim() : (existing.difficulty || "");
         const finalUpdated = lastUpdated || existing.lastUpdated || Date.now();
 
+        let finalScoutLevel = 0;
+        if (scoutLevel !== undefined && scoutLevel !== null && scoutLevel !== '') {
+            finalScoutLevel = parseInt(scoutLevel) || 0;
+        } else if (existing.scoutLevel !== undefined && existing.scoutLevel !== null) {
+            finalScoutLevel = parseInt(existing.scoutLevel) || 0;
+        } else if (finalSigned) {
+            finalScoutLevel = 25;
+        }
+        const effectiveSigned = finalSigned || (finalScoutLevel >= 25);
+
         const entry = {
             gameId: finalGid,
             name: finalName,
-            signedUp: finalSigned,
+            signedUp: effectiveSigned,
+            scoutLevel: finalScoutLevel,
             phase: finalPhase,
             difficulty: finalDiff,
             lastUpdated: finalUpdated
@@ -4218,7 +4229,8 @@ window.fetchMercenaryData = async () => {
                     if (rec && typeof rec === 'object') {
                         const gid = rec.gameId ? String(rec.gameId).trim() : (/^\d{6,}$/.test(k) ? k : (window.nameToIdMap?.[k.toLowerCase()] || ''));
                         const chiefName = rec.name || (gid && window.idToNameMap ? window.idToNameMap[gid] : '') || (!/^\d+$/.test(k) ? k : 'Chief');
-                        addEntry(gid, chiefName, rec.mercenary, rec.mercenaryPhase, rec.mercenaryDifficulty, rec.updatedAt);
+                        const sLvl = rec.mercenaryScoutLevel !== undefined ? rec.mercenaryScoutLevel : rec.scoutLevel;
+                        addEntry(gid, chiefName, rec.mercenary, rec.mercenaryPhase, rec.mercenaryDifficulty, rec.updatedAt, sLvl);
                     }
                 });
             }
@@ -4234,7 +4246,8 @@ window.fetchMercenaryData = async () => {
                     if (rec && typeof rec === 'object' && k !== 'boss_progress') {
                         const gid = rec.gameId ? String(rec.gameId).trim() : (/^\d{6,}$/.test(k) ? k : (window.nameToIdMap?.[k.toLowerCase()] || ''));
                         const chiefName = rec.name || (gid && window.idToNameMap ? window.idToNameMap[gid] : '') || (!/^\d+$/.test(k) ? k : 'Chief');
-                        addEntry(gid, chiefName, rec.signedUp, rec.phase, rec.difficulty, rec.lastUpdated);
+                        const sLvl = rec.scoutLevel !== undefined ? rec.scoutLevel : rec.mercenaryScoutLevel;
+                        addEntry(gid, chiefName, rec.signedUp, rec.phase, rec.difficulty, rec.lastUpdated, sLvl);
                     }
                 });
             }
@@ -4245,7 +4258,7 @@ window.fetchMercenaryData = async () => {
     if (window.idToNameMap) {
         Object.entries(window.idToNameMap).forEach(([gid, name]) => {
             if (!result[gid] && !result[name]) {
-                addEntry(gid, name, false, "", "", Date.now());
+                addEntry(gid, name, false, "", "", Date.now(), 0);
             }
         });
     }
@@ -4349,69 +4362,183 @@ window.onMercTierChange = async (gameId) => {
     diffSel.style.border = diff ? '1px solid var(--border)' : '1px solid rgba(239,68,68,0.35)';
 
     await window.updateMercenaryTier(gameId, phase, diff);
+    if (typeof window.computeAndSyncMercenaryBossProgress === 'function') {
+        await window.computeAndSyncMercenaryBossProgress();
+    }
 };
 
-// Toggle Mercenary Prestige signup status natively in master node activity_live
-window.toggleMercenaryStatus = async (gameId, forceStatus = null) => {
+// Update Mercenary Scout Level (0, 5, 10, 15, 20, 25) with automatic Phaethon Master & Boss Sync
+window.updateMercenaryScoutLevel = async (gameId, targetLevel) => {
     if (!gameId) return false;
     const gIdStr = gameId.toString().trim();
+    const lvl = Math.max(0, parseInt(targetLevel) || 0);
+    const isDone = (lvl >= 25);
+    const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+
     let data = {};
     try { data = await window.fetchMercenaryData(); } catch(e) { console.error(e); }
-
-    const existing = window.getEventRecord(data, { gameId: gIdStr, name: window.idToNameMap?.[gIdStr] }) || data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
-    const newSignedUpStatus = (forceStatus !== null) ? forceStatus : !existing.signedUp;
-    const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+    const existing = (window.getEventRecord ? window.getEventRecord(data, { gameId: gIdStr, name: window.idToNameMap?.[gIdStr] }) : null) || data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false, scoutLevel: 0 };
     const playerName = existing.name || (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief';
 
+    // 1. Update in-memory cache immediately
+    if (window.mercenaryCache) {
+        const updateObj = (obj) => {
+            if (!obj) return;
+            obj.scoutLevel = lvl;
+            obj.signedUp = isDone;
+            obj.lastUpdated = Date.now();
+        };
+        updateObj(window.mercenaryCache[gIdStr]);
+        if (playerName) {
+            updateObj(window.mercenaryCache[playerName]);
+            updateObj(window.mercenaryCache[playerName.toLowerCase()]);
+        }
+    }
+
     try {
-        // 1. Write directly to master node activity_live
+        // 2. Write to master node activity_live
         try {
             await update(ref(db, `activity_live/${gIdStr}`), {
                 name: playerName,
-                mercenary: newSignedUpStatus,
+                mercenary: isDone,
+                mercenaryScoutLevel: lvl,
                 updatedAt: Date.now()
             });
         } catch(uErr) {
             const snap = await get(ref(db, `activity_live/${gIdStr}`));
             const currentRec = (snap && snap.exists()) ? snap.val() : { name: playerName };
             currentRec.name = playerName;
-            currentRec.mercenary = newSignedUpStatus;
+            currentRec.mercenary = isDone;
+            currentRec.mercenaryScoutLevel = lvl;
             currentRec.updatedAt = Date.now();
             await set(ref(db, `activity_live/${gIdStr}`), currentRec);
         }
 
-        // 2. Secondary write for legacy node
+        // 3. Write to mercenary node
         try {
             await update(ref(db, `mercenary/${gIdStr}`), {
-                gameId: gIdStr, name: playerName, signedUp: newSignedUpStatus, phase: existing.phase || "Champion's Initiation", difficulty: existing.difficulty || "Hard", lastUpdated: Date.now(), updatedBy: adminName
+                gameId: gIdStr,
+                name: playerName,
+                signedUp: isDone,
+                scoutLevel: lvl,
+                phase: existing.phase || "Champion's Initiation",
+                difficulty: existing.difficulty || "Hard",
+                lastUpdated: Date.now(),
+                updatedBy: adminName
             });
-        } catch(e) {
-            try {
-                await set(ref(db, `mercenary/${gIdStr}`), {
-                    gameId: gIdStr, name: playerName, signedUp: newSignedUpStatus, phase: existing.phase || "Champion's Initiation", difficulty: existing.difficulty || "Hard", lastUpdated: Date.now(), updatedBy: adminName
-                });
-            } catch(sErr) {}
+        } catch(mErr) {
+            await set(ref(db, `mercenary/${gIdStr}`), {
+                gameId: gIdStr,
+                name: playerName,
+                signedUp: isDone,
+                scoutLevel: lvl,
+                phase: existing.phase || "Champion's Initiation",
+                difficulty: existing.difficulty || "Hard",
+                lastUpdated: Date.now(),
+                updatedBy: adminName
+            }).catch(() => null);
         }
 
         window.clearAllEventCaches();
 
-        try {
-            if (window.logAdminAction) {
-                window.logAdminAction("Mercenary Prestige Toggle", `Toggled ${playerName} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`, playerName);
-            }
-        } catch(e) {}
-        
+        if (window.logAdminAction) {
+            window.logAdminAction("Mercenary Scout Milestone", `Set ${playerName} (${gIdStr}) to Scout Lv ${lvl} ${isDone ? '★ Phaethon Master (Done)' : ''}`, playerName);
+        }
+
+        // Optional Apps Script event push
         try {
             const evToken = await getAuthToken().catch(() => '');
-            const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(playerName)}&eventName=${encodeURIComponent("Mercenary Prestige")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
+            const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(playerName)}&eventName=${encodeURIComponent("Mercenary Prestige")}&status=${encodeURIComponent(isDone ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
             fetch(url, { mode: 'no-cors' }).catch(() => null);
         } catch(e) {}
 
+        // 4. Automatically recompute and sync all 5 Phaethon Boss Unlock meters
+        if (typeof window.computeAndSyncMercenaryBossProgress === 'function') {
+            await window.computeAndSyncMercenaryBossProgress();
+        }
+
         return true;
-    } catch(e) {
-        console.error("Failed to toggle mercenary status in Firebase:", e);
+    } catch(err) {
+        console.error("Failed to update mercenary scout level in Firebase:", err);
         return false;
     }
+};
+
+// 1-Tap Milestone Pill Click Handler for Roster Row
+window.onMercScoutLevelSelect = async (gameId, level, clickedBtn) => {
+    const btn = clickedBtn || (event && (event.currentTarget || event.target));
+    if (!btn || btn.disabled) return;
+
+    window._isLocalToggleActive = true;
+    clearTimeout(window._localToggleTimeout);
+    window._localToggleTimeout = setTimeout(() => { window._isLocalToggleActive = false; }, 2000);
+
+    const row = btn.closest('.merc-row');
+    if (!row) return;
+
+    const prevLevel = parseInt(row.getAttribute('data-scout-level')) || 0;
+    const targetLevel = parseInt(level) || 0;
+    const willBeDone = (targetLevel >= 25);
+
+    // Optimistic UI updates on row pills
+    row.setAttribute('data-scout-level', targetLevel);
+    row.setAttribute('data-signed', willBeDone ? 'yes' : 'no');
+
+    const pills = row.querySelectorAll('.merc-milestone-pill');
+    pills.forEach(p => {
+        const pLvl = parseInt(p.getAttribute('data-level')) || 0;
+        if (pLvl === targetLevel) {
+            p.classList.add('active');
+            if (targetLevel === 25) {
+                p.style.background = 'linear-gradient(135deg, #eab308, #ca8a04)';
+                p.style.color = '#ffffff';
+                p.style.borderColor = 'transparent';
+                p.style.boxShadow = '0 2px 8px rgba(234,179,8,0.4)';
+            } else if (targetLevel > 0) {
+                p.style.background = '#3b82f6';
+                p.style.color = '#ffffff';
+                p.style.borderColor = 'transparent';
+                p.style.boxShadow = '0 2px 6px rgba(59,130,246,0.3)';
+            } else {
+                p.style.background = 'rgba(239,68,68,0.2)';
+                p.style.color = '#ef4444';
+                p.style.borderColor = 'rgba(239,68,68,0.4)';
+                p.style.boxShadow = 'none';
+            }
+        } else {
+            p.classList.remove('active');
+            p.style.background = 'var(--bg-main)';
+            p.style.color = 'var(--text-muted)';
+            p.style.borderColor = 'var(--border)';
+            p.style.boxShadow = 'none';
+        }
+    });
+
+    if (typeof window.updateMercStatsUI === 'function') window.updateMercStatsUI();
+    if (typeof window.filterMercTable === 'function') window.filterMercTable();
+
+    const ok = await window.updateMercenaryScoutLevel(gameId, targetLevel);
+    if (!ok) {
+        // Revert on write error
+        row.setAttribute('data-scout-level', prevLevel);
+        row.setAttribute('data-signed', prevLevel >= 25 ? 'yes' : 'no');
+        if (typeof window.updateMercStatsUI === 'function') window.updateMercStatsUI();
+        if (typeof window.filterMercTable === 'function') window.filterMercTable();
+        if (window.showToast) window.showToast("Failed to save scout level", "error");
+    }
+};
+
+// Backwards-compatible toggle handler
+window.toggleMercenaryStatus = async (gameId, forceStatus = null) => {
+    if (!gameId) return false;
+    const gIdStr = gameId.toString().trim();
+    let data = {};
+    try { data = await window.fetchMercenaryData(); } catch(e) { console.error(e); }
+
+    const existing = (window.getEventRecord ? window.getEventRecord(data, { gameId: gIdStr, name: window.idToNameMap?.[gIdStr] }) : null) || data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false, scoutLevel: 0 };
+    const newSignedUpStatus = (forceStatus !== null) ? forceStatus : !existing.signedUp;
+    const nextLevel = newSignedUpStatus ? 25 : 0;
+    return await window.updateMercenaryScoutLevel(gIdStr, nextLevel);
 };
 
 // Fetch Mercenary Boss Progress from Firebase node mercenary/boss_progress
@@ -4494,47 +4621,60 @@ window.saveAllBossProgress = async () => {
     }
 };
 
-window.autoFillBossProgressFromTracker = async () => {
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
-    if (!isManager) {
-        if (window.showToast) window.showToast("Only R4/R5 managers can auto-fill boss unlock counts", "error");
-        return;
-    }
-
+// Automatic Calculation & Real-Time Sync of all 5 Phaethon Boss Unlock meters
+window.computeAndSyncMercenaryBossProgress = async () => {
     let lv1 = 0, lv2 = 0, lv3 = 0, lv4 = 0, lv5 = 0;
     let completedCount = 0;
 
-    // 1. First priority: inspect live DOM rows in #mercTableBody if currently rendered
+    // 1. Inspect live DOM rows in #mercTableBody if currently rendered
     const rows = document.querySelectorAll('.merc-row');
     if (rows && rows.length > 0) {
         rows.forEach(row => {
-            const isSigned = row.getAttribute('data-signed') === 'yes';
-            if (!isSigned) return;
-            completedCount++;
-
             const gid = row.getAttribute('data-gid');
+            const scoutLvl = parseInt(row.getAttribute('data-scout-level')) || 0;
             const diffSelect = document.getElementById(`merc_diff_${gid}`);
             const diff = (diffSelect ? diffSelect.value : '') || '';
             const diffNormalized = diff.toLowerCase().trim();
 
-            // Tier evaluation based on completed member:
-            // Easy (or unassigned): qualifies for Lv. 1 (Easy+)
-            // Normal: qualifies for Lv. 1, Lv. 2, Lv. 3 (Normal+)
-            // Hard: qualifies for Lv. 1, Lv. 2, Lv. 3, Lv. 4 (Hard+)
-            // Nightmare / Insane: qualifies for Lv. 1, Lv. 2, Lv. 3, Lv. 4, Lv. 5 (Nightmare+)
-            lv1++;
-            if (diffNormalized === 'normal' || diffNormalized.includes('normal')) {
-                lv2++;
-                lv3++;
-            } else if (diffNormalized === 'hard' || diffNormalized.includes('hard')) {
-                lv2++;
-                lv3++;
-                lv4++;
-            } else if (diffNormalized === 'nightmare' || diffNormalized.includes('nightmare') || diffNormalized === 'insane' || diffNormalized.includes('insane')) {
-                lv2++;
-                lv3++;
-                lv4++;
-                lv5++;
+            if (scoutLvl >= 25) completedCount++;
+
+            // Game Unlock Thresholds:
+            // Lv. 1 Dr. Toxin: Lv 5+ (Easy+)
+            if (scoutLvl >= 5) {
+                lv1++;
+                if (diffNormalized === 'normal' || diffNormalized.includes('normal') ||
+                    diffNormalized === 'hard' || diffNormalized.includes('hard') ||
+                    diffNormalized === 'nightmare' || diffNormalized.includes('nightmare') ||
+                    diffNormalized === 'insane' || diffNormalized.includes('insane')) {
+                    lv2++; // Lv. 2 Zenobia: Lv 5+ (Normal+)
+                }
+            }
+
+            // Lv. 3 Helios Cannon: Lv 10+ (Normal+)
+            if (scoutLvl >= 10) {
+                if (diffNormalized === 'normal' || diffNormalized.includes('normal') ||
+                    diffNormalized === 'hard' || diffNormalized.includes('hard') ||
+                    diffNormalized === 'nightmare' || diffNormalized.includes('nightmare') ||
+                    diffNormalized === 'insane' || diffNormalized.includes('insane')) {
+                    lv3++;
+                }
+            }
+
+            // Lv. 4 Callisto Mark II: Lv 15+ (Hard+)
+            if (scoutLvl >= 15) {
+                if (diffNormalized === 'hard' || diffNormalized.includes('hard') ||
+                    diffNormalized === 'nightmare' || diffNormalized.includes('nightmare') ||
+                    diffNormalized === 'insane' || diffNormalized.includes('insane')) {
+                    lv4++;
+                }
+            }
+
+            // Lv. 5 Behemoth: Lv 20+ (Nightmare+)
+            if (scoutLvl >= 20) {
+                if (diffNormalized === 'nightmare' || diffNormalized.includes('nightmare') ||
+                    diffNormalized === 'insane' || diffNormalized.includes('insane')) {
+                    lv5++;
+                }
             }
         });
     } else {
@@ -4560,53 +4700,335 @@ window.autoFillBossProgressFromTracker = async () => {
 
         rosterList.forEach(p => {
             const rec = window.getEventRecord ? window.getEventRecord(mercData, p) : mercData[p.gameId];
-            if (rec && rec.signedUp) {
-                completedCount++;
-                const diff = (rec.difficulty || '').toLowerCase().trim();
+            const scoutLvl = (rec && rec.scoutLevel !== undefined) ? parseInt(rec.scoutLevel) || 0 : ((rec && rec.signedUp) ? 25 : 0);
+            const diff = ((rec && rec.difficulty) || '').toLowerCase().trim();
+
+            if (scoutLvl >= 25) completedCount++;
+
+            if (scoutLvl >= 5) {
                 lv1++;
-                if (diff === 'normal' || diff.includes('normal')) {
+                if (diff === 'normal' || diff.includes('normal') ||
+                    diff === 'hard' || diff.includes('hard') ||
+                    diff === 'nightmare' || diff.includes('nightmare') ||
+                    diff === 'insane' || diff.includes('insane')) {
                     lv2++;
+                }
+            }
+            if (scoutLvl >= 10) {
+                if (diff === 'normal' || diff.includes('normal') ||
+                    diff === 'hard' || diff.includes('hard') ||
+                    diff === 'nightmare' || diff.includes('nightmare') ||
+                    diff === 'insane' || diff.includes('insane')) {
                     lv3++;
-                } else if (diff === 'hard' || diff.includes('hard')) {
-                    lv2++;
-                    lv3++;
+                }
+            }
+            if (scoutLvl >= 15) {
+                if (diff === 'hard' || diff.includes('hard') ||
+                    diff === 'nightmare' || diff.includes('nightmare') ||
+                    diff === 'insane' || diff.includes('insane')) {
                     lv4++;
-                } else if (diff === 'nightmare' || diff.includes('nightmare') || diff === 'insane' || diff.includes('insane')) {
-                    lv2++;
-                    lv3++;
-                    lv4++;
+                }
+            }
+            if (scoutLvl >= 20) {
+                if (diff === 'nightmare' || diff.includes('nightmare') ||
+                    diff === 'insane' || diff.includes('insane')) {
                     lv5++;
                 }
             }
         });
     }
 
-    // Set DOM inputs if present
-    ['lv1', 'lv2', 'lv3', 'lv4', 'lv5'].forEach(k => {
-        const input = document.getElementById(`boss_input_${k}`);
-        if (input) {
-            input.value = { lv1, lv2, lv3, lv4, lv5 }[k];
+    const payload = { lv1, lv2, lv3, lv4, lv5, updatedAt: Date.now() };
+    window.mercenaryBossProgressCache = payload;
+
+    // Update Command Deck DOM indicators live if present
+    const bossDefs = [
+        { key: 'lv1', target: 10 },
+        { key: 'lv2', target: 10 },
+        { key: 'lv3', target: 15 },
+        { key: 'lv4', target: 15 },
+        { key: 'lv5', target: 20 }
+    ];
+
+    bossDefs.forEach(b => {
+        const val = payload[b.key] || 0;
+        const input = document.getElementById(`boss_input_${b.key}`);
+        if (input) input.value = val;
+
+        const valEl = document.getElementById(`boss_val_${b.key}`);
+        if (valEl) valEl.textContent = val;
+
+        const barEl = document.getElementById(`boss_bar_${b.key}`);
+        if (barEl) {
+            const pct = Math.min(100, Math.round((val / b.target) * 100));
+            barEl.style.width = `${pct}%`;
+        }
+
+        const badgeEl = document.getElementById(`boss_badge_${b.key}`);
+        if (badgeEl) {
+            const isUnlocked = val >= b.target;
+            if (isUnlocked) {
+                badgeEl.style.background = 'rgba(16,185,129,0.2)';
+                badgeEl.style.color = '#10b981';
+                badgeEl.style.borderColor = 'rgba(16,185,129,0.4)';
+                badgeEl.innerHTML = 'UNLOCKED ✅';
+            } else {
+                const rem = b.target - val;
+                badgeEl.style.background = 'rgba(239,68,68,0.15)';
+                badgeEl.style.color = '#ef4444';
+                badgeEl.style.borderColor = 'rgba(239,68,68,0.3)';
+                badgeEl.innerHTML = `LOCKED 🔒 (${rem} needed)`;
+            }
         }
     });
 
-    const newBp = { lv1, lv2, lv3, lv4, lv5, updatedAt: Date.now() };
-    const ok = await window.saveMercenaryBossProgress(newBp);
-    if (ok) {
-        window.mercenaryBossProgressCache = newBp;
-        if (window.logAdminAction) {
-            window.logAdminAction("Auto-Fill Boss Unlocks", `Auto-filled boss unlock counts from Mercenary Tracker: Lv1=${lv1}, Lv2=${lv2}, Lv3=${lv3}, Lv4=${lv4}, Lv5=${lv5} (${completedCount} Masters Done).`);
-        }
+    // Save to Firebase in the background
+    await window.saveMercenaryBossProgress(payload).catch(() => null);
+    return payload;
+};
+
+window.autoFillBossProgressFromTracker = async () => {
+    const activeUser = currentUser || window.currentUser;
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
+    if (!isManager) {
+        if (window.showToast) window.showToast("Only R4/R5 managers can auto-fill boss unlock counts", "error");
+        return;
+    }
+    const res = await window.computeAndSyncMercenaryBossProgress();
+    if (res) {
         if (window.showToast) {
-            window.showToast(`⚡ Auto-filled boss unlock counts from tracker! (${completedCount} Masters: Lv1=${lv1}, Lv2=${lv2}, Lv3=${lv3}, Lv4=${lv4}, Lv5=${lv5})`, "success");
-        }
-        if (typeof window.activeViewFunc === 'function') {
-            window.activeViewFunc();
-        } else if (window.views && window.views.mercenaryAdmin) {
-            window.views.mercenaryAdmin();
+            window.showToast(`⚡ Auto-filled boss unlock counts! Lv1=${res.lv1}, Lv2=${res.lv2}, Lv3=${res.lv3}, Lv4=${res.lv4}, Lv5=${res.lv5}`, "success");
         }
     } else {
-        if (window.showToast) window.showToast("Failed to save auto-filled boss unlock counts.", "error");
+        if (window.showToast) window.showToast("Failed to auto-fill boss counts.", "error");
     }
+};
+
+// Real-Time Alliance Rally Report & Chat Broadcast Modal
+window.openMercenaryRallyReportModal = async () => {
+    let existing = document.getElementById('mercRallyReportModal');
+    if (existing) existing.remove();
+
+    const [bossData, mercData, rosterData] = await Promise.all([
+        window.fetchMercenaryBossProgress().catch(() => ({ lv1: 0, lv2: 0, lv3: 0, lv4: 0, lv5: 0 })),
+        window.fetchMercenaryData().catch(() => ({})),
+        window.fetchRoster().catch(() => ({}))
+    ]);
+
+    const bossDefs = [
+        { key: 'lv1', label: 'Lv. 1: Dr. Toxin Theodore', target: 10, reqLvl: 5, reqDiff: 'Easy+', diffRule: ['easy', 'normal', 'hard', 'nightmare', 'insane'] },
+        { key: 'lv2', label: 'Lv. 2: Zenobia Queen of Violence', target: 10, reqLvl: 5, reqDiff: 'Normal+', diffRule: ['normal', 'hard', 'nightmare', 'insane'] },
+        { key: 'lv3', label: 'Lv. 3: Helios Cannon', target: 15, reqLvl: 10, reqDiff: 'Normal+', diffRule: ['normal', 'hard', 'nightmare', 'insane'] },
+        { key: 'lv4', label: 'Lv. 4: Callisto Mark II', target: 15, reqLvl: 15, reqDiff: 'Hard+', diffRule: ['hard', 'nightmare', 'insane'] },
+        { key: 'lv5', label: 'Lv. 5: Behemoth', target: 20, reqLvl: 20, reqDiff: 'Nightmare+', diffRule: ['nightmare', 'insane'] }
+    ];
+
+    // Find first locked boss gap
+    let targetBoss = null;
+    let targetGap = 0;
+    for (const b of bossDefs) {
+        const cur = parseInt(bossData[b.key]) || 0;
+        if (cur < b.target) {
+            targetBoss = b;
+            targetGap = b.target - cur;
+            break;
+        }
+    }
+
+    // Assemble roster
+    const rosterList = [];
+    const seenGids = new Set();
+    if (rosterData) {
+        Object.values(rosterData).forEach(p => {
+            if (!p || typeof p !== 'object') return;
+            const gid = p.gameId ? String(p.gameId).trim() : (p.name || '').toLowerCase().trim();
+            if (gid && seenGids.has(gid)) return;
+            if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
+                seenGids.add(gid);
+                rosterList.push(p);
+            }
+        });
+    }
+    rosterList.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+
+    // Identify target chiefs to call out
+    let targetChiefs = [];
+    if (targetBoss) {
+        rosterList.forEach(p => {
+            const rec = window.getEventRecord ? window.getEventRecord(mercData, p) : mercData[p.gameId];
+            const scoutLvl = (rec && rec.scoutLevel !== undefined) ? parseInt(rec.scoutLevel) || 0 : ((rec && rec.signedUp) ? 25 : 0);
+            const diff = ((rec && rec.difficulty) || '').toLowerCase().trim();
+            const phase = (rec && rec.phase) || '';
+            const isQualifiedTier = targetBoss.diffRule.some(d => diff.includes(d));
+
+            if (isQualifiedTier && scoutLvl < targetBoss.reqLvl) {
+                targetChiefs.push({
+                    name: p.name,
+                    gameId: p.gameId,
+                    scoutLevel: scoutLvl,
+                    difficulty: rec?.difficulty || diff || 'Normal',
+                    phase: phase
+                });
+            }
+        });
+    }
+
+    if (targetBoss && targetChiefs.length === 0) {
+        rosterList.forEach(p => {
+            const rec = window.getEventRecord ? window.getEventRecord(mercData, p) : mercData[p.gameId];
+            const scoutLvl = (rec && rec.scoutLevel !== undefined) ? parseInt(rec.scoutLevel) || 0 : ((rec && rec.signedUp) ? 25 : 0);
+            if (scoutLvl < targetBoss.reqLvl) {
+                targetChiefs.push({
+                    name: p.name,
+                    gameId: p.gameId,
+                    scoutLevel: scoutLvl,
+                    difficulty: rec?.difficulty || 'Unassigned',
+                    phase: rec?.phase || ''
+                });
+            }
+        });
+    }
+
+    // Generate Alliance Chat Broadcast Text
+    let broadcastMsg = '';
+    if (targetBoss) {
+        const curCount = parseInt(bossData[targetBoss.key]) || 0;
+        const calloutNames = targetChiefs.slice(0, 15).map(c => `@${c.name} (Lv ${c.scoutLevel})`).join(', ');
+        const extraCount = targetChiefs.length > 15 ? ` +${targetChiefs.length - 15} more` : '';
+        broadcastMsg = `⚔️ MERCENARY PRESTIGE ALLIANCE RALLY ⚔️\n🎯 Target: Unlock ${targetBoss.label}!\n📊 Alliance Progress: ${curCount}/${targetBoss.target} (${targetGap} more needed!)\n⚡ Action: Push to Scout Level ${targetBoss.reqLvl} (${targetBoss.reqDiff})\n📢 Calling: ${calloutNames}${extraCount}\nLet's unlock the boss together for maximum alliance rewards! 🛡️🔥`;
+    } else {
+        broadcastMsg = `🏆 MERCENARY PRESTIGE ALLIANCE UPDATE 🏆\n🎉 ALL 5 PHAETHON BOSSES ARE UNLOCKED!\n⚔️ Next Goal: Final Push for 25/25 Phaethon Masters!\nGreat work alliance! Claim your boss rally rewards! 🛡️🔥`;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'mercRallyReportModal';
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
+        z-index: 10006; display: flex; justify-content: center; align-items: center;
+        padding: 16px; box-sizing: border-box; animation: fadeIn 0.2s ease-out;
+    `;
+
+    overlay.innerHTML = `
+        <div style="background: var(--card-bg, #1e293b); border: 1px solid rgba(234, 179, 8, 0.4); border-radius: 16px; width: 100%; max-width: 680px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+            
+            <!-- Modal Header -->
+            <div style="padding: 18px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(239, 68, 68, 0.1));">
+                <div>
+                    <h3 style="margin: 0; color: #facc15; font-size: 19px; display: flex; align-items: center; gap: 8px;">
+                        📢 Live Alliance Rally Report
+                    </h3>
+                    <p style="margin: 3px 0 0 0; color: var(--text-muted); font-size: 12px;">Real-time engagement breakdown & targeted member callouts</p>
+                </div>
+                <button onclick="document.getElementById('mercRallyReportModal').remove()" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: var(--text-main); width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; transition: 0.2s;">✕</button>
+            </div>
+
+            <!-- Modal Body (Scrollable) -->
+            <div style="padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;">
+                
+                <!-- Target Boss Focus Card -->
+                <div style="background: ${targetBoss ? 'linear-gradient(135deg, rgba(239,68,68,0.12), rgba(234,179,8,0.12))' : 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(59,130,246,0.1))'}; border: 1px solid ${targetBoss ? 'rgba(239,68,68,0.4)' : 'rgba(16,185,129,0.4)'}; border-radius: 12px; padding: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <span style="font-size: 12px; font-weight: bold; text-transform: uppercase; color: ${targetBoss ? '#ef4444' : '#10b981'};">
+                            ${targetBoss ? '🔥 Priority Unlock Target' : '🏆 Alliance Milestone Achieved'}
+                        </span>
+                        <span style="font-size: 13px; font-weight: bold; color: var(--text-main);">
+                            ${targetBoss ? `${parseInt(bossData[targetBoss.key]) || 0} / ${targetBoss.target} (${targetGap} needed)` : '100% Complete'}
+                        </span>
+                    </div>
+                    <div style="font-size: 18px; font-weight: bold; color: var(--text-main); margin-top: 6px;">
+                        ${targetBoss ? targetBoss.label : '🎉 All 5 Phaethon Bosses Unlocked!'}
+                    </div>
+                    <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+                        ${targetBoss ? `Required: Chiefs on <b style="color:var(--text-main);">${targetBoss.reqDiff}</b> reach <b style="color:#facc15;">Scout Level ${targetBoss.reqLvl}</b>` : 'Alliance can now challenge all 5 Phaethon bosses for maximum glory!'}
+                    </div>
+                </div>
+
+                <!-- 5 Boss Meters Mini Grid -->
+                <div>
+                    <div style="font-size: 12px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">All 5 Boss Unlock Meters</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(115px, 1fr)); gap: 8px;">
+                        ${bossDefs.map(b => {
+                            const cur = parseInt(bossData[b.key]) || 0;
+                            const isU = cur >= b.target;
+                            return `
+                                <div style="background: var(--bg-main); border: 1px solid ${isU ? 'rgba(16,185,129,0.4)' : 'var(--border)'}; border-radius: 8px; padding: 8px 10px; text-align: center;">
+                                    <div style="font-size: 11px; font-weight: bold; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${b.label.split(':')[0]}</div>
+                                    <div style="font-size: 13px; font-weight: bold; color: ${isU ? '#10b981' : 'var(--text-main)'}; margin-top: 2px;">${cur} / ${b.target}</div>
+                                    <div style="font-size: 10px; font-weight: bold; color: ${isU ? '#10b981' : '#ef4444'}; margin-top: 2px;">${isU ? 'UNLOCKED ✅' : 'LOCKED 🔒'}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <!-- Chiefs to Call Out -->
+                ${targetBoss ? `
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-size: 12px; font-weight: bold; color: var(--text-muted); text-transform: uppercase;">
+                                🎯 Chiefs Who Need to Push (${targetChiefs.length})
+                            </span>
+                            <span style="font-size: 11px; color: var(--text-muted);">Assigned ${targetBoss.reqDiff}</span>
+                        </div>
+                        <div style="background: var(--bg-main); border: 1px solid var(--border); border-radius: 10px; max-height: 160px; overflow-y: auto; padding: 6px;">
+                            ${targetChiefs.length > 0 ? targetChiefs.map(c => `
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 13px;">
+                                    <span style="font-weight: bold; color: var(--text-main);">${escapeHTML(c.name)}</span>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <span style="font-size: 11px; background: rgba(59,130,246,0.15); color: #60a5fa; padding: 2px 8px; border-radius: 4px;">${escapeHTML(c.difficulty)}</span>
+                                        <span style="font-size: 11px; font-weight: bold; color: ${c.scoutLevel > 0 ? '#facc15' : '#ef4444'};">Lv ${c.scoutLevel}/25</span>
+                                    </div>
+                                </div>
+                            `).join('') : '<div style="padding:12px; text-align:center; color:var(--text-muted); font-size:12px;">No chiefs found in this tier. Encourage more members to take on this difficulty!</div>'}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Alliance Chat Broadcast Section -->
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 12px; font-weight: bold; color: var(--text-muted); text-transform: uppercase;">
+                            💬 Alliance Chat Broadcast (Ready to Paste)
+                        </span>
+                    </div>
+                    <textarea id="mercRallyBroadcastText" readonly style="width: 100%; height: 110px; background: var(--bg-main); border: 1px solid var(--border); border-radius: 8px; padding: 10px; color: var(--text-main); font-family: monospace; font-size: 12px; resize: none; box-sizing: border-box;">${broadcastMsg}</textarea>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div style="padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--bg-main); flex-wrap: wrap; gap: 10px;">
+                <button onclick="document.getElementById('mercRallyReportModal').remove()" style="background: transparent; border: 1px solid var(--border); color: var(--text-main); padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px;">Close</button>
+                <button id="mercCopyBroadcastBtn" onclick="window.copyMercenaryRallyBroadcast()" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 9px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(16,185,129,0.3); transition: 0.2s;">
+                    📋 Copy Alliance Chat Broadcast
+                </button>
+            </div>
+
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    window.copyMercenaryRallyBroadcast = () => {
+        const ta = document.getElementById('mercRallyBroadcastText');
+        const btn = document.getElementById('mercCopyBroadcastBtn');
+        const text = ta ? ta.value : broadcastMsg;
+        const fallback = (txt) => {
+            const temp = document.createElement('textarea'); temp.value = txt;
+            document.body.appendChild(temp); temp.select(); document.execCommand('copy'); document.body.removeChild(temp);
+            if (btn) { btn.innerHTML = '✅ Copied to Clipboard!'; btn.style.background = '#059669'; }
+            if (window.showToast) window.showToast("Copied Alliance Chat Broadcast!", "success");
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                if (btn) { btn.innerHTML = '✅ Copied to Clipboard!'; btn.style.background = '#059669'; }
+                if (window.showToast) window.showToast("Copied Alliance Chat Broadcast!", "success");
+            }).catch(() => fallback(text));
+        } else {
+            fallback(text);
+        }
+    };
 };
 
 window.syncBossProgressFromMasters = async (rosterMasterCount) => {
@@ -4625,7 +5047,8 @@ window.syncBossProgressFromMasters = async (rosterMasterCount) => {
 };
 
 window.resetMercenaryBossProgress = async () => {
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    const activeUser = currentUser || window.currentUser;
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
     if (!isManager) {
         if (window.showToast) window.showToast("Only R4/R5 managers can reset boss unlock counts", "error");
         return;
@@ -4803,7 +5226,8 @@ window.archiveAndResetChampionshipCycle = async () => {
 
 // ⚔️ Mercenary Prestige: Dedicated Archival & Reset Pipeline Modal
 window.showResetAndArchiveMercenaryModal = async () => {
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    const activeUser = currentUser || window.currentUser;
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
     if (!isManager) {
         if (window.showToast) window.showToast("Only R4/R5 managers can reset Mercenary cycles", "error");
         return;
@@ -5015,10 +5439,12 @@ window.showResetAndArchiveMercenaryModal = async () => {
                 } else {
                     noCount++;
                 }
+                const scoutLvl = (rec && rec.scoutLevel !== undefined) ? parseInt(rec.scoutLevel) || 0 : (isDone ? 25 : 0);
                 playerSnapshots.push({
                     gameId: gidStr,
                     name: p.name,
                     signedUp: isDone,
+                    scoutLevel: scoutLvl,
                     phase: (rec && rec.phase) ? rec.phase : "",
                     difficulty: (rec && rec.difficulty) ? rec.difficulty : ""
                 });
@@ -5092,12 +5518,14 @@ window.showResetAndArchiveMercenaryModal = async () => {
                     try {
                         await update(ref(db, `activity_live/${gidStr}`), {
                             mercenary: false,
+                            mercenaryScoutLevel: 0,
                             mercenaryPhase: "",
                             mercenaryDifficulty: "",
                             updatedAt: timestamp
                         });
                     } catch(e) {
                         await set(ref(db, `activity_live/${gidStr}/mercenary`), false).catch(() => null);
+                        await set(ref(db, `activity_live/${gidStr}/mercenaryScoutLevel`), 0).catch(() => null);
                         await set(ref(db, `activity_live/${gidStr}/mercenaryPhase`), "").catch(() => null);
                         await set(ref(db, `activity_live/${gidStr}/mercenaryDifficulty`), "").catch(() => null);
                     }
@@ -5105,6 +5533,7 @@ window.showResetAndArchiveMercenaryModal = async () => {
                         gameId: gidStr,
                         name: p.name,
                         signedUp: false,
+                        scoutLevel: 0,
                         phase: "",
                         difficulty: "",
                         lastUpdated: timestamp,
@@ -5152,7 +5581,8 @@ window.archiveAndResetMercenaryCycle = window.showResetAndArchiveMercenaryModal;
 
 // 🐻‍❄️ Polar Terrors: Dedicated Archive & Reset Engine
 window.archiveAndResetPolarTerrorsCycle = async () => {
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    const activeUser = currentUser || window.currentUser;
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
     if (!isManager) {
         if (window.showToast) window.showToast("Only R4/R5 managers can archive & reset Polar Terrors cycles", "error");
         return;
@@ -5295,7 +5725,8 @@ window.archiveAndResetPolarTerrorsCycle = async () => {
 
 // 🐻 Bear Trap: Dedicated Archive & Reset Engine
 window.archiveAndResetBearTrapCycle = async () => {
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    const activeUser = currentUser || window.currentUser;
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
     if (!isManager) {
         if (window.showToast) window.showToast("Only R4/R5 managers can archive & reset Bear Trap cycles", "error");
         return;
@@ -5440,7 +5871,8 @@ window.archiveAndResetBearTrapCycle = async () => {
 
 // Universal Event Archive Restore Modal
 window.showEventArchiveRestoreModal = async (eventType) => {
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    const activeUser = currentUser || window.currentUser;
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
     if (!isManager) {
         if (window.showToast) window.showToast("Only R4/R5 managers can restore archived events", "error");
         return;
@@ -5545,7 +5977,8 @@ window.showEventArchiveRestoreModal = async (eventType) => {
 
 // Execute Restore of Snapshot
 window.restoreEventArchiveSnapshot = async (eventType, archiveKey) => {
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    const activeUser = currentUser || window.currentUser;
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
     if (!isManager) {
         if (window.showToast) window.showToast("Only R4/R5 managers can restore archives", "error");
         return;
@@ -11119,7 +11552,8 @@ window._executeLogBearTrapWinner = async (name, trap) => {
   };
 
   window.auditAndCleanInactiveEventRecords = async () => {
-      const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+      const activeUser = currentUser || window.currentUser;
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
       if (!isManager) {
           if (window.showToast) window.showToast("Only R4/R5 managers can audit and clean event records", "error");
           return;
@@ -15911,7 +16345,8 @@ window.archiveAndResetChampionshipSeason = async (initialScope = 'full') => {
 };
 
 window.showResetAndArchiveChampionshipModal = async (initialScope = 'full') => {
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    const activeUser = currentUser || window.currentUser;
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
     if (!isManager) {
         if (window.showToast) window.showToast("Only R4/R5 managers can archive & reset Championship", "error");
         return;
@@ -18402,7 +18837,8 @@ window.toggleFeedbackVote = async (itemId) => {
 
 window.updateFeedbackStatus = async (itemId, newStatus, adminNote = null) => {
     if (!itemId) return;
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    const activeUser = currentUser || window.currentUser;
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
     if (!isManager) {
         if (window.showToast) window.showToast("Only R4/R5 managers can update status.", "error");
         return;
@@ -18440,7 +18876,8 @@ window.toggleFeedbackCompleted = async (itemId, isChecked) => {
 
 window.deleteFeedbackItem = async (itemId) => {
     if (!itemId) return;
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    const activeUser = currentUser || window.currentUser;
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
     if (!isManager) {
         if (window.showToast) window.showToast("Only R4/R5 managers can delete tickets.", "error");
         return;
@@ -19612,66 +20049,119 @@ window.renderMercenaryCaptainsSectionHtml = (clearedCount = null, bossProgress =
   `;
 };
 
-window.renderMercenaryBossAdminCardHtml = (bossProgress) => {
+window.renderMercenaryBossCommandDeckHtml = (bossProgress, isManager = true) => {
     const bp = bossProgress || { lv1: 0, lv2: 0, lv3: 0, lv4: 0, lv5: 0 };
     const bossDefs = [
-        { key: 'lv1', label: 'Lv. 1: Dr. Toxin Theodore', target: 10, reqDesc: '10 members reach level 5 (Easy+)' },
-        { key: 'lv2', label: 'Lv. 2: Zenobia Queen of Violence', target: 10, reqDesc: '10 members reach level 5 (Normal+)' },
-        { key: 'lv3', label: 'Lv. 3: Helios Cannon', target: 15, reqDesc: '15 members reach level 10 (Normal+)' },
-        { key: 'lv4', label: 'Lv. 4: Callisto Mark II', target: 15, reqDesc: '15 members reach level 15 (Hard+)' },
-        { key: 'lv5', label: 'Lv. 5: Behemoth', target: 20, reqDesc: '20 members reach level 20 (Nightmare+)' }
+        { key: 'lv1', name: 'Dr. Toxin Theodore', levelLabel: 'Lv. 1', target: 10, reqDesc: '10 @ Lv 5+ (Easy+)' },
+        { key: 'lv2', name: 'Zenobia', levelLabel: 'Lv. 2', target: 10, reqDesc: '10 @ Lv 5+ (Normal+)' },
+        { key: 'lv3', name: 'Helios Cannon', levelLabel: 'Lv. 3', target: 15, reqDesc: '15 @ Lv 10+ (Normal+)' },
+        { key: 'lv4', name: 'Callisto Mark II', levelLabel: 'Lv. 4', target: 15, reqDesc: '15 @ Lv 15+ (Hard+)' },
+        { key: 'lv5', name: 'Behemoth', levelLabel: 'Lv. 5', target: 20, reqDesc: '20 @ Lv 20+ (Nightmare+)' }
     ];
 
+    let unlockedCount = 0;
+    bossDefs.forEach(b => {
+        if ((parseInt(bp[b.key]) || 0) >= b.target) unlockedCount++;
+    });
+
     return `
-      <div class="card" style="background:linear-gradient(135deg, rgba(234,179,8,0.08), rgba(59,130,246,0.05)); border:1px solid rgba(234,179,8,0.3); margin-top:20px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
-          <h3 style="margin:0; font-size:16px; color:#facc15; display:flex; align-items:center; gap:8px;">
-            ⚙️ Phaethon Boss Unlock Manager (Alliance Progress)
-          </h3>
-          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <button onclick="window.autoFillBossProgressFromTracker()" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border:none; padding:7px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(37,99,235,0.3); transition:0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'" title="Auto-fill counts for all 5 bosses based on completed members and their difficulty tiers">
-              ⚡ Auto-Fill from Tracker
+      <div id="mercBossCommandDeck" class="card" style="background:linear-gradient(135deg, rgba(234,179,8,0.1), rgba(59,130,246,0.06)); border:1px solid rgba(234,179,8,0.35); border-radius:14px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.25);">
+        
+        <!-- Command Deck Header -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+          <div>
+            <h3 style="margin:0; font-size:18px; color:#facc15; display:flex; align-items:center; gap:8px;">
+              ⚙️ Phaethon Boss Command Deck
+              <span style="font-size:12px; background:rgba(234,179,8,0.2); color:#facc15; padding:2px 8px; border-radius:10px; font-weight:bold; border:1px solid rgba(234,179,8,0.4);">${unlockedCount}/5 Unlocked</span>
+            </h3>
+            <p style="margin:3px 0 0 0; color:var(--text-muted); font-size:12px;">Live alliance unlock meters — automatically synced from member scout milestones.</p>
+          </div>
+          
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <button id="mercRallyReportBtn" onclick="window.openMercenaryRallyReportModal()" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(217,119,6,0.35); transition:0.2s;">
+              📢 Live Rally Report
             </button>
-            <button onclick="window.resetMercenaryBossProgress()" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:7px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'" title="Reset all 5 Phaethon Boss Unlock counts to 0">
-              🔄 Reset Boss Counts
-            </button>
-            <button onclick="window.saveAllBossProgress()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.3);">
-              💾 Save All Boss Counts
-            </button>
+            ${isManager ? `
+              <button onclick="window.autoFillBossProgressFromTracker()" style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.4); color:#60a5fa; padding:8px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" title="Auto-fill counts for all 5 bosses based on member scout milestones and difficulty tiers">
+                ⚡ Auto-Fill from Tracker
+              </button>
+            ` : ''}
           </div>
         </div>
 
-        <p style="color:var(--text-muted); font-size:13px; margin:0 0 16px 0; line-height:1.5;">
-          Click <b>⚡ Auto-Fill from Tracker</b> to calculate counts directly from completed members & their difficulty tiers, or manually adjust numbers below and click <b>💾 Save All Boss Counts</b>!
-        </p>
-
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:14px;">
+        <!-- 5 Boss Cards Grid -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:12px;">
           ${bossDefs.map(b => {
               const currentVal = (bp[b.key] !== undefined && bp[b.key] !== null) ? parseInt(bp[b.key]) : 0;
               const isUnlocked = currentVal >= b.target;
+              const pct = Math.min(100, Math.round((currentVal / b.target) * 100));
+              const needed = Math.max(0, b.target - currentVal);
               return `
-                <div style="background:var(--bg-main); border:1px solid ${isUnlocked ? 'rgba(16,185,129,0.4)' : 'var(--border)'}; border-radius:10px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                <div style="background:var(--bg-main); border:1px solid ${isUnlocked ? 'rgba(16,185,129,0.45)' : 'var(--border)'}; border-radius:10px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:10px; position:relative; overflow:hidden;">
                   <div>
-                    <div style="font-size:13px; font-weight:bold; color:var(--text-main);">${b.label}</div>
-                    <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Req: <b style="color:var(--text-main);">${b.reqDesc}</b></div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                      <span style="font-size:11px; font-weight:bold; color:#facc15; text-transform:uppercase;">${b.levelLabel}</span>
+                      <span id="boss_badge_${b.key}" style="font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; border:1px solid ${isUnlocked ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.3)'}; background:${isUnlocked ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.12)'}; color:${isUnlocked ? '#10b981' : '#ef4444'};">
+                        ${isUnlocked ? 'UNLOCKED ✅' : `LOCKED 🔒 (${needed} needed)`}
+                      </span>
+                    </div>
+                    <div style="font-size:13px; font-weight:bold; color:var(--text-main); margin-top:4px; line-height:1.2;">${b.name}</div>
+                    <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">${b.reqDesc}</div>
                   </div>
 
-                  <div style="display:flex; align-items:center; gap:6px;">
-                    <button onclick="window.adjustBossProgressCount('${b.key}', -1)" style="width:28px; height:28px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; cursor:pointer;">-</button>
-                    
-                    <input type="number" id="boss_input_${b.key}" value="${currentVal}" min="0" max="100" style="width:48px; text-align:center; padding:5px; border-radius:6px; border:1px solid ${isUnlocked ? 'rgba(16,185,129,0.5)' : 'var(--border)'}; background:var(--card-bg); color:${isUnlocked ? '#10b981' : 'var(--text-main)'}; font-weight:bold; font-size:14px;">
-                    
-                    <button onclick="window.adjustBossProgressCount('${b.key}', 1)" style="width:28px; height:28px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; cursor:pointer;">+</button>
-
-                    <span style="font-size:13px; font-weight:bold; color:var(--text-muted); min-width:32px;">/ ${b.target}</span>
+                  <div>
+                    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
+                      <span style="font-size:11px; color:var(--text-muted);">Progress</span>
+                      <span style="font-size:13px; font-weight:bold; color:${isUnlocked ? '#10b981' : 'var(--text-main)'};">
+                        <span id="boss_val_${b.key}">${currentVal}</span> / ${b.target}
+                      </span>
+                    </div>
+                    <div style="width:100%; height:7px; background:rgba(0,0,0,0.3); border-radius:4px; overflow:hidden; border:1px solid var(--border);">
+                      <div id="boss_bar_${b.key}" style="width:${pct}%; height:100%; background:${isUnlocked ? '#10b981' : 'linear-gradient(90deg, #3b82f6, #6366f1)'}; border-radius:4px; transition:width 0.3s ease;"></div>
+                    </div>
                   </div>
                 </div>
               `;
           }).join('')}
         </div>
+
+        <!-- Collapsible Manual Override (Leadership Only) -->
+        ${isManager ? `
+          <details style="margin-top:14px; background:rgba(0,0,0,0.18); border-radius:8px; border:1px solid var(--border); padding:10px 14px;">
+            <summary style="cursor:pointer; font-size:12px; font-weight:bold; color:var(--text-muted); display:flex; align-items:center; gap:6px; user-select:none;">
+              ⚙️ Manual Boss Count Override (+ / -) <span style="font-size:10px; opacity:0.7;">(Auto-derives by default)</span>
+            </summary>
+            <div style="margin-top:12px; display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
+              ${bossDefs.map(b => {
+                  const currentVal = (bp[b.key] !== undefined && bp[b.key] !== null) ? parseInt(bp[b.key]) : 0;
+                  return `
+                    <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                      <span style="font-size:12px; font-weight:bold; color:var(--text-main);">${b.levelLabel}: ${b.name}</span>
+                      <div style="display:flex; align-items:center; gap:4px;">
+                        <button onclick="window.adjustBossProgressCount('${b.key}', -1)" style="width:26px; height:26px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; cursor:pointer;">-</button>
+                        <input type="number" id="boss_input_${b.key}" value="${currentVal}" min="0" max="100" style="width:42px; text-align:center; padding:4px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px;">
+                        <button onclick="window.adjustBossProgressCount('${b.key}', 1)" style="width:26px; height:26px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; cursor:pointer;">+</button>
+                      </div>
+                    </div>
+                  `;
+              }).join('')}
+            </div>
+            <div style="margin-top:10px; display:flex; justify-content:flex-end; gap:8px; align-items:center;">
+              <button onclick="window.resetMercenaryBossProgress()" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px;">
+                🔄 Reset to 0
+              </button>
+              <button onclick="window.saveAllBossProgress()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:6px 14px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px; box-shadow:0 2px 8px rgba(16,185,129,0.3);">
+                💾 Save Manual Counts
+              </button>
+            </div>
+          </details>
+        ` : ''}
+
       </div>
     `;
 };
+
+window.renderMercenaryBossAdminCardHtml = window.renderMercenaryBossCommandDeckHtml;
 
 // Showdown Missed Days Report Modal
 window.showMissedDaysReportModal = async (btnEl = null) => {
@@ -33619,7 +34109,8 @@ const views = {
 
       // Archive current cycle & increment lifetime miss counters for missing players
       window.archiveAndResetEventCycle = async () => {
-        const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+        const activeUser = currentUser || window.currentUser;
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
         if (!isManager) {
           if (window.showToast) window.showToast("Only R4/R5 managers can archive & reset event cycles", "error");
           return;
@@ -33825,7 +34316,8 @@ const views = {
           return;
         }
 
-        const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+        const activeUser = currentUser || window.currentUser;
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
 
         tbody.innerHTML = list.map(p => `
           <tr class="activity-matrix-row" data-name="${escapeHTML(p.name.toLowerCase())}" data-gid="${p.gameId}" style="border-bottom:1px solid var(--border);">
@@ -36360,7 +36852,8 @@ const views = {
     const app = document.getElementById('app');
     if (!app) return;
     
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    const activeUser = currentUser || window.currentUser;
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
     if (!isManager) {
        if(window.showToast) window.showToast("Only R4/R5 managers can edit Showdown data", "error");
        return;
@@ -36796,7 +37289,8 @@ const views = {
     const app = document.getElementById('app');
     if (!app) return;
 
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    const activeUser = currentUser || window.currentUser;
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
     if (!isManager) {
        if(window.showToast) window.showToast("Only R4/R5 managers can edit Championship data", "error");
        return;
@@ -38175,7 +38669,8 @@ const views = {
     const app = document.getElementById('app');
     if (!app) return;
 
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    const activeUser = currentUser || window.currentUser;
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
     if (!isManager) {
        if(window.showToast) window.showToast("Only R4/R5 managers can edit Polar Terrors data", "error");
        return;
@@ -38431,7 +38926,8 @@ const views = {
     const app = document.getElementById('app');
     if (!app) return;
 
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    const activeUser = currentUser || window.currentUser;
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
     if (!isManager) {
        if(window.showToast) window.showToast("Only R4/R5 managers can edit Bear Trap data", "error");
        return;
@@ -38781,7 +39277,8 @@ const views = {
 
     window.activeViewFunc = () => views.mercenaryAdmin();
 
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    const activeUser = currentUser || window.currentUser;
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
     if (!isManager) {
        if(window.showToast) window.showToast("Only R4/R5 managers can edit Mercenary Prestige data", "error");
        return;
@@ -38825,17 +39322,18 @@ const views = {
         // Calculate statistics
         let totalCount = rosterList.length;
         let yesCount = 0;
-        let noCount = 0;
+        let needsPushCount = 0;
         let missingNames = [];
 
         rosterList.forEach(p => {
-            let gIdStr = p.gameId.toString().trim();
-            let record = mercenaryData[gIdStr];
+            let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
+            let record = (window.getEventRecord ? window.getEventRecord(mercenaryData, p) : null) || mercenaryData[gIdStr] || (p.name ? mercenaryData[p.name] : {}) || {};
             let isDone = record && record.signedUp;
-            if (isDone) {
+            let scoutLvl = (record && record.scoutLevel !== undefined) ? parseInt(record.scoutLevel) || 0 : (isDone ? 25 : 0);
+            if (scoutLvl >= 25 || isDone) {
                 yesCount++;
             } else {
-                noCount++;
+                needsPushCount++;
                 missingNames.push(p.name);
             }
         });
@@ -38843,7 +39341,7 @@ const views = {
         let percentSignedUp = totalCount > 0 ? Math.round((yesCount / totalCount) * 100) : 0;
 
         let html = `
-          <div style="display:flex; flex-direction:column; gap:20px; max-width:900px; margin:0 auto; padding-bottom:40px; animation: fadeIn 0.3s ease;">
+          <div style="display:flex; flex-direction:column; gap:20px; max-width:920px; margin:0 auto; padding-bottom:40px; animation: fadeIn 0.3s ease;">
             
             <div style="border-bottom: 2px solid #ef4444; padding-bottom: 12px; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
               <div style="display:flex; align-items:center; gap:12px;">
@@ -38854,7 +39352,7 @@ const views = {
                   <h2 style="margin:0; color:var(--text-main); font-size:22px; display:flex; align-items:center; gap:10px;">
                     ⚔️ Mercenary Prestige Tracker
                   </h2>
-                  <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:13px;">Real-time tracking of who has completed Mercenary Prestige & who still needs to.</p>
+                  <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:13px;">Real-time tracking of milestone scout levels, boss unlocks & engagement rally.</p>
                 </div>
               </div>
               <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
@@ -38867,19 +39365,22 @@ const views = {
               </div>
             </div>
 
+            <!-- Elevated Alliance Boss Command Deck -->
+            ${window.renderMercenaryBossCommandDeckHtml(bossProgressData, true)}
+
             <!-- Summary KPI Cards -->
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:15px;">
               <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center;">
                 <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; font-weight:bold;">Total Roster</div>
                 <div id="mercStatTotal" style="font-size:28px; font-weight:bold; color:var(--text-main); margin-top:4px;">${totalCount}</div>
               </div>
-              <div style="background:var(--card-bg); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:16px; text-align:center;">
-                <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">✅ Done</div>
-                <div id="mercStatYes" style="font-size:28px; font-weight:bold; color:#10b981; margin-top:4px;">${yesCount}</div>
-              </div>
               <div style="background:var(--card-bg); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px; text-align:center;">
-                <div style="font-size:12px; color:#ef4444; text-transform:uppercase; font-weight:bold;">❌ Not Done Yet</div>
-                <div id="mercStatNo" style="font-size:28px; font-weight:bold; color:#ef4444; margin-top:4px;">${noCount}</div>
+                <div style="font-size:12px; color:#ef4444; text-transform:uppercase; font-weight:bold;">🔥 Needs Push</div>
+                <div id="mercStatPush" style="font-size:28px; font-weight:bold; color:#ef4444; margin-top:4px;">${needsPushCount}</div>
+              </div>
+              <div style="background:var(--card-bg); border:1px solid rgba(234,179,8,0.35); border-radius:12px; padding:16px; text-align:center;">
+                <div style="font-size:12px; color:#facc15; text-transform:uppercase; font-weight:bold;">★ 25 Done (Masters)</div>
+                <div id="mercStatYes" style="font-size:28px; font-weight:bold; color:#facc15; margin-top:4px;">${yesCount}</div>
               </div>
               <div style="background:var(--card-bg); border:1px solid rgba(59,130,246,0.3); border-radius:12px; padding:16px; text-align:center;">
                 <div style="font-size:12px; color:#60a5fa; text-transform:uppercase; font-weight:bold;">Response Rate</div>
@@ -38893,9 +39394,14 @@ const views = {
                 <h3 style="margin:0; color:#ef4444; font-size:16px; display:flex; align-items:center; gap:8px;">
                   ⚠️ Members Not Done Yet <span id="mercMissingCountTitle">(${missingNames.length})</span>
                 </h3>
-                <button onclick="window.copyMissingMercenaryList()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px; box-shadow:0 2px 8px rgba(239,68,68,0.3);">
-                  📋 Copy Not Done List for Chat
-                </button>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button onclick="window.openMercenaryRallyReportModal()" style="background:#f59e0b; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px; box-shadow:0 2px 8px rgba(245,158,11,0.3);">
+                    📢 Open Rally Report
+                  </button>
+                  <button onclick="window.copyMissingMercenaryList()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px; box-shadow:0 2px 8px rgba(239,68,68,0.3);">
+                    📋 Copy Incomplete List
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -38922,22 +39428,22 @@ const views = {
             <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
               <input type="text" id="mercSearchInput" placeholder="🔍 Filter player name..." style="flex:1; min-width:200px; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px;" onkeyup="window.filterMercTable()">
               
-              <div style="display:flex; gap:6px;">
+              <div style="display:flex; gap:6px; flex-wrap:wrap;">
                 <button id="mercFilterBtnAll" class="merc-filter-btn active" data-filter="all" onclick="window.setMercFilter('all')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--accent); color:white; font-weight:bold; cursor:pointer; font-size:13px;">All (${totalCount})</button>
-                <button id="mercFilterBtnYes" class="merc-filter-btn" data-filter="yes" onclick="window.setMercFilter('yes')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">✅ Done (${yesCount})</button>
-                <button id="mercFilterBtnNo" class="merc-filter-btn" data-filter="no" onclick="window.setMercFilter('no')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">❌ Not Done (${noCount})</button>
+                <button id="mercFilterBtnPush" class="merc-filter-btn" data-filter="push" onclick="window.setMercFilter('push')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">🔥 Needs Push (${needsPushCount})</button>
+                <button id="mercFilterBtnYes" class="merc-filter-btn" data-filter="yes" onclick="window.setMercFilter('yes')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">★ Completed 25 (${yesCount})</button>
               </div>
             </div>
 
-            <!-- Roster Table -->
-            <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
-              <table style="width:100%; border-collapse:collapse; text-align:left; font-size:14px;">
+            <!-- Roster Table with 1-Tap Milestone Pills -->
+            <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; text-align:left; font-size:14px; min-width:680px;">
                 <thead>
                   <tr style="background:var(--bg-main); border-bottom:1px solid var(--border); color:var(--text-muted); font-size:12px; text-transform:uppercase;">
                     <th style="padding:12px 20px;">Chief Name</th>
                     <th style="padding:12px 10px;">Initiation Phase</th>
                     <th style="padding:12px 10px;">Difficulty Tier</th>
-                    <th style="padding:12px 20px; text-align:right;">Master Status</th>
+                    <th style="padding:12px 20px; text-align:right;">Scout Milestone</th>
                   </tr>
                 </thead>
                 <tbody id="mercTableBody">
@@ -38945,10 +39451,11 @@ const views = {
                       let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
                       let record = (window.getEventRecord ? window.getEventRecord(mercenaryData, p) : null) || mercenaryData[gIdStr] || (p.name ? mercenaryData[p.name] : {}) || {};
                       let isDone = record && record.signedUp;
+                      let scoutLvl = (record && record.scoutLevel !== undefined) ? parseInt(record.scoutLevel) || 0 : (isDone ? 25 : 0);
                       let currentPhase = (record && record.phase) ? record.phase : "";
                       let currentDiff = (record && record.difficulty) ? record.difficulty : "";
                       return `
-                        <tr class="merc-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${isDone ? 'yes' : 'no'}" style="border-bottom:1px solid var(--border);">
+                        <tr class="merc-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${(scoutLvl >= 25 || isDone) ? 'yes' : 'no'}" data-scout-level="${scoutLvl}" style="border-bottom:1px solid var(--border);">
                           <td class="merc-name-cell" style="padding:14px 20px; font-weight:bold; color:var(--text-main); font-size:15px;">${escapeHTML(p.name)}</td>
                           <td style="padding:14px 10px;">
                             <select id="merc_phase_${gIdStr}" onchange="window.onMercTierChange('${gIdStr}')" style="background:var(--bg-main); color:${currentPhase ? 'var(--text-main)' : 'var(--text-muted)'}; border:1px solid ${currentPhase ? 'var(--border)' : 'rgba(239,68,68,0.35)'}; border-radius:6px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer;">
@@ -38962,10 +39469,27 @@ const views = {
                               ${Object.entries(window.MERCENARY_DIFFICULTIES).map(([dk, dv]) => `<option value="${dk}" ${currentDiff === dk ? 'selected' : ''}>${dv.label}</option>`).join('')}
                             </select>
                           </td>
-                          <td style="padding:14px 20px; text-align:right;">
-                            <button class="merc-toggle-btn" onclick="window.onMercToggle('${gIdStr}', this)" style="background:${isDone ? 'linear-gradient(135deg, #eab308, #ca8a04)' : 'rgba(239,68,68,0.15)'}; color:${isDone ? '#ffffff' : '#ef4444'}; border:${isDone ? 'none' : '1px solid rgba(239,68,68,0.4)'}; padding:6px 20px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s; box-shadow:${isDone ? '0 2px 8px rgba(234,179,8,0.35)' : 'none'};">
-                              ${isDone ? '⚔️ Phaethon Master (Done)' : '❌ Not Done (0/25)'}
-                            </button>
+                          <td style="padding:12px 20px; text-align:right;">
+                            <div style="display:inline-flex; gap:4px; align-items:center; justify-content:flex-end; flex-wrap:wrap;">
+                              ${[0, 5, 10, 15, 20, 25].map(lvl => {
+                                  const isActive = (lvl === 25) ? (scoutLvl >= 25) : (scoutLvl === lvl);
+                                  let btnStyle = "background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border);";
+                                  let label = `${lvl}`;
+                                  if (lvl === 25) {
+                                      label = '25 ★';
+                                      if (isActive) btnStyle = "background:linear-gradient(135deg, #eab308, #ca8a04); color:#ffffff; border:none; box-shadow:0 2px 8px rgba(234,179,8,0.4);";
+                                  } else if (lvl === 0) {
+                                      if (isActive) btnStyle = "background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.4);";
+                                  } else {
+                                      if (isActive) btnStyle = "background:#3b82f6; color:#ffffff; border:none; box-shadow:0 2px 6px rgba(59,130,246,0.3);";
+                                  }
+                                  return `
+                                    <button type="button" class="merc-milestone-pill ${isActive ? 'active' : ''}" data-level="${lvl}" onclick="window.onMercScoutLevelSelect('${gIdStr}', ${lvl}, this)" style="${btnStyle} padding:5px 9px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; transition:0.15s ease;" title="Set scout milestone to level ${lvl}">
+                                      ${label}
+                                    </button>
+                                  `;
+                              }).join('')}
+                            </div>
                           </td>
                         </tr>
                       `;
@@ -38973,8 +39497,6 @@ const views = {
                 </tbody>
               </table>
             </div>
-
-            ${window.renderMercenaryBossAdminCardHtml(bossProgressData)}
 
             ${window.renderMercenaryCaptainsSectionHtml(yesCount, bossProgressData)}
 
@@ -38988,17 +39510,18 @@ const views = {
         window.mercMissingNames = missingNames;
 
         window.updateMercStatsUI = () => {
-            let total = 0, yes = 0, no = 0;
+            let total = 0, yes = 0, push = 0;
             let missingList = [];
 
             document.querySelectorAll('.merc-row').forEach(row => {
                 total++;
                 const isSigned = row.getAttribute('data-signed') === 'yes';
+                const sLvl = parseInt(row.getAttribute('data-scout-level')) || 0;
                 const pName = row.querySelector('.merc-name-cell')?.textContent || '';
-                if (isSigned) {
+                if (isSigned || sLvl >= 25) {
                     yes++;
                 } else {
-                    no++;
+                    push++;
                     if (pName) missingList.push(pName);
                 }
             });
@@ -39006,21 +39529,21 @@ const views = {
             const pct = total > 0 ? Math.round((yes / total) * 100) : 0;
 
             const elTotal = document.getElementById('mercStatTotal');
+            const elPush = document.getElementById('mercStatPush');
             const elYes = document.getElementById('mercStatYes');
-            const elNo = document.getElementById('mercStatNo');
             const elPct = document.getElementById('mercStatPct');
             const elBtnAll = document.getElementById('mercFilterBtnAll');
+            const elBtnPush = document.getElementById('mercFilterBtnPush');
             const elBtnYes = document.getElementById('mercFilterBtnYes');
-            const elBtnNo = document.getElementById('mercFilterBtnNo');
             const elMissingCount = document.getElementById('mercMissingCountTitle');
 
             if (elTotal) elTotal.textContent = total;
+            if (elPush) elPush.textContent = push;
             if (elYes) elYes.textContent = yes;
-            if (elNo) elNo.textContent = no;
             if (elPct) elPct.textContent = `${pct}%`;
             if (elBtnAll) elBtnAll.textContent = `All (${total})`;
-            if (elBtnYes) elBtnYes.textContent = `✅ Done (${yes})`;
-            if (elBtnNo) elBtnNo.textContent = `❌ Not Done (${no})`;
+            if (elBtnPush) elBtnPush.textContent = `🔥 Needs Push (${push})`;
+            if (elBtnYes) elBtnYes.textContent = `★ Completed 25 (${yes})`;
             if (elMissingCount) elMissingCount.textContent = `(${missingList.length})`;
             window.mercMissingNames = missingList;
         };
@@ -39035,11 +39558,11 @@ const views = {
             const fallback = (txt) => {
                 const ta = document.createElement('textarea'); ta.value = txt;
                 document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-                window.showToast("Copied Not Done list to clipboard!", "success");
+                window.showToast("Copied Incomplete list to clipboard!", "success");
             };
             const doCopy = (txt) => {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(txt).then(() => window.showToast("Copied Not Done list to clipboard!", "success")).catch(() => fallback(txt));
+                    navigator.clipboard.writeText(txt).then(() => window.showToast("Copied Incomplete list to clipboard!", "success")).catch(() => fallback(txt));
                 } else { fallback(txt); }
             };
             doCopy(text);
@@ -39058,35 +39581,15 @@ const views = {
 
             const wasDone = row.getAttribute('data-signed') === 'yes';
             const willBeDone = !wasDone;
+            const nextLvl = willBeDone ? 25 : 0;
 
-            // Optimistic in-place update
-            btn.disabled = true;
             row.setAttribute('data-signed', willBeDone ? 'yes' : 'no');
-            
-            btn.style.background = willBeDone ? 'linear-gradient(135deg, #eab308, #ca8a04)' : 'rgba(239,68,68,0.15)';
-            btn.style.color = willBeDone ? '#ffffff' : '#ef4444';
-            btn.style.border = willBeDone ? 'none' : '1px solid rgba(239,68,68,0.4)';
-            btn.style.boxShadow = willBeDone ? '0 2px 8px rgba(234,179,8,0.35)' : 'none';
-            btn.innerHTML = willBeDone ? '⚔️ Phaethon Master (Done)' : '❌ Not Done (0/25)';
+            row.setAttribute('data-scout-level', nextLvl);
 
             window.updateMercStatsUI();
             window.filterMercTable();
 
-            const ok = await window.toggleMercenaryStatus(gameId, willBeDone);
-            btn.disabled = false;
-
-            if (!ok) {
-                // Revert on write error
-                row.setAttribute('data-signed', wasDone ? 'yes' : 'no');
-                btn.style.background = wasDone ? 'linear-gradient(135deg, #eab308, #ca8a04)' : 'rgba(239,68,68,0.15)';
-                btn.style.color = wasDone ? '#ffffff' : '#ef4444';
-                btn.style.border = wasDone ? 'none' : '1px solid rgba(239,68,68,0.4)';
-                btn.style.boxShadow = wasDone ? '0 2px 8px rgba(234,179,8,0.35)' : 'none';
-                btn.innerHTML = wasDone ? '⚔️ Phaethon Master (Done)' : '❌ Not Done (0/25)';
-                window.updateMercStatsUI();
-                window.filterMercTable();
-                if (window.showToast) window.showToast("Failed to save done status", "error");
-            }
+            await window.updateMercenaryScoutLevel(gameId, nextLvl);
         };
 
         window.mercCurrentFilter = 'all';
@@ -39113,9 +39616,15 @@ const views = {
                 const name = row.getAttribute('data-name');
                 const gid = row.getAttribute('data-gid');
                 const signed = row.getAttribute('data-signed');
+                const sLvl = parseInt(row.getAttribute('data-scout-level')) || 0;
 
                 const matchesSearch = !query || name.includes(query) || gid.includes(query);
-                const matchesFilter = (filter === 'all') || (filter === 'yes' && signed === 'yes') || (filter === 'no' && signed === 'no');
+                let matchesFilter = true;
+                if (filter === 'yes') {
+                    matchesFilter = (signed === 'yes' || sLvl >= 25);
+                } else if (filter === 'push' || filter === 'no') {
+                    matchesFilter = (signed === 'no' || sLvl < 25);
+                }
 
                 if (matchesSearch && matchesFilter) {
                     row.style.display = '';
@@ -44328,6 +44837,9 @@ window.resetBearTrapEvent = async () => {
               </div>
             </div>
 
+            <!-- Elevated Alliance Boss Command Deck -->
+            ${window.renderMercenaryBossCommandDeckHtml(bossProgressData, false)}
+
             <!-- View Switcher & Search / Filters -->
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
               <div style="display:flex; background:var(--bg-main); border:1px solid var(--border); border-radius:8px; overflow:hidden;">
@@ -44442,6 +44954,8 @@ window.resetBearTrapEvent = async () => {
                       let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || p.name || ''));
                       let record = window.getEventRecord(mercenaryData, p) || {};
                       let isDone = record && record.signedUp;
+                      let scoutLvl = (record && record.scoutLevel !== undefined) ? parseInt(record.scoutLevel) || 0 : (isDone ? 25 : 0);
+                      if (scoutLvl >= 25) isDone = true;
                       let phase = record.phase || "";
                       let phaseStyle = (phase && window.MERCENARY_PHASE_STYLES && window.MERCENARY_PHASE_STYLES[phase]) || {
                           icon: "🛡️",
@@ -44476,9 +44990,12 @@ window.resetBearTrapEvent = async () => {
                             ` : `<span style="color:var(--text-muted);">-</span>`}
                           </td>
                           <td style="padding:12px 16px; text-align:center;">
-                            ${isDone ? 
+                            ${(isDone || scoutLvl >= 25) ? 
                               `<span style="background:linear-gradient(135deg, #eab308, #ca8a04); color:#fff; padding:4px 12px; border-radius:12px; font-weight:bold; font-size:12px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 6px rgba(234,179,8,0.3);">⚔️ 25/25 Phaethon Master</span>` :
-                              `<span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 12px; border-radius:12px; font-weight:bold; font-size:12px; display:inline-flex; align-items:center; gap:4px;">❌ Pending (0/25)</span>`
+                              (scoutLvl > 0 ?
+                                `<span style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.4); color:#60a5fa; padding:4px 12px; border-radius:12px; font-weight:bold; font-size:12px; display:inline-flex; align-items:center; gap:4px;">🔥 Lv ${scoutLvl}/25</span>` :
+                                `<span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 12px; border-radius:12px; font-weight:bold; font-size:12px; display:inline-flex; align-items:center; gap:4px;">❌ Pending (0/25)</span>`
+                              )
                             }
                           </td>
                         </tr>

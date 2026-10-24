@@ -1,16 +1,20 @@
 {
-  "version": "3.3.132",
+  "version": "3.3.133",
   "releaseDate": "2026-10-24",
-  "title": "What's New in v3.3.132",
+  "title": "What's New in v3.3.133",
   "notes": [
-    "🔒 Override Button Removed: Removed early override button from cooldown card.",
-    "⏳ Strict Event Gating: Season Setup remains locked until tournament begins.",
-    "🚫 Bypass Prevention: Blocked unauthorized early setup navigation during cooldown.",
-    "🎯 Automatic Unlock: Step 1 unlocks automatically when event officially opens."
+    "⚔️ Command Deck: Elevated 5 Phaethon Boss meters to the top.",
+    "🎯 Milestone Pills: Added 1-tap scout level pills for members.",
+    "⚡ Auto Calculation: Boss unlock meters calculate automatically from roster.",
+    "📢 Live Rally Report: Added real-time boss gaps and member callouts.",
+    "📋 Chat Broadcast: 1-click formatted Alliance Chat rally broadcast generator.",
+    "🔍 Quick Filters: Filter roster by All, Needs Push, or Completed.",
+    "⚙️ Manual Override: Preserved collapsible leadership manual +/- boss override."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.132",
+    "version": "3.3.133",
     "latestChanges": [
+      "v3.3.133: Remodeled Mercenary Prestige Tracker with milestone scout levels and real-time rally deck",
       "v3.3.132: Removed championship cooldown early override button and enforced strict event gating",
       "v3.3.131: Added in-game total hours countdown format and aligned championship season window to Oct 26 - Oct 31",
       "v3.3.130: Transformed bug tracker into Alliance Help & Support Ticket Desk with urgency tags and support categories",

@@ -1,19 +1,25 @@
-# Task List: Remove Championship Early Override & Enforce Strict Event Gating (`v3.3.132`)
+# Task List: Mercenary Prestige Remodel (`v3.3.133`)
 
 - [x] **1. Clean House & Pre-Change Backup**
-  - [x] Delete `wos_website_backup_pre_v3.3.130.tar.gz` and create `wos_website_backup_pre_v3.3.132.tar.gz` (strict 2-backup retention: `pre_v3.3.131` & `pre_v3.3.132`)
-- [x] **2. Remove Early Override & Enforce Strict Cooldown Gating in `main.js`**
-  - [x] Remove `#btnUnlockChampSetupEarly` ("🛠️ Setup Early") from Cooldown Gate card
-  - [x] Remove `#btnAlertUnlockEarly` from `showChampSetupLockedAlert` modal
-  - [x] Remove `_champBypassCooldown` bypass logic; ensure setup is strictly locked until event opens (`diff <= 0`)
-  - [x] Remove early override banner in Step 1
-- [x] **3. Test Suites & Headless Chrome Verification**
-  - [x] Update `tools/test_championship_redesign_headless.cjs` to assert absence of override button and verify strict lockdown until event opens
-  - [x] Run full project build (`cmd /c npm run build`) - 100% passed (37/37 suites)
-- [x] **4. Version Bump & App Store Changelog (`v3.3.132`)**
-  - [x] Bump version to `3.3.132` in `package.json`, `version.json`, and `public/version.json`
+  - [x] Delete `wos_website_backup_pre_v3.3.131.tar.gz` and create `wos_website_backup_pre_v3.3.133.tar.gz` (strict 2-backup retention: `pre_v3.3.132` & `pre_v3.3.133`)
+- [x] **2. Core Data & Boss Auto-Sync Engine in `main.js`**
+  - [x] Update `fetchMercenaryData` to read `scoutLevel` (0, 5, 10, 15, 20, 25)
+  - [x] Create `window.updateMercenaryScoutLevel(gameId, level)` with automatic `signedUp` synchronization
+  - [x] Implement `window.computeAndSyncMercenaryBossProgress()` evaluating actual Scout Levels against Boss Unlock thresholds (5, 10, 15, 20) with background Firebase sync
+  - [x] Update `window.executeMercenaryReset` pipeline to reset `scoutLevel` to 0
+- [x] **3. UI Remodel in `views.mercenaryAdmin` & `views.mercenary`**
+  - [x] Elevate the 5 Phaethon Boss Unlock meters to the top Command Deck
+  - [x] Add 1-Tap Milestone Pills `[ 0 ] [ 5 ] [ 10 ] [ 15 ] [ 20 ] [ 25 ★ Done ]` to each roster row
+  - [x] Add Quick Filter Pills above roster: `All | 🔥 Needs Push | ★ Completed 25`
+  - [x] Implement `window.openMercenaryRallyReportModal()` with gap analysis, member callouts, and 1-click in-game broadcast generator
+  - [x] Update public view `views.mercenary` to display milestone badges and top command deck
+- [x] **4. Test Suite & Headless Chrome Verification**
+  - [x] Create `tools/test_mercenary_remodel_headless.cjs` to test milestone clicks, real-time boss recalculation, modal broadcast, and mobile/desktop responsiveness
+  - [x] Run full project build (`cmd /c npm run build`) - 100% pass across all test suites
+- [x] **5. Version Bump & App Store Changelog (`v3.3.133`)**
+  - [x] Bump version to `3.3.133` in `package.json`, `version.json`, and `public/version.json`
   - [x] Update `CHANGELOG.md` and `public/CHANGELOG.md` with App Store style notes ($\le 10$ words per bullet)
-- [x] **5. Git Commit, Push & Process Cleanup**
-  - [x] Commit and push to GitHub `origin/main` with `v3.3.132 : Removed championship cooldown early override button for strict event gating`
-  - [x] Proactively terminate background tasks and processes
-  - [x] Explicitly announce "Ready for Testing" to the user
+- [/] **6. Git Commit, Push & Process Cleanup**
+  - [ ] Commit and push to GitHub `origin/main` with `v3.3.133 : Remodeled Mercenary Prestige Tracker with milestone scout levels and real-time rally deck`
+  - [ ] Proactively terminate background tasks and processes
+  - [ ] Explicitly announce "Ready for Testing" to the user

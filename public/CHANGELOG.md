@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [3.3.133] - 2026-10-24
+- ⚔️ **Command Deck**: Elevated 5 Phaethon Boss meters to the top.
+- 🎯 **Milestone Pills**: Added 1-tap scout level pills for members.
+- ⚡ **Auto Calculation**: Boss unlock meters calculate automatically from roster.
+- 📢 **Live Rally Report**: Added real-time boss gaps and member callouts.
+- 📋 **Chat Broadcast**: 1-click formatted Alliance Chat rally broadcast generator.
+- 🔍 **Quick Filters**: Filter roster by All, Needs Push, or Completed.
+- ⚙️ **Manual Override**: Preserved collapsible leadership manual +/- boss override.
+
 ## [3.3.132] - 2026-10-24
 - 🔒 **Override Button Removed**: Removed early override button from cooldown card.
 - ⏳ **Strict Event Gating**: Season Setup remains locked until tournament begins.
