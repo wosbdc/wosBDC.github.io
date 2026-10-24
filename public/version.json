@@ -1,15 +1,16 @@
 {
-  "version": "3.3.126",
+  "version": "3.3.127",
   "releaseDate": "2026-10-23",
-  "title": "What's New in v3.3.126",
+  "title": "What's New in v3.3.127",
   "notes": [
-    "🔥 Live Event Hero Spotlight: Added glowing live event hero banner.",
-    "⏰ Clean Schedule Sections: Separated upcoming today and completed events cleanly.",
-    "⏱️ Realtime Countdown Clock: Hero banner ticks every second live."
+    "🕒 Full 24:00 UTC Support: Enabled 24:00 midnight end-time in Scheduler.",
+    "🌐 Game Time Clarity: Added UTC reset reminders and PDT previews.",
+    "⚔️ 24h Event Calculation: Correctly computes 00:00 to 24:00 durations."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.126",
+    "version": "3.3.127",
     "latestChanges": [
+      "v3.3.127: Full 24:00 UTC end-time support, time normalization, and time clarity",
       "v3.3.126: Elevated active event to glowing Hero Spotlight banner and cleaned Today Schedule view",
       "v3.3.125: Fixed Rewards & Events Scheduler saving and syncing hang with Firebase key sanitization and REST fallback",
       "v3.3.124: Added interactive popup calendar for Start/End dates and 24-hour UTC time picker in Scheduler",

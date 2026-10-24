@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.127] - 2026-10-23
+- 🕒 **24:00 UTC Support**: Allows scheduling 24:00 midnight end times in Scheduler.
+- 🌐 **Game Time Clarity**: Added clear UTC reset guidance and local PDT previews.
+- ⚔️ **24-Hour Durations**: Correctly computes full-day events from 00:00 to 24:00 UTC.
+
 ## [3.3.126] - 2026-10-23
 - 🔥 **Hero Spotlight**: Current active events pop with glowing live hero banner.
 - ⏰ **Clean Separation**: Upcoming events and completed events separated into distinct sections.

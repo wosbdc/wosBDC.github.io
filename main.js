@@ -29269,12 +29269,27 @@ window.getUnifiedScheduleEvents = () => {
       const exactStart = new Date(Date.UTC(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate(), startT.h, startT.m, 0, 0));
 
       let durationMs = 3600000;
-      const nameLower = ev.eventName.toLowerCase();
-      if (nameLower.includes('bear trap') || nameLower.includes('🪤') || nameLower.includes('🐻')) durationMs = 30 * 60 * 1000;
-      else if (nameLower.includes('brothers in arms') || nameLower.includes('k. e.') || nameLower.includes('ke') || nameLower.includes('svs')) durationMs = 24 * 3600 * 1000;
-      else if (nameLower.includes('castle') || nameLower.includes('sunfire')) durationMs = 4 * 3600 * 1000;
-      else if (nameLower.includes('foundry') || nameLower.includes('canyon')) durationMs = 2 * 3600 * 1000;
-      else if (nameLower.includes('shield')) durationMs = 8 * 3600 * 1000;
+      if (ev.endUtcStr) {
+        const endT = window.parseScheduleEventTime(ev.endUtcStr, ev.endPdtVal);
+        if (endT) {
+          let diffH = endT.h - startT.h;
+          let diffM = endT.m - startT.m;
+          let calculatedMs = (diffH * 60 + diffM) * 60000;
+          if (calculatedMs <= 0) {
+            calculatedMs += 24 * 3600000;
+          }
+          if (calculatedMs > 0) {
+            durationMs = calculatedMs;
+          }
+        }
+      } else {
+        const nameLower = ev.eventName.toLowerCase();
+        if (nameLower.includes('bear trap') || nameLower.includes('🪤') || nameLower.includes('🐻')) durationMs = 30 * 60 * 1000;
+        else if (nameLower.includes('brothers in arms') || nameLower.includes('k. e.') || nameLower.includes('ke') || nameLower.includes('svs')) durationMs = 24 * 3600 * 1000;
+        else if (nameLower.includes('castle') || nameLower.includes('sunfire')) durationMs = 4 * 3600 * 1000;
+        else if (nameLower.includes('foundry') || nameLower.includes('canyon')) durationMs = 2 * 3600 * 1000;
+        else if (nameLower.includes('shield')) durationMs = 8 * 3600 * 1000;
+      }
 
       addEvent(ev.eventName, exactStart, new Date(exactStart.getTime() + durationMs), durationMs, `${String(startT.h).padStart(2,'0')}:${String(startT.m).padStart(2,'0')} UTC`, ev.pdtVal, ev.emoji, ev.dateStr);
     });
@@ -45726,6 +45741,9 @@ window.utcTimeToPdtStr = (utcHHmm) => {
   if (!m) return '';
   const utcH = parseInt(m[1], 10);
   const utcM = m[2];
+  if (utcH === 24 && utcM === '00') {
+    return '5:00 PM (end)';
+  }
   const pdtH24 = (utcH - 7 + 24) % 24;
   const ap = pdtH24 >= 12 ? 'PM' : 'AM';
   let h12 = pdtH24 % 12;
@@ -45738,7 +45756,7 @@ window.normalize24HrTimeStr = (rawVal, fallback = '00:00') => {
   const s = String(rawVal).trim();
   if (!s) return fallback;
 
-  // 1. Check 12-hour AM/PM if pasted or typed (e.g. "4:30 PM" -> "16:30")
+  // 1. Check 12-hour AM/PM if pasted or typed (e.g. "4:30 PM" -> "16:30", "12:00 AM" -> "00:00")
   const m12 = s.match(/^(\d{1,2})(?::(\d{1,2}))?(?::\d{1,2})?\s*(AM|PM)$/i);
   if (m12) {
     let h = parseInt(m12[1], 10);
@@ -45751,27 +45769,33 @@ window.normalize24HrTimeStr = (rawVal, fallback = '00:00') => {
     return `${String(h).padStart(2, '0')}:${String(clampedM).padStart(2, '0')}`;
   }
 
-  // 2. Standard 24-hour HH:MM or H:MM (e.g. "16:00", "0:00", "23:59")
+  // 2. Standard 24-hour HH:MM or H:MM (e.g. "16:00", "0:00", "23:59", "24:00")
   const m24 = s.match(/^(\d{1,2}):(\d{1,2})(?::\d{1,2})?(?:\s*UTC)?$/i);
   if (m24) {
-    const h = Math.max(0, Math.min(23, parseInt(m24[1], 10)));
+    const rawH = parseInt(m24[1], 10);
     const min = Math.max(0, Math.min(59, parseInt(m24[2], 10)));
+    if (rawH === 24 && min === 0) return '24:00';
+    const h = Math.max(0, Math.min(23, rawH));
     return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
   }
 
-  // 3. Compact 3 or 4 digit military/24h time (e.g. "1600" -> "16:00", "930" -> "09:30")
+  // 3. Compact 3 or 4 digit military/24h time (e.g. "1600" -> "16:00", "2400" -> "24:00", "930" -> "09:30")
   const mCompact = s.match(/^(\d{3,4})$/);
   if (mCompact) {
     const digits = mCompact[1].padStart(4, '0');
-    const h = Math.max(0, Math.min(23, parseInt(digits.slice(0, 2), 10)));
+    const rawH = parseInt(digits.slice(0, 2), 10);
     const min = Math.max(0, Math.min(59, parseInt(digits.slice(2, 4), 10)));
+    if (rawH === 24 && min === 0) return '24:00';
+    const h = Math.max(0, Math.min(23, rawH));
     return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
   }
 
-  // 4. Single or double digit hour (e.g. "16" -> "16:00", "0" -> "00:00")
+  // 4. Single or double digit hour (e.g. "16" -> "16:00", "24" -> "24:00", "0" -> "00:00")
   const mHourOnly = s.match(/^(\d{1,2})$/);
   if (mHourOnly) {
-    const h = Math.max(0, Math.min(23, parseInt(mHourOnly[1], 10)));
+    const rawH = parseInt(mHourOnly[1], 10);
+    if (rawH === 24) return '24:00';
+    const h = Math.max(0, Math.min(23, rawH));
     return `${String(h).padStart(2, '0')}:00`;
   }
 
@@ -45983,6 +46007,7 @@ window.openSch24HrTimePicker = (targetInputId) => {
   const inputEl = document.getElementById(targetInputId);
   if (!inputEl) return;
 
+  const isEndInput = String(targetInputId || '').toLowerCase().includes('end');
   let current24 = window.normalize24HrTimeStr(inputEl.value, '00:00');
   let [selH, selM] = current24.split(':').map(Number);
   if (isNaN(selH)) selH = 0;
@@ -46009,7 +46034,7 @@ window.openSch24HrTimePicker = (targetInputId) => {
 
   const applyTime = (hh, mm, closeAfter = false) => {
     selH = hh;
-    selM = mm;
+    selM = (selH === 24) ? 0 : mm;
     const formatted = `${String(selH).padStart(2, '0')}:${String(selM).padStart(2, '0')}`;
     inputEl.value = formatted;
     inputEl.dispatchEvent(new Event('input', { bubbles: true }));
@@ -46021,7 +46046,9 @@ window.openSch24HrTimePicker = (targetInputId) => {
     }
   };
 
-  const presets = ['00:00', '08:00', '09:30', '12:00', '14:00', '16:00', '16:30', '17:00', '19:00', '20:00', '23:59'];
+  const presets = isEndInput
+    ? ['00:00', '08:00', '09:30', '12:00', '14:00', '16:00', '16:30', '17:00', '19:00', '20:00', '23:59', '24:00']
+    : ['00:00', '08:00', '09:30', '12:00', '14:00', '16:00', '16:30', '17:00', '19:00', '20:00', '23:59'];
   const minutesList = [0, 15, 30, 45, 59];
 
   const renderTimePop = () => {
@@ -46035,6 +46062,15 @@ window.openSch24HrTimePicker = (targetInputId) => {
       hoursHtml += `
         <button type="button" class="sch-tp-hour-btn" data-hour="${h}" style="padding:5px 0; border-radius:6px; background:${isSel ? 'linear-gradient(135deg, #0ea5e9, #0284c7)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${isSel ? '#38bdf8' : 'rgba(255,255,255,0.08)'}; color:${isSel ? '#fff' : '#cbd5e1'}; font-weight:${isSel ? '900' : '600'}; font-size:11.5px; cursor:pointer; font-family:monospace;">
           ${hStr}
+        </button>
+      `;
+    }
+
+    if (isEndInput) {
+      const is24Sel = selH === 24;
+      hoursHtml += `
+        <button type="button" class="sch-tp-hour-btn" data-hour="24" style="grid-column: span 6; margin-top:2px; padding:5px 0; border-radius:6px; background:${is24Sel ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(16,185,129,0.12)'}; border:1px solid ${is24Sel ? '#34d399' : 'rgba(16,185,129,0.35)'}; color:${is24Sel ? '#fff' : '#34d399'}; font-weight:800; font-size:11.5px; cursor:pointer; font-family:monospace;" title="End of Day (24:00 UTC / Next Daily Reset)">
+          24:00 (End of Day / Next Daily Reset)
         </button>
       `;
     }
@@ -46070,7 +46106,7 @@ window.openSch24HrTimePicker = (targetInputId) => {
       <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px;">
         ${presetsHtml}
       </div>
-      <div style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Hour (00 – 23 UTC)</div>
+      <div style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Hour (${isEndInput ? '00 – 24 UTC' : '00 – 23 UTC'})</div>
       <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:4px; margin-bottom:8px;">
         ${hoursHtml}
       </div>
@@ -46767,7 +46803,7 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
                 </div>
               </div>
 
-              <!-- Start UTC (Col K) & End UTC (Col N) — True 24-Hour Format (00:00 - 23:59) -->
+              <!-- Start UTC (Col K) & End UTC (Col N) — True 24-Hour Format (00:00 - 24:00) -->
               <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(135px, 1fr)); gap:10px;">
                 <div>
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
@@ -46782,13 +46818,18 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
                 <div>
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                     <label style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">End UTC 24h (Col N)</label>
-                    <span id="schSearchEndUtcPdtBadge" style="font-size:10px; color:#38bdf8; font-weight:bold;">${escapeHTML(window.utcTimeToPdtStr(isAddRewardMode ? '00:00' : (selectedItem?.endUtc || '00:00')))} PDT</span>
+                    <span id="schSearchEndUtcPdtBadge" style="font-size:10px; color:#38bdf8; font-weight:bold;">${escapeHTML(window.utcTimeToPdtStr(isAddRewardMode ? '24:00' : (selectedItem?.endUtc || '00:00')))} PDT</span>
                   </div>
                   <div style="position:relative; display:flex; align-items:center;">
-                    <input type="text" id="schSearchEndUtc" inputmode="numeric" maxlength="8" value="${escapeHTML(window.normalize24HrTimeStr(isAddRewardMode ? '00:00' : (selectedItem?.endUtc || '00:00')))}" placeholder="00:00 - 23:59" onclick="window.openSch24HrTimePicker('schSearchEndUtc')" style="width:100%; padding:8px 52px 8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box; font-family:monospace;">
+                    <input type="text" id="schSearchEndUtc" inputmode="numeric" maxlength="8" value="${escapeHTML(window.normalize24HrTimeStr(isAddRewardMode ? '24:00' : (selectedItem?.endUtc || '00:00')))}" placeholder="00:00 - 24:00" onclick="window.openSch24HrTimePicker('schSearchEndUtc')" style="width:100%; padding:8px 52px 8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box; font-family:monospace;">
                     <button type="button" id="btnOpenEndUtc24h" onclick="window.openSch24HrTimePicker('schSearchEndUtc')" style="position:absolute; right:4px; background:rgba(14,165,233,0.16); border:1px solid rgba(14,165,233,0.35); color:#38bdf8; border-radius:4px; font-size:10px; font-weight:800; cursor:pointer; padding:3px 6px;" title="Open 24-Hour Time Picker">24h 🕒</button>
                   </div>
                 </div>
+              </div>
+
+              <!-- Time Helper Guidance -->
+              <div style="font-size:11px; color:#cbd5e1; background:rgba(14,165,233,0.1); border:1px solid rgba(14,165,233,0.3); border-radius:8px; padding:7px 10px; line-height:1.45;">
+                <strong style="color:#38bdf8;">🌐 UTC Game Time:</strong> Daily reset is <strong>00:00 UTC</strong> (5:00 PM PDT). For 24-hour events, set Start: <strong style="color:#34d399; font-family:monospace;">00:00</strong> and End: <strong style="color:#34d399; font-family:monospace;">24:00</strong>.
               </div>
 
               <!-- Save & Delete Controls -->

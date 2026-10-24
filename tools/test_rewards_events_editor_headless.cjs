@@ -99,8 +99,12 @@ function runStaticAndUnitVerification() {
   assert.strictEqual(sandbox.window.normalize24HrTimeStr('930'), '09:30');
   assert.strictEqual(sandbox.window.normalize24HrTimeStr('4:30 PM'), '16:30');
   assert.strictEqual(sandbox.window.normalize24HrTimeStr('2359'), '23:59');
+  assert.strictEqual(sandbox.window.normalize24HrTimeStr('24:00'), '24:00');
+  assert.strictEqual(sandbox.window.normalize24HrTimeStr('2400'), '24:00');
+  assert.strictEqual(sandbox.window.normalize24HrTimeStr('24'), '24:00');
   assert.strictEqual(sandbox.window.normalize24HrTimeStr('0'), '00:00');
-  console.log('  ✅ Timezone, 1899 ISO, and 24-hour UTC time normalizations verified (1600 -> 16:00 UTC -> 9:00 AM PDT)');
+  assert.strictEqual(sandbox.window.utcTimeToPdtStr('24:00'), '5:00 PM (end)');
+  console.log('  ✅ Timezone, 1899 ISO, and 24-hour UTC time normalizations verified (including 24:00 end-of-day rollover)');
 
   // Test parsing sample 'data' sheet rows
   const todayIso = sandbox.window.getLocalTodayIsoStr();
@@ -330,16 +334,18 @@ async function runHeadlessBrowserVerification() {
     assert.strictEqual(startUtc24Val, '16:30', '24-Hour Time Picker must set Start UTC to 16:30');
     assert.strictEqual(startUtcPdtText, '9:30 AM PDT', 'PDT preview badge must update to 9:30 AM PDT for 16:30 UTC');
 
-    // Verify direct 24-hour compact typing (e.g. "2145" -> "21:45") on End UTC
+    // Verify direct 24-hour compact typing (e.g. "2400" -> "24:00") on End UTC
     await page.evaluate(() => {
       const endUtc = document.getElementById('schSearchEndUtc');
-      endUtc.value = '2145';
+      endUtc.value = '2400';
       endUtc.dispatchEvent(new Event('input', { bubbles: true }));
       endUtc.dispatchEvent(new Event('blur', { bubbles: true }));
     });
     const endUtc24Val = await page.$eval('#schSearchEndUtc', el => el.value);
-    assert.strictEqual(endUtc24Val, '21:45', 'Direct 24-hour input "2145" must normalize to "21:45"');
-    console.log('  ✅ 24-Hour UTC Time Picker & 24h input normalization verified (16:30 & 21:45 UTC)!');
+    const endUtcPdtText = await page.$eval('#schSearchEndUtcPdtBadge', el => el.textContent.trim());
+    assert.strictEqual(endUtc24Val, '24:00', 'Direct 24-hour input "2400" must normalize to "24:00"');
+    assert(endUtcPdtText.includes('5:00 PM'), 'PDT preview badge for 24:00 UTC must display 5:00 PM');
+    console.log('  ✅ 24-Hour UTC Time Picker & 24:00 end-of-day normalization verified (16:30 & 24:00 UTC)!');
 
     await page.click('#schSetStartTodayBtn');
     await page.click('#schAdd2DaysBtn');
