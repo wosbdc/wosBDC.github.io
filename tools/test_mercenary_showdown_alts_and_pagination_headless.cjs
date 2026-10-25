@@ -71,6 +71,9 @@ function runStaticVerification() {
   assert(code.includes('mercPublicClearSearchBtn'), 'Must include mercPublicClearSearchBtn');
   assert(code.includes('mercModeBtnMains'), 'Must include mercModeBtnMains toggle button');
   assert(code.includes('mercModeBtnAll'), 'Must include mercModeBtnAll toggle button');
+  assert(code.includes('mercPaginationContainer'), 'Must include mercPaginationContainer in Mercenary Prestige DOM');
+  assert(code.includes('window.changeMercPage ='), 'Must define window.changeMercPage');
+  assert(code.includes('window.setMercPageSize ='), 'Must define window.setMercPageSize');
   assert(code.includes('window.currentAdminUserPopulationTab = \'mains\''), 'Admin Users must default to mains population tab');
   assert(code.includes('window.changeAdminUserPage ='), 'Must define window.changeAdminUserPage');
   assert(code.includes('window.setAdminUserPageSize ='), 'Must define window.setAdminUserPageSize');
@@ -235,7 +238,15 @@ async function runHeadlessBrowserTests() {
       return r && r.style.display !== 'none';
     });
     assert.strictEqual(allModeInactiveAltVisible, true, 'All Roster mode must reveal all registered alts');
-    console.log('  ✅ Mercenary Prestige Showdown alt exclusion & 1-tap clear button verified.');
+
+    // Test Mercenary Prestige Smartphone Pagination
+    const pagContainer = await page.$('#mercPaginationContainer');
+    assert(pagContainer, 'Mercenary pagination container must exist in DOM');
+    await page.setViewport({ width: 375, height: 667 });
+    await page.evaluate(() => { window._mercPageSize = 15; window.filterMercTable(false); });
+    const mercVisibleCount = await page.evaluate(() => Array.from(document.querySelectorAll('.merc-row')).filter(r => r.style.display !== 'none').length);
+    assert(mercVisibleCount <= 15, `Mercenary roster rows on mobile must be <= 15 (found ${mercVisibleCount})`);
+    console.log('  ✅ Mercenary Prestige Showdown alt exclusion, 1-tap clear button & smartphone pagination verified.');
 
     console.log('🧪 Test 2: Testing Admin Users Directory Smartphone Pagination & Mains Default...');
     const adminError = await page.evaluate(async () => {

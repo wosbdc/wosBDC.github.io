@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [3.3.137] - 2026-10-24
+- 📱 **Mercenary Pagination**: Added smartphone pagination to Mercenary Prestige Tracker.
+- 🚀 **CI Deployment Fix**: Resolved GitHub Actions headless test runner issue.
+- ⚔️ **Showdown Alignment**: Excluded secondary alts from required roster.
+- ⭐ **Mains Only Filter**: Added 1-tap switcher for mains versus active alts.
+- ✕ **Search Clear**: Added instant 1-tap clear button to player search.
+- 📱 **Admin Pagination**: Added smartphone pagination to eliminate long directory scrolling.
+
 ## [3.3.136] - 2026-10-24
 - ⚔️ **Showdown Alignment**: Excluded secondary alts from required roster.
 - ⭐ **Mains Only Filter**: Added 1-tap switcher for mains versus active alts.

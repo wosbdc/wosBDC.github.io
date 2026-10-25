@@ -39752,7 +39752,7 @@ const views = {
             <!-- Search & Filter Controls -->
             <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
               <div style="position:relative; flex:1; min-width:200px;">
-                <input type="text" id="mercSearchInput" placeholder="🔍 Filter player name..." style="width:100%; box-sizing:border-box; padding:10px 34px 10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px;" onkeyup="window.filterMercTable()" onkeydown="if(event.key==='Escape'){ window.clearMercSearch(); }">
+                <input type="text" id="mercSearchInput" placeholder="🔍 Filter player name..." style="width:100%; box-sizing:border-box; padding:10px 34px 10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px;" onkeyup="window.filterMercTable(true)" onkeydown="if(event.key==='Escape'){ window.clearMercSearch(); }">
                 <button id="mercClearSearchBtn" onclick="window.clearMercSearch()" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-weight:bold; font-size:16px; padding:4px 6px; line-height:1;" title="Clear search">✕</button>
               </div>
 
@@ -39839,6 +39839,9 @@ const views = {
               </table>
             </div>
 
+            <!-- Smart Pagination Controls -->
+            <div id="mercPaginationContainer"></div>
+
             ${window.renderMercenaryCaptainsSectionHtml(yesCount, bossProgressData)}
 
           </div>
@@ -39849,6 +39852,20 @@ const views = {
             window.scrollTo({ top: savedScrollY, behavior: 'instant' });
         }
         window.mercMissingNames = missingNames;
+
+        window._mercPage = 1;
+        window._mercPageSize = (typeof window !== 'undefined' && window.innerWidth <= 768) ? 15 : 25;
+
+        window.setMercPageSize = (size) => {
+            window._mercPageSize = (size === 'all') ? 'all' : parseInt(size, 10);
+            window._mercPage = 1;
+            window.filterMercTable(false);
+        };
+
+        window.changeMercPage = (delta) => {
+            window._mercPage = (window._mercPage || 1) + delta;
+            window.filterMercTable(false);
+        };
 
         window.setMercRosterMode = (mode) => {
             window.mercRosterMode = mode;
@@ -39867,7 +39884,7 @@ const views = {
                     btnMains.style.color = 'var(--text-muted)';
                 }
             }
-            window.filterMercTable();
+            window.filterMercTable(true);
             window.updateMercStatsUI();
         };
 
@@ -39875,7 +39892,7 @@ const views = {
             const inp = document.getElementById('mercSearchInput');
             if (inp) {
                 inp.value = '';
-                window.filterMercTable();
+                window.filterMercTable(true);
                 inp.focus();
             }
         };
@@ -39983,14 +40000,16 @@ const views = {
                     b.style.color = 'var(--text-main)';
                 }
             });
-            window.filterMercTable();
+            window.filterMercTable(true);
         };
 
-        window.filterMercTable = () => {
+        window.filterMercTable = (resetPage = false) => {
+            if (resetPage) window._mercPage = 1;
             const query = (document.getElementById('mercSearchInput')?.value || '').toLowerCase().trim();
             const filter = window.mercCurrentFilter || 'all';
             const rosterMode = window.mercRosterMode || 'mains';
 
+            const matchingRows = [];
             document.querySelectorAll('.merc-row').forEach(row => {
                 const name = row.getAttribute('data-name');
                 const gid = row.getAttribute('data-gid');
@@ -40014,12 +40033,68 @@ const views = {
                 }
 
                 if (matchesSearch && matchesFilter) {
+                    matchingRows.push(row);
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Smart Pagination Calculations
+            const totalMatching = matchingRows.length;
+            const isShowAll = window._mercPageSize === 'all';
+            const pageSize = isShowAll ? (totalMatching || 1) : (window._mercPageSize || 15);
+            const totalPages = Math.max(1, Math.ceil(totalMatching / pageSize));
+
+            if (window._mercPage > totalPages) window._mercPage = totalPages;
+            if (window._mercPage < 1) window._mercPage = 1;
+
+            const startIdx = isShowAll ? 0 : (window._mercPage - 1) * pageSize;
+            const endIdx = isShowAll ? totalMatching : Math.min(startIdx + pageSize, totalMatching);
+
+            matchingRows.forEach((row, idx) => {
+                if (idx >= startIdx && idx < endIdx) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';
                 }
             });
+
+            // Render pagination controls
+            const pagContainer = document.getElementById('mercPaginationContainer');
+            if (pagContainer) {
+                if (totalMatching === 0) {
+                    pagContainer.innerHTML = '';
+                } else {
+                    pagContainer.innerHTML = `
+                      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:12px 16px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; margin-top:10px;">
+                        <div style="font-size:13px; color:var(--text-muted); font-weight:600;">
+                          Showing <span style="color:var(--text-main); font-weight:bold;">${totalMatching === 0 ? 0 : startIdx + 1}</span>–<span style="color:var(--text-main); font-weight:bold;">${endIdx}</span> of <span style="color:var(--text-main); font-weight:bold;">${totalMatching}</span> members
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                          <button type="button" onclick="window.changeMercPage(-1)" ${window._mercPage <= 1 ? 'disabled' : ''} style="background:${window._mercPage <= 1 ? 'rgba(255,255,255,0.03)' : 'var(--bg-main)'}; color:${window._mercPage <= 1 ? 'var(--text-muted)' : 'var(--text-main)'}; border:1px solid var(--border); padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:${window._mercPage <= 1 ? 'not-allowed' : 'pointer'}; opacity:${window._mercPage <= 1 ? '0.4' : '1'}; transition:0.15s;">
+                            ◀ Prev
+                          </button>
+                          <span style="font-size:13px; font-weight:bold; color:var(--text-main); min-width:85px; text-align:center;">
+                            Page ${window._mercPage} of ${totalPages}
+                          </span>
+                          <button type="button" onclick="window.changeMercPage(1)" ${window._mercPage >= totalPages ? 'disabled' : ''} style="background:${window._mercPage >= totalPages ? 'rgba(255,255,255,0.03)' : 'var(--bg-main)'}; color:${window._mercPage >= totalPages ? 'var(--text-muted)' : 'var(--text-main)'}; border:1px solid var(--border); padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:${window._mercPage >= totalPages ? 'not-allowed' : 'pointer'}; opacity:${window._mercPage >= totalPages ? '0.4' : '1'}; transition:0.15s;">
+                            Next ▶
+                          </button>
+                          <select onchange="window.setMercPageSize(this.value)" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; margin-left:4px;">
+                            <option value="15" ${window._mercPageSize == 15 ? 'selected' : ''}>15 / page</option>
+                            <option value="25" ${window._mercPageSize == 25 ? 'selected' : ''}>25 / page</option>
+                            <option value="50" ${window._mercPageSize == 50 ? 'selected' : ''}>50 / page</option>
+                            <option value="all" ${window._mercPageSize === 'all' ? 'selected' : ''}>Show All</option>
+                          </select>
+                        </div>
+                      </div>
+                    `;
+                }
+            }
         };
+
+        // Initial pagination filter apply
+        window.filterMercTable(false);
 
         window.applyBatchMercenaryPhase = async () => {
             const sel = document.getElementById('mercBatchPhaseSelect');
