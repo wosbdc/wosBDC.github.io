@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.138] - 2026-10-24
+- 🎖️ **Boss Artwork**: Integrated official boss images into elevated Command Deck.
+- ⚡ **Single Source**: Consolidated Phaethon Boss deck to the top.
+- 📋 **Fast Copy**: Added 1-tap Copy Boss Status to header.
+- 📱 **Clean Layout**: Removed duplicate bottom captain section from views.
+
 ## [3.3.137] - 2026-10-24
 - 📱 **Mercenary Pagination**: Added smartphone pagination to Mercenary Prestige Tracker.
 - 🚀 **CI Deployment Fix**: Resolved GitHub Actions headless test runner issue.

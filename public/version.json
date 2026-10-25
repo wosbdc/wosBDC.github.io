@@ -1,18 +1,17 @@
 {
-  "version": "3.3.137",
+  "version": "3.3.138",
   "releaseDate": "2026-10-24",
-  "title": "What's New in v3.3.137",
+  "title": "What's New in v3.3.138",
   "notes": [
-    "📱 Mercenary Pagination: Added smartphone pagination to Mercenary Prestige Tracker.",
-    "🚀 CI Deployment Fix: Resolved GitHub Actions headless test runner issue.",
-    "⚔️ Showdown Alignment: Excluded secondary alts from required roster.",
-    "⭐ Mains Only: Added 1-tap switcher for mains and active alts.",
-    "✕ Search Clear: Added instant 1-tap clear button to search.",
-    "📱 Admin Pagination: Added smartphone pagination to eliminate long directory scrolling."
+    "🎖️ Boss Artwork: Integrated official boss images into elevated Command Deck.",
+    "⚡ Single Source: Consolidated Phaethon Boss deck to the top.",
+    "📋 Fast Copy: Added 1-tap Copy Boss Status to header.",
+    "📱 Clean Layout: Removed duplicate bottom captain section from views."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.137",
+    "version": "3.3.138",
     "latestChanges": [
+      "v3.3.138: Consolidated Phaethon Boss Command Deck with official character artwork and eliminated bottom redundancy",
       "v3.3.137: Added Mercenary Prestige smartphone pagination and fixed GitHub Actions CI runner",
       "v3.3.136: Added Mercenary search clear, Showdown alt exclusion, and Admin Users smartphone pagination",
       "v3.3.135: Resolved chief names in Admin Users directory and unclaimed roster to prevent numeric IDs",

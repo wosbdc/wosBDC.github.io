@@ -71,6 +71,8 @@ function runStaticVerification() {
   assert(code.includes('mercBossCommandDeck'), 'Must include mercBossCommandDeck DOM container');
   assert(code.includes('merc-milestone-pill'), 'Must include 1-tap milestone pills');
   assert(code.includes('mercRallyReportBtn'), 'Must include mercRallyReportBtn in Command Deck');
+  assert(code.includes('copyMercBossStatusBtn'), 'Must include copyMercBossStatusBtn in Command Deck toolbar');
+  assert(code.includes('merc_boss_lv1.png'), 'Must include official boss character images in Command Deck');
   assert(code.includes('mercFilterBtnPush'), 'Must include mercFilterBtnPush quick filter');
   assert(code.includes('scoutLevel: lvl'), 'Must save scoutLevel in Firebase nodes');
   assert(code.includes('mercenaryScoutLevel: 0'), 'Stage 4 must reset mercenaryScoutLevel back to 0');

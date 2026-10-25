@@ -20090,158 +20090,74 @@ window.copyMercenaryBossUnlockStatus = async () => {
   return textToCopy;
 };
 
-window.renderMercenaryCaptainsSectionHtml = (clearedCount = null, bossProgress = null) => {
-  let doneCount = clearedCount;
-  if (doneCount === null) {
-    doneCount = 0;
-    if (window.mercenaryCache) {
-      Object.values(window.mercenaryCache).forEach(rec => {
-        if (rec && rec.signedUp) doneCount++;
-      });
-    }
-  }
-
-  const pData = bossProgress || window.mercenaryBossProgressCache || {};
-
-  const captains = [
-    {
-      level: "Lv. 1",
-      key: "lv1",
-      name: "Dr. Toxin Theodore",
-      image: "./images/merc_boss_lv1.png",
-      color: "#22c55e",
-      bgGradient: "linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(34,197,94,0.02) 100%)",
-      borderColor: "rgba(34,197,94,0.35)",
-      badgeBg: "rgba(34,197,94,0.2)",
-      badgeColor: "#4ade80",
-      reqMembers: 10,
-      reqText: "👥 <b>10 Members</b> — Reach Level 5 Scout (Easy+)"
-    },
-    {
-      level: "Lv. 2",
-      key: "lv2",
-      name: "Zenobia Queen of Violence",
-      image: "./images/merc_boss_lv2.png",
-      color: "#eab308",
-      bgGradient: "linear-gradient(135deg, rgba(234,179,8,0.15) 0%, rgba(234,179,8,0.02) 100%)",
-      borderColor: "rgba(234,179,8,0.35)",
-      badgeBg: "rgba(234,179,8,0.2)",
-      badgeColor: "#facc15",
-      reqMembers: 10,
-      reqText: "👥 <b>10 Members</b> — Reach Level 5 Scout (Normal+)"
-    },
-    {
-      level: "Lv. 3",
-      key: "lv3",
-      name: "Helios Cannon",
-      image: "./images/merc_boss_lv3.png",
-      color: "#f97316",
-      bgGradient: "linear-gradient(135deg, rgba(249,115,22,0.15) 0%, rgba(249,115,22,0.02) 100%)",
-      borderColor: "rgba(249,115,22,0.35)",
-      badgeBg: "rgba(249,115,22,0.2)",
-      badgeColor: "#fb923c",
-      reqMembers: 15,
-      reqText: "👥 <b>15 Members</b> — Reach Level 10 Scout (Normal+)"
-    },
-    {
-      level: "Lv. 4",
-      key: "lv4",
-      name: "Callisto Mark II",
-      image: "./images/merc_boss_lv4.png",
-      color: "#ef4444",
-      bgGradient: "linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.02) 100%)",
-      borderColor: "rgba(239,68,68,0.35)",
-      badgeBg: "rgba(239,68,68,0.2)",
-      badgeColor: "#f87171",
-      reqMembers: 15,
-      reqText: "👥 <b>15 Members</b> — Reach Level 15 Scout (Hard+)"
-    },
-    {
-      level: "Lv. 5",
-      key: "lv5",
-      name: "Behemoth",
-      image: "./images/merc_boss_lv5.png",
-      color: "#a855f7",
-      bgGradient: "linear-gradient(135deg, rgba(168,85,247,0.15) 0%, rgba(168,85,247,0.02) 100%)",
-      borderColor: "rgba(168,85,247,0.35)",
-      badgeBg: "rgba(168,85,247,0.2)",
-      badgeColor: "#c084fc",
-      reqMembers: 20,
-      reqText: "👥 <b>20 Members</b> — Reach Level 20 Scout (Nightmare+)"
-    }
-  ];
-
-  return `
-    <div class="card" style="margin-top:10px;">
-      <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-        <span style="display:flex; align-items:center; gap:8px;">
-          🎖️ Phaethon Mercenary Captain Boss Unlocks
-        </span>
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <button id="copyMercBossStatusBtn" onclick="window.copyMercenaryBossUnlockStatus()" style="background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.4); color:#eab308; padding:5px 12px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(234,179,8,0.28)'" onmouseout="this.style.background='rgba(234,179,8,0.15)'" title="Copy compact boss unlock requirements and needed counts for alliance chat">
-            📋 Copy Boss Status
-          </button>
-          <span style="font-size:12px; background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.4); color:#eab308; padding:4px 10px; border-radius:12px; font-weight:bold;">
-            🔥 ${doneCount} Roster Masters Cleared
-          </span>
-        </div>
-      </div>
-
-      <p style="color:var(--text-muted); font-size:13px; margin:0 0 16px 0; line-height:1.5;">
-        Official unlock requirements and live rally availability for all 5 Phaethon Mercenary Captain bosses.
-      </p>
-
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px;">
-        ${captains.map(c => {
-          const currentCount = (pData && pData[c.key] !== undefined && pData[c.key] !== null) ? parseInt(pData[c.key]) : doneCount;
-          const isUnlocked = currentCount >= c.reqMembers;
-          const pct = Math.min(100, Math.round((currentCount / c.reqMembers) * 100));
-          return `
-            <div style="background:${c.bgGradient}; border:1px solid ${isUnlocked ? c.borderColor : 'var(--border)'}; border-radius:14px; padding:16px; display:flex; flex-direction:column; justify-content:space-between; gap:12px; box-shadow:0 4px 15px rgba(0,0,0,0.2); transition:transform 0.2s ease; position:relative; overflow:hidden;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
-              ${isUnlocked ? `<div style="position:absolute; top:0; left:0; width:100%; height:4px; background:linear-gradient(90deg, #10b981, #22c55e);"></div>` : ''}
-              <div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                  <span style="background:${c.badgeBg}; color:${c.badgeColor}; border:1px solid ${c.borderColor}; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:bold;">${c.level}</span>
-                  ${isUnlocked ? 
-                    `<span style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#10b981; font-weight:bold; font-size:11px; padding:3px 8px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">🔓 UNLOCKED</span>` :
-                    `<span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; font-weight:bold; font-size:11px; padding:3px 8px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">🔒 LOCKED (${currentCount}/${c.reqMembers})</span>`
-                  }
-                </div>
-                <div style="text-align:center; margin:6px 0 10px 0;">
-                  <img src="${c.image}" style="max-height:110px; max-width:100%; border-radius:8px; border:1px solid ${c.borderColor}; box-shadow:0 4px 14px rgba(0,0,0,0.35); object-fit:contain; filter:${isUnlocked ? 'none' : 'grayscale(40%)'};" alt="${c.name}">
-                </div>
-                <h4 style="margin:0; font-size:15px; color:var(--text-main); font-weight:bold; text-align:center;">${c.name}</h4>
-              </div>
-
-              <!-- Requirement Info & Progress -->
-              <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:6px;">
-                <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:bold; display:flex; justify-content:space-between; align-items:center;">
-                  <span>📋 Progress (${currentCount}/${c.reqMembers})</span>
-                  <span style="color:${isUnlocked ? '#10b981' : '#eab308'};">${pct}%</span>
-                </div>
-                <div style="font-size:12px; color:var(--text-main); font-weight:500; line-height:1.4;">
-                  ${c.reqText}
-                </div>
-                <div style="width:100%; height:6px; background:var(--bg-main); border-radius:3px; overflow:hidden; border:1px solid var(--border); margin-top:2px;">
-                  <div style="width:${pct}%; height:100%; background:${isUnlocked ? 'linear-gradient(90deg, #10b981, #22c55e)' : 'linear-gradient(90deg, #eab308, #ef4444)'}; border-radius:3px; transition:width 0.5s ease;"></div>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    </div>
-  `;
-};
-
 window.renderMercenaryBossCommandDeckHtml = (bossProgress, isManager = true) => {
-    const bp = bossProgress || { lv1: 0, lv2: 0, lv3: 0, lv4: 0, lv5: 0 };
+    const bp = bossProgress || window.mercenaryBossProgressCache || { lv1: 0, lv2: 0, lv3: 0, lv4: 0, lv5: 0 };
     const bossDefs = [
-        { key: 'lv1', name: 'Dr. Toxin Theodore', levelLabel: 'Lv. 1', target: 10, reqDesc: '10 @ Lv 5+ (Easy+)' },
-        { key: 'lv2', name: 'Zenobia', levelLabel: 'Lv. 2', target: 10, reqDesc: '10 @ Lv 5+ (Normal+)' },
-        { key: 'lv3', name: 'Helios Cannon', levelLabel: 'Lv. 3', target: 15, reqDesc: '15 @ Lv 10+ (Normal+)' },
-        { key: 'lv4', name: 'Callisto Mark II', levelLabel: 'Lv. 4', target: 15, reqDesc: '15 @ Lv 15+ (Hard+)' },
-        { key: 'lv5', name: 'Behemoth', levelLabel: 'Lv. 5', target: 20, reqDesc: '20 @ Lv 20+ (Nightmare+)' }
+        {
+          key: 'lv1',
+          level: 'Lv. 1',
+          name: 'Dr. Toxin Theodore',
+          image: './images/merc_boss_lv1.png',
+          target: 10,
+          color: '#22c55e',
+          bgGradient: 'linear-gradient(135deg, rgba(34,197,94,0.14) 0%, rgba(34,197,94,0.02) 100%)',
+          borderColor: 'rgba(34,197,94,0.35)',
+          badgeBg: 'rgba(34,197,94,0.2)',
+          badgeColor: '#4ade80',
+          reqDesc: '👥 10 Members — Reach Lv 5 Scout (Easy+)'
+        },
+        {
+          key: 'lv2',
+          level: 'Lv. 2',
+          name: 'Zenobia Queen of Violence',
+          image: './images/merc_boss_lv2.png',
+          target: 10,
+          color: '#eab308',
+          bgGradient: 'linear-gradient(135deg, rgba(234,179,8,0.14) 0%, rgba(234,179,8,0.02) 100%)',
+          borderColor: 'rgba(234,179,8,0.35)',
+          badgeBg: 'rgba(234,179,8,0.2)',
+          badgeColor: '#facc15',
+          reqDesc: '👥 10 Members — Reach Lv 5 Scout (Normal+)'
+        },
+        {
+          key: 'lv3',
+          level: 'Lv. 3',
+          name: 'Helios Cannon',
+          image: './images/merc_boss_lv3.png',
+          target: 15,
+          color: '#f97316',
+          bgGradient: 'linear-gradient(135deg, rgba(249,115,22,0.14) 0%, rgba(249,115,22,0.02) 100%)',
+          borderColor: 'rgba(249,115,22,0.35)',
+          badgeBg: 'rgba(249,115,22,0.2)',
+          badgeColor: '#fb923c',
+          reqDesc: '👥 15 Members — Reach Lv 10 Scout (Normal+)'
+        },
+        {
+          key: 'lv4',
+          level: 'Lv. 4',
+          name: 'Callisto Mark II',
+          image: './images/merc_boss_lv4.png',
+          target: 15,
+          color: '#ef4444',
+          bgGradient: 'linear-gradient(135deg, rgba(239,68,68,0.14) 0%, rgba(239,68,68,0.02) 100%)',
+          borderColor: 'rgba(239,68,68,0.35)',
+          badgeBg: 'rgba(239,68,68,0.2)',
+          badgeColor: '#f87171',
+          reqDesc: '👥 15 Members — Reach Lv 15 Scout (Hard+)'
+        },
+        {
+          key: 'lv5',
+          level: 'Lv. 5',
+          name: 'Behemoth',
+          image: './images/merc_boss_lv5.png',
+          target: 20,
+          color: '#a855f7',
+          bgGradient: 'linear-gradient(135deg, rgba(168,85,247,0.14) 0%, rgba(168,85,247,0.02) 100%)',
+          borderColor: 'rgba(168,85,247,0.35)',
+          badgeBg: 'rgba(168,85,247,0.2)',
+          badgeColor: '#c084fc',
+          reqDesc: '👥 20 Members — Reach Lv 20 Scout (Nightmare+)'
+        }
     ];
 
     let unlockedCount = 0;
@@ -20250,19 +20166,22 @@ window.renderMercenaryBossCommandDeckHtml = (bossProgress, isManager = true) => 
     });
 
     return `
-      <div id="mercBossCommandDeck" class="card" style="background:linear-gradient(135deg, rgba(234,179,8,0.1), rgba(59,130,246,0.06)); border:1px solid rgba(234,179,8,0.35); border-radius:14px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.25);">
+      <div id="mercBossCommandDeck" class="card" style="background:linear-gradient(135deg, rgba(234,179,8,0.08) 0%, rgba(59,130,246,0.05) 100%); border:1px solid rgba(234,179,8,0.35); border-radius:16px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.25);">
         
         <!-- Command Deck Header -->
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
           <div>
-            <h3 style="margin:0; font-size:18px; color:#facc15; display:flex; align-items:center; gap:8px;">
-              ⚙️ Phaethon Boss Command Deck
-              <span style="font-size:12px; background:rgba(234,179,8,0.2); color:#facc15; padding:2px 8px; border-radius:10px; font-weight:bold; border:1px solid rgba(234,179,8,0.4);">${unlockedCount}/5 Unlocked</span>
+            <h3 style="margin:0; font-size:19px; color:#facc15; display:flex; align-items:center; gap:8px;">
+              🎖️ Phaethon Boss Command Deck
+              <span style="font-size:12px; background:rgba(234,179,8,0.2); color:#facc15; padding:3px 10px; border-radius:12px; font-weight:bold; border:1px solid rgba(234,179,8,0.4); box-shadow:0 0 10px rgba(234,179,8,0.2);">${unlockedCount}/5 Unlocked</span>
             </h3>
-            <p style="margin:3px 0 0 0; color:var(--text-muted); font-size:12px;">Live alliance unlock meters — automatically synced from member scout milestones.</p>
+            <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:13px;">Official unlock requirements & live rally status — automatically synced from member scout milestones.</p>
           </div>
           
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <button id="copyMercBossStatusBtn" onclick="window.copyMercenaryBossUnlockStatus()" style="background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.4); color:#eab308; padding:8px 14px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(234,179,8,0.28)'" onmouseout="this.style.background='rgba(234,179,8,0.15)'" title="Copy compact boss unlock requirements and needed counts for alliance chat">
+              📋 Copy Boss Status
+            </button>
             <button id="mercRallyReportBtn" onclick="window.openMercenaryRallyReportModal()" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(217,119,6,0.35); transition:0.2s;">
               📢 Live Rally Report
             </button>
@@ -20274,35 +20193,45 @@ window.renderMercenaryBossCommandDeckHtml = (bossProgress, isManager = true) => 
           </div>
         </div>
 
-        <!-- 5 Boss Cards Grid -->
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:12px;">
+        <!-- 5 Boss Cards Grid with Official Character Artwork -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:14px;">
           ${bossDefs.map(b => {
               const currentVal = (bp[b.key] !== undefined && bp[b.key] !== null) ? parseInt(bp[b.key]) : 0;
               const isUnlocked = currentVal >= b.target;
               const pct = Math.min(100, Math.round((currentVal / b.target) * 100));
               const needed = Math.max(0, b.target - currentVal);
               return `
-                <div style="background:var(--bg-main); border:1px solid ${isUnlocked ? 'rgba(16,185,129,0.45)' : 'var(--border)'}; border-radius:10px; padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:10px; position:relative; overflow:hidden;">
+                <div style="background:${b.bgGradient}; border:1px solid ${isUnlocked ? b.borderColor : 'var(--border)'}; border-radius:14px; padding:14px; display:flex; flex-direction:column; justify-content:space-between; gap:10px; position:relative; overflow:hidden; box-shadow:0 4px 14px rgba(0,0,0,0.2); transition:transform 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+                  ${isUnlocked ? `<div style="position:absolute; top:0; left:0; width:100%; height:4px; background:linear-gradient(90deg, #10b981, #22c55e);"></div>` : ''}
                   <div>
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                      <span style="font-size:11px; font-weight:bold; color:#facc15; text-transform:uppercase;">${b.levelLabel}</span>
-                      <span id="boss_badge_${b.key}" style="font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; border:1px solid ${isUnlocked ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.3)'}; background:${isUnlocked ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.12)'}; color:${isUnlocked ? '#10b981' : '#ef4444'};">
-                        ${isUnlocked ? 'UNLOCKED ✅' : `LOCKED 🔒 (${needed} needed)`}
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                      <span style="background:${b.badgeBg}; color:${b.badgeColor}; border:1px solid ${b.borderColor}; padding:3px 9px; border-radius:12px; font-size:11px; font-weight:bold;">${b.level}</span>
+                      <span id="boss_badge_${b.key}" style="font-size:11px; font-weight:bold; padding:3px 8px; border-radius:10px; border:1px solid ${isUnlocked ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.3)'}; background:${isUnlocked ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.12)'}; color:${isUnlocked ? '#10b981' : '#ef4444'}; display:inline-flex; align-items:center; gap:4px;">
+                        ${isUnlocked ? '🔓 UNLOCKED' : `🔒 LOCKED (${needed} needed)`}
                       </span>
                     </div>
-                    <div style="font-size:13px; font-weight:bold; color:var(--text-main); margin-top:4px; line-height:1.2;">${b.name}</div>
-                    <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">${b.reqDesc}</div>
+
+                    <!-- Official Boss Image -->
+                    <div style="text-align:center; margin:4px 0 8px 0;">
+                      <img src="${b.image}" style="max-height:95px; max-width:100%; border-radius:8px; border:1px solid ${b.borderColor}; box-shadow:0 4px 12px rgba(0,0,0,0.35); object-fit:contain; filter:${isUnlocked ? 'none' : 'grayscale(35%)'};" alt="${b.name}">
+                    </div>
+
+                    <h4 style="margin:0; font-size:14px; color:var(--text-main); font-weight:bold; text-align:center; line-height:1.2;">${b.name}</h4>
                   </div>
 
-                  <div>
-                    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
-                      <span style="font-size:11px; color:var(--text-muted);">Progress</span>
-                      <span style="font-size:13px; font-weight:bold; color:${isUnlocked ? '#10b981' : 'var(--text-main)'};">
-                        <span id="boss_val_${b.key}">${currentVal}</span> / ${b.target}
+                  <!-- Requirement & Progress Bar -->
+                  <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:10px; padding:8px 10px; display:flex; flex-direction:column; gap:5px;">
+                    <div style="font-size:11px; color:var(--text-muted); font-weight:500; line-height:1.3;">
+                      ${b.reqDesc}
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-top:2px;">
+                      <span style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:bold;">Progress</span>
+                      <span style="font-size:12px; font-weight:bold; color:${isUnlocked ? '#10b981' : '#facc15'};">
+                        <span id="boss_val_${b.key}">${currentVal}</span> / ${b.target} (${pct}%)
                       </span>
                     </div>
-                    <div style="width:100%; height:7px; background:rgba(0,0,0,0.3); border-radius:4px; overflow:hidden; border:1px solid var(--border);">
-                      <div id="boss_bar_${b.key}" style="width:${pct}%; height:100%; background:${isUnlocked ? '#10b981' : 'linear-gradient(90deg, #3b82f6, #6366f1)'}; border-radius:4px; transition:width 0.3s ease;"></div>
+                    <div style="width:100%; height:6px; background:rgba(0,0,0,0.3); border-radius:3px; overflow:hidden; border:1px solid var(--border);">
+                      <div id="boss_bar_${b.key}" style="width:${pct}%; height:100%; background:${isUnlocked ? 'linear-gradient(90deg, #10b981, #22c55e)' : 'linear-gradient(90deg, #3b82f6, #6366f1)'}; border-radius:3px; transition:width 0.3s ease;"></div>
                     </div>
                   </div>
                 </div>
@@ -20314,14 +20243,14 @@ window.renderMercenaryBossCommandDeckHtml = (bossProgress, isManager = true) => 
         ${isManager ? `
           <details style="margin-top:14px; background:rgba(0,0,0,0.18); border-radius:8px; border:1px solid var(--border); padding:10px 14px;">
             <summary style="cursor:pointer; font-size:12px; font-weight:bold; color:var(--text-muted); display:flex; align-items:center; gap:6px; user-select:none;">
-              ⚙️ Manual Boss Count Override (+ / -) <span style="font-size:10px; opacity:0.7;">(Auto-derives by default)</span>
+              ⚙️ Manual Boss Count Override (+ / -) <span style="font-size:10px; opacity:0.7;">(Auto-derives from member milestones by default)</span>
             </summary>
             <div style="margin-top:12px; display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
               ${bossDefs.map(b => {
                   const currentVal = (bp[b.key] !== undefined && bp[b.key] !== null) ? parseInt(bp[b.key]) : 0;
                   return `
                     <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
-                      <span style="font-size:12px; font-weight:bold; color:var(--text-main);">${b.levelLabel}: ${b.name}</span>
+                      <span style="font-size:12px; font-weight:bold; color:var(--text-main);">${b.level}: ${b.name}</span>
                       <div style="display:flex; align-items:center; gap:4px;">
                         <button onclick="window.adjustBossProgressCount('${b.key}', -1)" style="width:26px; height:26px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; cursor:pointer;">-</button>
                         <input type="number" id="boss_input_${b.key}" value="${currentVal}" min="0" max="100" style="width:42px; text-align:center; padding:4px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px;">
@@ -20346,6 +20275,7 @@ window.renderMercenaryBossCommandDeckHtml = (bossProgress, isManager = true) => 
     `;
 };
 
+window.renderMercenaryCaptainsSectionHtml = () => '';
 window.renderMercenaryBossAdminCardHtml = window.renderMercenaryBossCommandDeckHtml;
 
 // Showdown Missed Days Report Modal
@@ -39842,8 +39772,6 @@ const views = {
             <!-- Smart Pagination Controls -->
             <div id="mercPaginationContainer"></div>
 
-            ${window.renderMercenaryCaptainsSectionHtml(yesCount, bossProgressData)}
-
           </div>
         `;
 
@@ -45506,7 +45434,6 @@ window.resetBearTrapEvent = async () => {
               </div>
             </div>
 
-            ${window.renderMercenaryCaptainsSectionHtml(yesCount, bossProgressData)}
           </div>
         `;
         app.innerHTML = html;
