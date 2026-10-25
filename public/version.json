@@ -1,16 +1,18 @@
 {
-  "version": "3.3.138",
+  "version": "3.3.139",
   "releaseDate": "2026-10-24",
-  "title": "What's New in v3.3.138",
+  "title": "What's New in v3.3.139",
   "notes": [
-    "🎖️ Boss Artwork: Integrated official boss images into elevated Command Deck.",
-    "⚡ Single Source: Consolidated Phaethon Boss deck to the top.",
-    "📋 Fast Copy: Added 1-tap Copy Boss Status to header.",
-    "📱 Clean Layout: Removed duplicate bottom captain section from views."
+    "😴 Sleeping Status: Added hiatus status for temporarily inactive players.",
+    "📊 Event Reports: Sleeping members excluded from active event rosters.",
+    "🛡️ Status Modal: Choose Sleeping / On Break with custom reasons.",
+    "⏰ Quick Wake Up: 1-tap button to instantly reactivate returning players.",
+    "👥 Member Directory: Added Sleeping tab filter and lavender badges."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.138",
+    "version": "3.3.139",
     "latestChanges": [
+      "v3.3.139: Added Sleeping membership status to exclude inactive members from event reports",
       "v3.3.138: Consolidated Phaethon Boss Command Deck with official character artwork and eliminated bottom redundancy",
       "v3.3.137: Added Mercenary Prestige smartphone pagination and fixed GitHub Actions CI runner",
       "v3.3.136: Added Mercenary search clear, Showdown alt exclusion, and Admin Users smartphone pagination",

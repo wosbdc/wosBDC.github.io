@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.139] - 2026-10-24
+- 😴 **Sleeping Status**: Added hiatus status for temporarily inactive players.
+- 📊 **Event Exclusion**: Sleeping members excluded from active event rosters.
+- 🛡️ **Status Modal**: Choose Sleeping / On Break with custom reasons.
+- ⏰ **Quick Wake Up**: 1-tap button to instantly reactivate returning players.
+- 👥 **Member Directory**: Added Sleeping tab filter and lavender badges.
+
 ## [3.3.138] - 2026-10-24
 - 🎖️ **Boss Artwork**: Integrated official boss images into elevated Command Deck.
 - ⚡ **Single Source**: Consolidated Phaethon Boss deck to the top.

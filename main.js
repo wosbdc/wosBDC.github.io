@@ -637,6 +637,7 @@ window.normalizeMembershipStatus = (status) => {
     if (!status) return 'active';
     const s = String(status).toLowerCase().trim();
     if (s === 'banned' || s === 'ban') return 'banned';
+    if (s === 'sleeping' || s === 'sleep' || s === 'afk' || s === 'inactive_break' || s === 'hiatus' || s === 'on_break' || s === 'break') return 'sleeping';
     if (s === 'left' || s === 'former' || s === 'inactive' || s === 'left_alliance' || s === 'left alliance' || s === 'departed' || s === 'depart' || s === 'deleted' || s === 'delete' || s === 'archived') return 'left';
     return 'active';
 };
@@ -1282,7 +1283,7 @@ window.updateMemberStatus = async (name, gid, uid, newStatus, reason = '', isAlt
             }
         });
 
-        const label = normStatus === 'active' ? '🟢 Active Member' : (normStatus === 'left' ? '🚪 Left Alliance' : '🚫 Banned');
+        const label = normStatus === 'active' ? '🟢 Active Member' : (normStatus === 'sleeping' ? '😴 Sleeping / Hiatus' : (normStatus === 'left' ? '🚪 Left Alliance' : '🚫 Banned'));
         if (window.showToast) window.showToast(`Updated ${targetName || 'Player'} status to ${label}! 🎉`, "success");
         return true;
     } catch(err) {
@@ -1401,6 +1402,18 @@ window.openChangeMembershipStatusModal = (name, gid, uid = null, currentStatus =
                             </div>
                             <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
                                 Included in all active event tables, signups, Bear Trap donations, Showdown, and leaderboards.
+                            </div>
+                        </div>
+                    </label>
+
+                    <label style="display:flex; align-items:flex-start; gap:12px; cursor:pointer; padding:8px; border-radius:8px; transition:0.2s; ${normCurStatus === 'sleeping' ? 'background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.4);' : ''}">
+                        <input type="radio" name="membershipStatusChoice" value="sleeping" ${normCurStatus === 'sleeping' ? 'checked' : ''} style="margin-top:3px;">
+                        <div>
+                            <div style="font-weight:bold; color:#a5b4fc; font-size:13.5px; display:flex; align-items:center; gap:6px;">
+                                😴 Sleeping / On Break (Hiatus)
+                            </div>
+                            <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                                Temporarily inactive or on hiatus. Excluded from active event rosters, signups, and missing callouts. Remains an alliance member with full profile and linked alts preserved.
                             </div>
                         </div>
                     </label>
@@ -31997,6 +32010,9 @@ const views = {
             if (tabName === 'active') {
                 btnEl.style.background = '#10b981';
                 btnEl.style.color = '#fff';
+            } else if (tabName === 'sleeping') {
+                btnEl.style.background = '#6366f1';
+                btnEl.style.color = '#fff';
             } else if (tabName === 'left') {
                 btnEl.style.background = '#f59e0b';
                 btnEl.style.color = '#fff';
@@ -32070,6 +32086,7 @@ const views = {
 
         let countAll = 0;
         let countActive = 0;
+        let countSleeping = 0;
         let countLeft = 0;
         let countBanned = 0;
         let countMains = 0;
@@ -32110,6 +32127,7 @@ const views = {
 
             let matchesTab = true;
             if (activeTab === 'active') matchesTab = (memStatus === 'active');
+            else if (activeTab === 'sleeping') matchesTab = (memStatus === 'sleeping');
             else if (activeTab === 'left') matchesTab = (memStatus === 'left');
             else if (activeTab === 'banned') matchesTab = (memStatus === 'banned');
             else if (activeTab === 'mains') matchesTab = !isAlt;
@@ -32136,6 +32154,7 @@ const views = {
 
             let matchesAttr = true;
             if (attrFilter === 'active_members') matchesAttr = (memStatus === 'active');
+            else if (attrFilter === 'sleeping_members') matchesAttr = (memStatus === 'sleeping');
             else if (attrFilter === 'left_members') matchesAttr = (memStatus === 'left');
             else if (attrFilter === 'banned_members') matchesAttr = (memStatus === 'banned');
             else if (attrFilter === 'new') matchesAttr = isNew && !isAlt;
@@ -32150,6 +32169,7 @@ const views = {
             if (matchesSearch) {
                 countAll++;
                 if (memStatus === 'active') countActive++;
+                else if (memStatus === 'sleeping') countSleeping++;
                 else if (memStatus === 'left') countLeft++;
                 else if (memStatus === 'banned') countBanned++;
 
@@ -32178,8 +32198,8 @@ const views = {
             const ownerUid = row.getAttribute('data-owner-uid');
             const isAltCollapsed = isAltRow && ownerUid && window._collapsedAltOwnerUids && window._collapsedAltOwnerUids.has(ownerUid);
             const isExplicitAltTab = (activeTab === 'alts');
-            const isStatusTab = (activeTab === 'banned' || activeTab === 'left');
-            const isStatusAttr = (attrFilter === 'banned_members' || attrFilter === 'left_members');
+            const isStatusTab = (activeTab === 'banned' || activeTab === 'left') || (activeTab === 'sleeping');
+            const isStatusAttr = (attrFilter === 'banned_members' || attrFilter === 'left_members') || (attrFilter === 'sleeping_members');
             const isSpecificSearchMatch = Boolean(searchVal && (row.getAttribute('data-name')?.includes(searchVal) || row.getAttribute('data-gid')?.includes(searchVal)));
 
             if (matchesSearch && matchesTab && matchesToken && matchesAttr) {
@@ -32265,6 +32285,9 @@ const views = {
         const btnActive = document.querySelector('.admin-user-filter-tab[data-tab="active"]');
         if (btnActive) btnActive.textContent = `🟢 Active (${countActive})`;
 
+        const btnSleeping = document.querySelector('.admin-user-filter-tab[data-tab="sleeping"]');
+        if (btnSleeping) btnSleeping.textContent = `😴 Sleeping (${countSleeping})`;
+
         const btnLeft = document.querySelector('.admin-user-filter-tab[data-tab="left"]');
         if (btnLeft) btnLeft.textContent = `🚪 Left (${countLeft})`;
 
@@ -32286,6 +32309,7 @@ const views = {
         // Dynamically update Attributes Dropdown Options
         updateSelectOptionText('adminUserAttrFilter', 'all', `🏷️ Attributes: All (${countAll})`);
         updateSelectOptionText('adminUserAttrFilter', 'active_members', `🟢 Active Members (${countActive})`);
+        updateSelectOptionText('adminUserAttrFilter', 'sleeping_members', `😴 Sleeping / Hiatus (${countSleeping})`);
         updateSelectOptionText('adminUserAttrFilter', 'left_members', `🚪 Left Alliance (${countLeft})`);
         updateSelectOptionText('adminUserAttrFilter', 'banned_members', `🚫 Banned (${countBanned})`);
         updateSelectOptionText('adminUserAttrFilter', 'push_on', `🔔 Push: Enabled (${countPushOn})`);
@@ -35281,6 +35305,7 @@ const views = {
 
               let hasAltsCount = 0;
               let activeMembersCount = 0;
+              let sleepingMembersCount = 0;
               let leftMembersCount = 0;
               let bannedMembersCount = 0;
               let tokenActiveCount = 0;
@@ -35297,6 +35322,7 @@ const views = {
               Object.entries(users).forEach(([uid, u]) => {
                 const memStat = window.normalizeMembershipStatus(u.membershipStatus || u.status);
                 if (memStat === 'active') activeMembersCount++;
+                else if (memStat === 'sleeping') sleepingMembersCount++;
                 else if (memStat === 'left') leftMembersCount++;
                 else if (memStat === 'banned') bannedMembersCount++;
 
@@ -35319,6 +35345,7 @@ const views = {
                   const rEntry = rosterRawData && (rosterRawData[cleanAid] || (aTokData.nickname && rosterRawData[aTokData.nickname]) || (aTokData.name && rosterRawData[aTokData.name]));
                   const aMem = window.normalizeMembershipStatus(aTokData.membershipStatus || aTokData.status || (rEntry && (rEntry.membershipStatus || rEntry.status)) || memStat);
                   if (aMem === 'active') activeMembersCount++;
+                  else if (aMem === 'sleeping') sleepingMembersCount++;
                   else if (aMem === 'left') leftMembersCount++;
                   else if (aMem === 'banned') bannedMembersCount++;
 
@@ -35366,6 +35393,8 @@ const views = {
                   if (unMem === 'active') {
                     activeMembersCount++;
                     tokenUnverifiedCount++;
+                  } else if (unMem === 'sleeping') {
+                    sleepingMembersCount++;
                   } else if (unMem === 'left') leftMembersCount++;
                   else if (unMem === 'banned') bannedMembersCount++;
                 });
@@ -35392,7 +35421,7 @@ const views = {
                         👥 Alliance Members & Player Database
                       </div>
                       <div id="adminUserSubtitleCounter" style="font-size:12px; color:var(--text-muted); margin-top:2px;">
-                        ${totalMembersCount} total • 🟢 ${activeMembersCount} active • 🚪 ${leftMembersCount} left • 🚫 ${bannedMembersCount} banned • ${totalMainsCount} mains • ${totalAltsCount} alts • ${unclaimedCount} unclaimed
+                        ${totalMembersCount} total • 🟢 ${activeMembersCount} active • 😴 ${sleepingMembersCount} sleeping • 🚪 ${leftMembersCount} left • 🚫 ${bannedMembersCount} banned • ${totalMainsCount} mains • ${totalAltsCount} alts • ${unclaimedCount} unclaimed
                       </div>
                     </div>
 
@@ -35409,6 +35438,9 @@ const views = {
                         </button>
                         <button class="admin-user-filter-tab" data-tab="active" onclick="window.setAdminUserPopulationTab('active', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
                           🟢 Active (${activeMembersCount})
+                        </button>
+                        <button class="admin-user-filter-tab" data-tab="sleeping" onclick="window.setAdminUserPopulationTab('sleeping', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                          😴 Sleeping (${sleepingMembersCount})
                         </button>
                         <button class="admin-user-filter-tab" data-tab="left" onclick="window.setAdminUserPopulationTab('left', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
                           🚪 Left (${leftMembersCount})
@@ -35443,6 +35475,10 @@ const views = {
                     <!-- Feature Attributes Selector with Live Counters -->
                     <select id="adminUserAttrFilter" onchange="window.filterAdminUsersList(true)" style="flex:1 1 170px; min-width:160px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
                       <option value="all">🏷️ Attributes: All (${totalMembersCount})</option>
+                      <option value="active_members">🟢 Active Members (${activeMembersCount})</option>
+                      <option value="sleeping_members">😴 Sleeping / Hiatus (${sleepingMembersCount})</option>
+                      <option value="left_members">🚪 Left Alliance (${leftMembersCount})</option>
+                      <option value="banned_members">🚫 Banned (${bannedMembersCount})</option>
                       <option value="push_on">🔔 Push: Enabled (${pushEnabledCount})</option>
                       <option value="push_off">🔕 Push: Disabled (${pushDisabledCount})</option>
                       <option value="alts">👥 Accounts with Alts (${hasAltsCount})</option>
@@ -35575,7 +35611,9 @@ const views = {
 
         const memStatus = window.normalizeMembershipStatus(u.membershipStatus || u.status || (rEntry && (rEntry.membershipStatus || rEntry.status)));
         let memStatusPill = `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🟢 Active</span>`;
-        if (memStatus === 'left') {
+        if (memStatus === 'sleeping') {
+          memStatusPill = `<span style="background:rgba(99,102,241,0.15); color:#a5b4fc; border:1px solid rgba(99,102,241,0.35); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">😴 Sleeping</span>`;
+        } else if (memStatus === 'left') {
           memStatusPill = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🚪 Left Alliance</span>`;
         } else if (memStatus === 'banned') {
           memStatusPill = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🚫 Banned</span>`;
@@ -35648,7 +35686,7 @@ const views = {
               data-push-enabled="${isPush ? 'true' : 'false'}"
               data-furnace-score="${furnaceScore}"
               data-created-ms="${createdMs}"
-              style="border-bottom:1px solid var(--border); transition:0.2s; ${memStatus === 'left' ? 'opacity:0.75; background:rgba(245,158,11,0.03);' : (memStatus === 'banned' ? 'opacity:0.65; background:rgba(239,68,68,0.04);' : '')}">
+              style="border-bottom:1px solid var(--border); transition:0.2s; ${memStatus === 'sleeping' ? 'opacity:0.85; background:rgba(99,102,241,0.03);' : (memStatus === 'left' ? 'opacity:0.75; background:rgba(245,158,11,0.03);' : (memStatus === 'banned' ? 'opacity:0.65; background:rgba(239,68,68,0.04);' : ''))}">
             
             <td style="padding:12px 6px; text-align:center;">
               <input type="checkbox" class="admin-user-select-checkbox" data-name="${escapeHTML(cName)}" data-gid="${escapeHTML(uGidStr)}" data-uid="${escapeHTML(uid)}" data-is-alt="false" onchange="window.toggleSelectAdminUser(this)">
@@ -35656,7 +35694,7 @@ const views = {
 
             <td style="padding:12px 10px;">
               <div style="display:flex; align-items:center; gap:12px;">
-                <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; background:var(--card-bg); flex-shrink:0; border:2px solid ${memStatus === 'left' ? '#f59e0b' : (memStatus === 'banned' ? '#ef4444' : 'var(--accent)')}; display:flex; align-items:center; justify-content:center;">
+                <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; background:var(--card-bg); flex-shrink:0; border:2px solid ${memStatus === 'sleeping' ? '#818cf8' : (memStatus === 'left' ? '#f59e0b' : (memStatus === 'banned' ? '#ef4444' : 'var(--accent)'))}; display:flex; align-items:center; justify-content:center;">
                   <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(cName)}&background=3b82f6&color=fff&bold=true&size=128';">
                 </div>
                 <div style="display:flex; flex-direction:column; gap:2px;">
@@ -35723,6 +35761,13 @@ const views = {
 
                   <div style="height:1px; background:rgba(255,255,255,0.08); margin:4px 0;"></div>
                   <div style="padding:4px 8px 2px 8px; font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Status & Roles</div>
+                  ${memStatus === 'sleeping' ? `
+                  <div onclick="window.closeAllUserActionMenus(); window.updateMemberStatus('${escapeHTML(cName.replace(/'/g, "\\'"))}', '${uGidStr}', '${uid}', 'active', 'Woken up by admin', false);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#10b981; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(16,185,129,0.15)';" onmouseout="this.style.background='transparent';">
+                    <span style="font-size:14px;">⏰</span> Wake Up (Set to Active)
+                  </div>` : (memStatus === 'active' ? `
+                  <div onclick="window.closeAllUserActionMenus(); window.updateMemberStatus('${escapeHTML(cName.replace(/'/g, "\\'"))}', '${uGidStr}', '${uid}', 'sleeping', 'Put on break / sleeping by admin', false);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#a5b4fc; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(99,102,241,0.15)';" onmouseout="this.style.background='transparent';">
+                    <span style="font-size:14px;">😴</span> Put to Sleep (Hiatus)
+                  </div>` : '')}
                   <div onclick="window.closeAllUserActionMenus(); window.openChangeMembershipStatusModal('${escapeHTML(cName.replace(/'/g, "\\'"))}', '${uGidStr}', '${uid}', '${memStatus}', false);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#38bdf8; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(56,189,248,0.15)';" onmouseout="this.style.background='transparent';">
                     <span style="font-size:14px;">🛡️</span> Membership Status
                   </div>
@@ -35780,7 +35825,9 @@ const views = {
             if (!altName || /^\d+$/.test(altName)) altName = (idToNameMap && idToNameMap[altGidStr]) || `Alt (${altGidStr})`;
             const altMemStatus = window.normalizeMembershipStatus(aTok.membershipStatus || aTok.status || aData.membershipStatus || aData.status || aDep.membershipStatus || (rEntry && (rEntry.membershipStatus || rEntry.status)) || memStatus);
             let altMemPill = `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 6px; border-radius:10px; font-size:10px; font-weight:bold;">🟢 Active</span>`;
-            if (altMemStatus === 'left') {
+            if (altMemStatus === 'sleeping') {
+              altMemPill = `<span style="background:rgba(99,102,241,0.15); color:#a5b4fc; border:1px solid rgba(99,102,241,0.35); padding:2px 6px; border-radius:10px; font-size:10px; font-weight:bold;">😴 Sleeping</span>`;
+            } else if (altMemStatus === 'left') {
               altMemPill = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 6px; border-radius:10px; font-size:10px; font-weight:bold;">🚪 Left</span>`;
             } else if (altMemStatus === 'banned') {
               altMemPill = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:2px 6px; border-radius:10px; font-size:10px; font-weight:bold;">🚫 Banned</span>`;
@@ -35889,6 +35936,13 @@ const views = {
 
                       <div style="height:1px; background:rgba(255,255,255,0.08); margin:4px 0;"></div>
                       <div style="padding:4px 8px 2px 8px; font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Status & Tools</div>
+                      ${altMemStatus === 'sleeping' ? `
+                      <div onclick="window.closeAllUserActionMenus(); window.updateMemberStatus('${escapeHTML(altName.replace(/'/g, "\\'"))}', '${altGidStr}', '${uid}', 'active', 'Woken up by admin', true);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#10b981; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(16,185,129,0.15)';" onmouseout="this.style.background='transparent';">
+                        <span style="font-size:14px;">⏰</span> Wake Up (Set to Active)
+                      </div>` : (altMemStatus === 'active' ? `
+                      <div onclick="window.closeAllUserActionMenus(); window.updateMemberStatus('${escapeHTML(altName.replace(/'/g, "\\'"))}', '${altGidStr}', '${uid}', 'sleeping', 'Put on break / sleeping by admin', true);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#a5b4fc; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(99,102,241,0.15)';" onmouseout="this.style.background='transparent';">
+                        <span style="font-size:14px;">😴</span> Put to Sleep (Hiatus)
+                      </div>` : '')}
                       <div onclick="window.closeAllUserActionMenus(); window.openChangeMembershipStatusModal('${escapeHTML(altName.replace(/'/g, "\\'"))}', '${altGidStr}', '${uid}', '${altMemStatus}', true);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#c084fc; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(168,85,247,0.15)';" onmouseout="this.style.background='transparent';">
                         <span style="font-size:14px;">🛡️</span> Membership Status
                       </div>
@@ -35931,7 +35985,9 @@ const views = {
           
           const unclaimMemStatus = window.normalizeMembershipStatus(p.membershipStatus || p.status);
           let unclaimMemPill = `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:10px; font-weight:bold;">🟢 Active</span>`;
-          if (unclaimMemStatus === 'left') {
+          if (unclaimMemStatus === 'sleeping') {
+            unclaimMemPill = `<span style="background:rgba(99,102,241,0.15); color:#a5b4fc; border:1px solid rgba(99,102,241,0.35); padding:3px 8px; border-radius:10px; font-size:10px; font-weight:bold;">😴 Sleeping</span>`;
+          } else if (unclaimMemStatus === 'left') {
             unclaimMemPill = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:3px 8px; border-radius:10px; font-size:10px; font-weight:bold;">🚪 Left</span>`;
           } else if (unclaimMemStatus === 'banned') {
             unclaimMemPill = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:3px 8px; border-radius:10px; font-size:10px; font-weight:bold;">🚫 Banned</span>`;
@@ -36023,6 +36079,13 @@ const views = {
                     <div onclick="window.closeAllUserActionMenus(); window.copyPlayerClaimLink('${escapeHTML(uGid)}', '${escapeHTML(uName.replace(/'/g, "\\'"))}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#10b981; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(16,185,129,0.15)';" onmouseout="this.style.background='transparent';">
                       <span style="font-size:14px;">📋</span> Copy Claim Link
                     </div>
+                    ${unclaimMemStatus === 'sleeping' ? `
+                    <div onclick="window.closeAllUserActionMenus(); window.updateMemberStatus('${escapeHTML(uName.replace(/'/g, "\\'"))}', '${uGid}', null, 'active', 'Woken up by admin', false);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#10b981; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(16,185,129,0.15)';" onmouseout="this.style.background='transparent';">
+                      <span style="font-size:14px;">⏰</span> Wake Up (Set to Active)
+                    </div>` : (unclaimMemStatus === 'active' ? `
+                    <div onclick="window.closeAllUserActionMenus(); window.updateMemberStatus('${escapeHTML(uName.replace(/'/g, "\\'"))}', '${uGid}', null, 'sleeping', 'Put on break / sleeping by admin', false);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#a5b4fc; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(99,102,241,0.15)';" onmouseout="this.style.background='transparent';">
+                      <span style="font-size:14px;">😴</span> Put to Sleep (Hiatus)
+                    </div>` : '')}
                     <div onclick="window.closeAllUserActionMenus(); window.openChangeMembershipStatusModal('${escapeHTML(uName.replace(/'/g, "\\'"))}', '${uGid}', null, '${unclaimMemStatus}', false);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#38bdf8; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(56,189,248,0.15)';" onmouseout="this.style.background='transparent';">
                       <span style="font-size:14px;">🛡️</span> Membership Status
                     </div>
@@ -40787,7 +40850,10 @@ window.resetBearTrapEvent = async () => {
 
     let primaryMemBadgeHtml = '';
     let primaryMemActionBtnHtml = '';
-    if (primaryMemStatus === 'left') {
+    if (primaryMemStatus === 'sleeping') {
+        primaryMemBadgeHtml = `<span style="background:rgba(99,102,241,0.15); color:#a5b4fc; border:1px solid rgba(99,102,241,0.45); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;" title="This character is currently sleeping / on hiatus">😴 Sleeping (Hiatus)</span>`;
+        primaryMemActionBtnHtml = `<button onclick="window.selfActivateMembershipStatus('${currentUser.gameId || ''}', '${window.escapeHTML(currentChiefName)}', false)" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 12px rgba(16,185,129,0.35); transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'" title="Back from break? Click to wake up and restore status to Active">⏰ Back from Break? Wake Up</button>`;
+    } else if (primaryMemStatus === 'left') {
         primaryMemBadgeHtml = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.45); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;" title="This character is currently marked as having left the alliance">🚪 Left Alliance</span>`;
         primaryMemActionBtnHtml = `<button onclick="window.selfActivateMembershipStatus('${currentUser.gameId || ''}', '${window.escapeHTML(currentChiefName)}', false)" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 12px rgba(16,185,129,0.35); transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'" title="Rejoined the alliance? Click to restore status to Active">👋 Rejoined? Set to Active</button>`;
     } else if (primaryMemStatus === 'banned') {
@@ -41151,6 +41217,8 @@ window.resetBearTrapEvent = async () => {
               let altMemBadgeHtml = '';
               if (altMemStatus === 'banned') {
                   altMemBadgeHtml = `<span style="background:rgba(239,68,68,0.18); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:1px 6px; border-radius:6px; font-size:10.5px; font-weight:bold;">🚫 Banned</span>`;
+              } else if (altMemStatus === 'sleeping') {
+                  altMemBadgeHtml = `<span style="background:rgba(99,102,241,0.18); color:#a5b4fc; border:1px solid rgba(99,102,241,0.4); padding:1px 6px; border-radius:6px; font-size:10.5px; font-weight:bold;">😴 Sleeping</span>`;
               } else if (altMemStatus === 'left') {
                   altMemBadgeHtml = `<span style="background:rgba(245,158,11,0.18); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:1px 6px; border-radius:6px; font-size:10.5px; font-weight:bold;">🚪 Left</span>`;
               } else {
@@ -41240,7 +41308,9 @@ window.resetBearTrapEvent = async () => {
                   <div style="display:flex; gap:6px; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px; flex-wrap:wrap;">
                       ${ altMemStatus === 'left'
                           ? `<button onclick="window.selfActivateMembershipStatus('${cleanGid}', '${window.escapeHTML(altName)}', true)" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(16,185,129,0.3); transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'" title="Rejoined the alliance? Restore this alt to Active Member status">👋 Set to Active</button>`
-                          : ''
+                          : (altMemStatus === 'sleeping'
+                              ? `<button onclick="window.selfActivateMembershipStatus('${cleanGid}', '${window.escapeHTML(altName)}', true)" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(16,185,129,0.3); transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'" title="Back from break? Wake up this alt">⏰ Wake Up</button>`
+                              : '')
                       }
                       ${ isAltTokenActive
                           ? `<button onclick="window.handleSyncAltProfile('${cleanGid}', this)" style="flex:1; min-width:110px; background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Token active (${altTokenDaysRemaining}d remaining). Click to sync.">🔄 Sync Data</button>`
@@ -41479,7 +41549,7 @@ window.resetBearTrapEvent = async () => {
                       <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Alliance Status</span>
                       <div style="display:flex; align-items:center; gap:6px;">
                           ${primaryMemBadgeHtml}
-                          ${primaryMemStatus === 'left' ? `<button onclick="window.selfActivateMembershipStatus('${currentUser.gameId || ''}', '${window.escapeHTML(currentChiefName)}', false)" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Rejoin alliance">Rejoin</button>` : ''}
+                          ${primaryMemStatus === 'left' ? `<button onclick="window.selfActivateMembershipStatus('${currentUser.gameId || ''}', '${window.escapeHTML(currentChiefName)}', false)" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Rejoin alliance">Rejoin</button>` : (primaryMemStatus === 'sleeping' ? `<button onclick="window.selfActivateMembershipStatus('${currentUser.gameId || ''}', '${window.escapeHTML(currentChiefName)}', false)" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Back from break? Wake up and activate account">⏰ Wake Up</button>` : '')}
                       </div>
                   </div>
                   ${userBio ? `<div class="id-card-stat-row" style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; margin-top:2px;">
