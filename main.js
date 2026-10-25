@@ -111,6 +111,8 @@ window.isBotAccount = (name, gid) => {
 window.getRegisteredAltSets = async () => {
     const altNamesSet = new Set();
     const altGidsSet = new Set();
+    const primaryNamesSet = new Set();
+    const primaryGidsSet = new Set();
     try {
         const [usersSnap, altsSnap] = await Promise.all([
             get(ref(db, 'users')).catch(() => null),
@@ -118,15 +120,33 @@ window.getRegisteredAltSets = async () => {
         ]);
         if (usersSnap && usersSnap.exists()) {
             const users = usersSnap.val() || {};
+            // 1. Record all registered primary chief accounts (THESE ARE MAIN ACCOUNTS, NEVER ALTS)
+            Object.values(users).forEach(u => {
+                if (!u || typeof u !== 'object') return;
+                const pGid = u.gameId ? String(u.gameId).trim() : '';
+                if (pGid) primaryGidsSet.add(pGid);
+                const pn = u.chiefName || u.name;
+                if (pn) {
+                    primaryNamesSet.add(String(pn).trim().toLowerCase());
+                    if (window.cleanChiefName) primaryNamesSet.add(window.cleanChiefName(pn).toLowerCase().trim());
+                }
+            });
+
+            // 2. Scan linked alts
             Object.values(users).forEach(u => {
                 if (!u || typeof u !== 'object') return;
                 const checkAlt = (aid, aData) => {
-                    if (aid) altGidsSet.add(String(aid).trim());
+                    const cleanAid = aid ? String(aid).trim() : '';
+                    if (cleanAid && !primaryGidsSet.has(cleanAid)) altGidsSet.add(cleanAid);
                     if (aData && typeof aData === 'object') {
                         const an = aData.nickname || aData.name || aData.chiefName;
                         if (an) {
-                            altNamesSet.add(String(an).trim().toLowerCase());
-                            if (window.cleanChiefName) altNamesSet.add(window.cleanChiefName(an).toLowerCase().trim());
+                            const rawLower = String(an).trim().toLowerCase();
+                            const cleanLower = window.cleanChiefName ? window.cleanChiefName(an).toLowerCase().trim() : rawLower;
+                            if (!primaryNamesSet.has(rawLower) && !primaryNamesSet.has(cleanLower)) {
+                                altNamesSet.add(rawLower);
+                                altNamesSet.add(cleanLower);
+                            }
                         }
                     }
                 };
@@ -137,25 +157,37 @@ window.getRegisteredAltSets = async () => {
                     Object.entries(u.linkedAltsData).forEach(([aid, at]) => checkAlt(aid, at));
                 }
                 if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
-                    u.linkedGameIds.forEach(aid => { if (aid) altGidsSet.add(String(aid).trim()); });
+                    u.linkedGameIds.forEach(aid => {
+                        const cleanAid = aid ? String(aid).trim() : '';
+                        if (cleanAid && !primaryGidsSet.has(cleanAid)) altGidsSet.add(cleanAid);
+                    });
                 }
             });
         }
         if (altsSnap && altsSnap.exists()) {
             const alts = altsSnap.val() || {};
             Object.entries(alts).forEach(([aid, a]) => {
-                if (aid) altGidsSet.add(String(aid).trim());
+                const cleanAid = aid ? String(aid).trim() : '';
+                if (cleanAid && !primaryGidsSet.has(cleanAid)) altGidsSet.add(cleanAid);
                 if (a && typeof a === 'object') {
                     const an = a.name || a.chiefName || a.nickname;
                     if (an) {
-                        altNamesSet.add(String(an).trim().toLowerCase());
-                        if (window.cleanChiefName) altNamesSet.add(window.cleanChiefName(an).toLowerCase().trim());
+                        const rawLower = String(an).trim().toLowerCase();
+                        const cleanLower = window.cleanChiefName ? window.cleanChiefName(an).toLowerCase().trim() : rawLower;
+                        if (!primaryNamesSet.has(rawLower) && !primaryNamesSet.has(cleanLower)) {
+                            altNamesSet.add(rawLower);
+                            altNamesSet.add(cleanLower);
+                        }
                     }
                 }
             });
         }
+
+        // Guaranteed safety check: explicitly remove any primary main accounts from alt sets
+        primaryGidsSet.forEach(gid => altGidsSet.delete(gid));
+        primaryNamesSet.forEach(name => altNamesSet.delete(name));
     } catch(e) {}
-    return { altNamesSet, altGidsSet };
+    return { altNamesSet, altGidsSet, primaryNamesSet, primaryGidsSet };
 };
 
 /**
@@ -187,8 +219,12 @@ window.getUnifiedMasterChiefList = async () => {
                 if (!existing.gameId && gid) existing.gameId = gid;
                 if (!existing.furnaceLevel && (extra.furnaceLevel || extra.stove_lv)) existing.furnaceLevel = extra.furnaceLevel || extra.stove_lv;
                 if (!existing.stove_lv && (extra.stove_lv || extra.furnaceLevel)) existing.stove_lv = extra.stove_lv || extra.furnaceLevel;
-                if (extra.isAlt) existing.isAlt = true;
-                if (extra.isMain) existing.isMain = true;
+                if (extra.isMain) {
+                    existing.isMain = true;
+                    existing.isAlt = false;
+                } else if (extra.isAlt && !existing.isMain) {
+                    existing.isAlt = true;
+                }
                 if (extra.parentChiefName && !existing.parentChiefName) existing.parentChiefName = extra.parentChiefName;
                 if (extra.uid && !existing.uid) existing.uid = extra.uid;
                 return;
@@ -1661,6 +1697,7 @@ window.executeTableBulkStatusChange = async (targetStatus, customReason = '') =>
     const normStatus = window.normalizeMembershipStatus(targetStatus);
     const statusLabels = {
         active: '🟢 ACTIVE (Include in all live events)',
+        sleeping: '😴 SLEEPING / ON BREAK (Hiatus - Exclude from live events, preserve data)',
         left: '🚪 LEFT ALLIANCE (Exclude from events, preserve data)',
         banned: '🚫 BANNED (Block & exclude from events)'
     };
@@ -1710,6 +1747,14 @@ window.openBulkStatusWithReasonModal = (preselectedStatus = 'left') => {
                         <div>
                             <div style="font-weight:bold; color:#10b981; font-size:13px;">🟢 Active Alliance Members</div>
                             <div style="font-size:11px; color:var(--text-muted);">Include in all active event signups, donations, Showdown, and leaderboards.</div>
+                        </div>
+                    </label>
+
+                    <label style="display:flex; align-items:flex-start; gap:12px; cursor:pointer; padding:8px; border-radius:8px;">
+                        <input type="radio" name="bulkStatusModalChoice" value="sleeping" ${preselectedStatus === 'sleeping' ? 'checked' : ''} style="margin-top:3px;">
+                        <div>
+                            <div style="font-weight:bold; color:#a5b4fc; font-size:13px;">😴 Sleeping / On Break (Hiatus)</div>
+                            <div style="font-size:11px; color:var(--text-muted);">Exclude from live events while on hiatus. Preserves alliance membership, data, and quick wake up.</div>
                         </div>
                     </label>
 
@@ -2015,6 +2060,7 @@ window.openBulkMembershipManagerModal = async () => {
 
     const statusBadge = (st) => {
         if (st === 'active') return '<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 7px; border-radius:10px; font-size:10.5px; font-weight:bold;">🟢 Active</span>';
+        if (st === 'sleeping') return '<span style="background:rgba(99,102,241,0.15); color:#a5b4fc; border:1px solid rgba(99,102,241,0.3); padding:2px 7px; border-radius:10px; font-size:10.5px; font-weight:bold;">😴 Sleeping</span>';
         if (st === 'left') return '<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); padding:2px 7px; border-radius:10px; font-size:10.5px; font-weight:bold;">🚪 Left</span>';
         return '<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:2px 7px; border-radius:10px; font-size:10.5px; font-weight:bold;">🚫 Banned</span>';
     };
@@ -2056,6 +2102,7 @@ window.openBulkMembershipManagerModal = async () => {
                         <div style="display:flex; gap:6px; flex-wrap:wrap;">
                             <button onclick="window.setBulkManagerFilter('all_visible')" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); font-size:11px; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold;">All Visible</button>
                             <button onclick="window.setBulkManagerFilter('active')" style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); color:#10b981; font-size:11px; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold;">All Active</button>
+                            <button onclick="window.setBulkManagerFilter('sleeping')" style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3); color:#a5b4fc; font-size:11px; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold;">All Sleeping</button>
                             <button onclick="window.setBulkManagerFilter('left')" style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; font-size:11px; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold;">All Left</button>
                             <button onclick="window.setBulkManagerFilter('invert')" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); font-size:11px; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold;">Invert</button>
                             <button onclick="window.setBulkManagerFilter('clear')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; font-size:11px; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold;">Clear</button>
@@ -2121,6 +2168,10 @@ window.openBulkMembershipManagerModal = async () => {
                         <label style="display:flex; align-items:center; gap:8px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); padding:10px 12px; border-radius:8px; cursor:pointer;">
                             <input type="radio" name="bulkManagerTargetStatus" value="active">
                             <span style="font-weight:bold; color:#10b981; font-size:12.5px;">🟢 Active Member</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:8px; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3); padding:10px 12px; border-radius:8px; cursor:pointer;">
+                            <input type="radio" name="bulkManagerTargetStatus" value="sleeping">
+                            <span style="font-weight:bold; color:#a5b4fc; font-size:12.5px;">😴 Sleeping / Hiatus</span>
                         </label>
                         <label style="display:flex; align-items:center; gap:8px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); padding:10px 12px; border-radius:8px; cursor:pointer;">
                             <input type="radio" name="bulkManagerTargetStatus" value="left" checked>
@@ -2243,7 +2294,7 @@ window.setBulkManagerFilter = (preset) => {
                 if (cb) cb.checked = true;
             }
         });
-    } else if (preset === 'active' || preset === 'left' || preset === 'banned') {
+    } else if (preset === 'active' || preset === 'sleeping' || preset === 'left' || preset === 'banned') {
         rows.forEach(r => {
             const st = r.getAttribute('data-status');
             const key = r.getAttribute('data-key');
@@ -2333,6 +2384,7 @@ window.submitBulkMembershipManager = async () => {
 
     const statusLabels = {
         active: '🟢 ACTIVE (Include in active events)',
+        sleeping: '😴 SLEEPING / ON BREAK (Hiatus - Exclude from live events, preserve data)',
         left: '🚪 LEFT ALLIANCE (Exclude from events, preserve data)',
         banned: '🚫 BANNED (Block & exclude from events)'
     };
@@ -36119,6 +36171,9 @@ const views = {
               <button onclick="window.executeTableBulkStatusChange('active')" style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.35)'" onmouseout="this.style.background='rgba(16,185,129,0.2)'">
                 🟢 Set Active
               </button>
+              <button onclick="window.executeTableBulkStatusChange('sleeping')" style="background:rgba(99,102,241,0.2); color:#a5b4fc; border:1px solid rgba(99,102,241,0.4); padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(99,102,241,0.35)'" onmouseout="this.style.background='rgba(99,102,241,0.2)'">
+                😴 Set Sleeping
+              </button>
               <button onclick="window.executeTableBulkStatusChange('left')" style="background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(245,158,11,0.35)'" onmouseout="this.style.background='rgba(245,158,11,0.2)'">
                 🚪 Set Left Alliance
               </button>
@@ -39588,7 +39643,7 @@ const views = {
             window.fetchMercenaryData(),
             window.fetchRoster().catch(() => ({})),
             window.fetchMercenaryBossProgress().catch(() => ({})),
-            window.getRegisteredAltSets ? window.getRegisteredAltSets() : Promise.resolve({ altNamesSet: new Set(), altGidsSet: new Set() })
+            window.getRegisteredAltSets ? window.getRegisteredAltSets() : Promise.resolve({ altNamesSet: new Set(), altGidsSet: new Set(), primaryNamesSet: new Set(), primaryGidsSet: new Set() })
         ]);
 
         let rosterList = [];
@@ -39611,7 +39666,11 @@ const views = {
                     // Alt account detection
                     const normN = (p.name || '').toLowerCase().trim();
                     const cleanN = typeof window.cleanChiefName === 'function' ? window.cleanChiefName(p.name).toLowerCase().trim() : normN;
-                    const isAlt = Boolean(
+                    const isPrimaryChief = Boolean(
+                        (gid && altSets.primaryGidsSet && altSets.primaryGidsSet.has(gid)) ||
+                        (altSets.primaryNamesSet && (altSets.primaryNamesSet.has(normN) || altSets.primaryNamesSet.has(cleanN)))
+                    );
+                    const isAlt = !isPrimaryChief && Boolean(
                         (gid && altSets.altGidsSet && altSets.altGidsSet.has(gid)) ||
                         (altSets.altNamesSet && (altSets.altNamesSet.has(normN) || altSets.altNamesSet.has(cleanN)))
                     );
@@ -45184,7 +45243,7 @@ window.resetBearTrapEvent = async () => {
             window.fetchMercenaryData().catch(() => ({})),
             window.fetchRoster().catch(() => ({})),
             window.fetchMercenaryBossProgress().catch(() => ({})),
-            window.getRegisteredAltSets ? window.getRegisteredAltSets() : Promise.resolve({ altNamesSet: new Set(), altGidsSet: new Set() })
+            window.getRegisteredAltSets ? window.getRegisteredAltSets() : Promise.resolve({ altNamesSet: new Set(), altGidsSet: new Set(), primaryNamesSet: new Set(), primaryGidsSet: new Set() })
         ]);
 
         let rosterList = [];
@@ -45206,7 +45265,11 @@ window.resetBearTrapEvent = async () => {
                 if (cleanName && window.isPlayerActiveMember(p)) {
                     // Alt account detection
                     const cleanN = typeof window.cleanChiefName === 'function' ? window.cleanChiefName(cleanName).toLowerCase().trim() : normName;
-                    const isAlt = Boolean(
+                    const isPrimaryChief = Boolean(
+                        (gid && altSets.primaryGidsSet && altSets.primaryGidsSet.has(gid)) ||
+                        (altSets.primaryNamesSet && (altSets.primaryNamesSet.has(normName) || altSets.primaryNamesSet.has(cleanN)))
+                    );
+                    const isAlt = !isPrimaryChief && Boolean(
                         (gid && altSets.altGidsSet && altSets.altGidsSet.has(gid)) ||
                         (altSets.altNamesSet && (altSets.altNamesSet.has(normName) || altSets.altNamesSet.has(cleanN)))
                     );

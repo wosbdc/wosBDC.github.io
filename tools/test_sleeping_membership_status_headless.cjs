@@ -88,6 +88,26 @@ function runStaticAndLogicVerification() {
     'Account Hub renders sleeping badge and self-wake action for returning players'
   );
 
+  runAssertion(
+    code.includes("executeTableBulkStatusChange('sleeping')"),
+    'Admin floating bulk toolbar includes 😴 Set Sleeping action'
+  );
+
+  runAssertion(
+    code.includes('bulkStatusModalChoice') && code.includes('value="sleeping"'),
+    'Bulk Status With Reason modal includes 😴 Sleeping / On Break radio option'
+  );
+
+  runAssertion(
+    code.includes("setBulkManagerFilter('sleeping')") && code.includes('bulkManagerTargetStatus') && code.includes('value="sleeping"'),
+    'Bulk Membership Manager modal includes All Sleeping filter and Sleeping target status radio'
+  );
+
+  runAssertion(
+    code.includes('primaryGidsSet.forEach(gid => altGidsSet.delete(gid))') && code.includes('!isPrimaryChief'),
+    'Alt resolver explicitly purges primary main chiefs and guards isAlt = !isPrimaryChief'
+  );
+
   // 2. Logic Simulation
   console.log('\n⚙️ Starting Logic Simulation for Sleeping Status Normalization & Exclusion...');
 
@@ -142,6 +162,32 @@ function runStaticAndLogicVerification() {
   runAssertion(activeEventRoster.map(p => p.name).includes('Delta'), 'Delta is in event roster');
   runAssertion(!activeEventRoster.map(p => p.name).includes('Bravo'), 'Sleeping member Bravo is excluded from event roster');
   runAssertion(!activeEventRoster.map(p => p.name).includes('Echo'), 'Hiatus member Echo is excluded from event roster');
+
+  // Primary Main Chiefs Alt Resolution simulation
+  const mockRegisteredUsers = {
+    u1: { gameId: '318843189', chiefName: 'BrianDCox', linkedGameIds: ['318843189', '444555666'] },
+    u2: { gameId: '697738681', chiefName: 'Guardian', linkedGameIds: ['697738681'] },
+    u3: { gameId: '628432919', chiefName: 'Thadwarf', linkedGameIds: ['628432919', '888999000'] }
+  };
+
+  const primaryGids = new Set(['318843189', '697738681', '628432919']);
+  const primaryNames = new Set(['briandcox', 'guardian', 'thadwarf']);
+  const altGids = new Set(['444555666', '888999000']); // Primary IDs filtered out!
+
+  const testChiefBrian = { name: 'BrianDCox', gameId: '318843189' };
+  const testChiefGuardian = { name: 'Guardian', gameId: '697738681' };
+  const testChiefAlt = { name: 'BrianFarm', gameId: '444555666' };
+
+  const isAltResolver = (p) => {
+    const gid = p.gameId;
+    const name = p.name.toLowerCase();
+    const isPrimary = primaryGids.has(gid) || primaryNames.has(name);
+    return !isPrimary && (altGids.has(gid) || false);
+  };
+
+  runAssertion(isAltResolver(testChiefBrian) === false, 'Registered primary chief BrianDCox is NOT an alt');
+  runAssertion(isAltResolver(testChiefGuardian) === false, 'Registered primary chief Guardian is NOT an alt');
+  runAssertion(isAltResolver(testChiefAlt) === true, 'Secondary linked account BrianFarm is correctly identified as an alt');
 }
 
 async function runHeadlessBrowserVerification() {

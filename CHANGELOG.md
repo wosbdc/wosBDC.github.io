@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.140] - 2026-10-24
+- 🛡️ **Chief Protection**: Protected primary chiefs from receiving false ALT badges.
+- 😴 **Bulk Toolbar**: Added Set Sleeping button to floating bulk toolbar.
+- 📝 **Bulk Reason**: Added Sleeping option to Bulk Status Reason modal.
+- 📋 **Preset Filter**: Added All Sleeping filter preset to Member Manager.
+- ⚡ **Target Status**: Added Sleeping target radio choice to Member Manager.
+
 ## [3.3.139] - 2026-10-24
 - 😴 **Sleeping Status**: Added hiatus status for temporarily inactive players.
 - 📊 **Event Exclusion**: Sleeping members excluded from active event rosters.

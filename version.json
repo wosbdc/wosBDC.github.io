@@ -1,17 +1,18 @@
 {
-  "version": "3.3.139",
+  "version": "3.3.140",
   "releaseDate": "2026-10-24",
-  "title": "What's New in v3.3.139",
+  "title": "What's New in v3.3.140",
   "notes": [
-    "😴 Sleeping Status: Added hiatus status for temporarily inactive players.",
-    "📊 Event Reports: Sleeping members excluded from active event rosters.",
-    "🛡️ Status Modal: Choose Sleeping / On Break with custom reasons.",
-    "⏰ Quick Wake Up: 1-tap button to instantly reactivate returning players.",
-    "👥 Member Directory: Added Sleeping tab filter and lavender badges."
+    "Protected primary chiefs from receiving false ALT badges.",
+    "Added Set Sleeping button to floating bulk toolbar.",
+    "Added Sleeping option to Bulk Status Reason modal.",
+    "Added All Sleeping filter preset to Member Manager.",
+    "Added Sleeping target radio choice to Member Manager."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.139",
+    "version": "3.3.140",
     "latestChanges": [
+      "v3.3.140: Fixed false ALT badges on main chiefs and added Sleeping to all Bulk tools",
       "v3.3.139: Added Sleeping membership status to exclude inactive members from event reports",
       "v3.3.138: Consolidated Phaethon Boss Command Deck with official character artwork and eliminated bottom redundancy",
       "v3.3.137: Added Mercenary Prestige smartphone pagination and fixed GitHub Actions CI runner",
