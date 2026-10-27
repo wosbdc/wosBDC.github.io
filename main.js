@@ -17515,8 +17515,8 @@ window.syncChampCooldownFromSchedule = async () => {
     }
 };
 
-window.showChampSetupLockedAlert = (targetTab = 'signups') => {
-    const tabName = targetTab === 'signups' ? 'Member Signups' : 'Season Matchups & Edit';
+window.showChampSetupLockedAlert = (targetTab = 'matchups') => {
+    const tabName = targetTab === 'matchups' ? 'Season Matchups & Edit' : (targetTab === 'signups' ? 'Member Signups' : 'Season Matchups & Edit');
     const schedStatus = window._lastChampScheduleStatus;
     const isCooldownActive = Boolean(schedStatus && schedStatus.isOnCooldown);
 
@@ -17625,7 +17625,7 @@ window.saveChampSeasonSetup = async () => {
             }
             if (saveBtn) {
                 saveBtn.disabled = false;
-                saveBtn.innerHTML = '💾 Save Schedule & Unlock Member Signups ➔';
+                saveBtn.innerHTML = '💾 Save Schedule & Unlock Matchups ➔';
             }
             return;
         }
@@ -17666,17 +17666,17 @@ window.saveChampSeasonSetup = async () => {
         window.clearAllEventCaches();
 
         if (window.showToast) {
-            window.showToast("🎉 Season schedule saved & member check-in desk unlocked!", "success");
+            window.showToast("🎉 Season schedule saved & Matchups desk unlocked!", "success");
         }
         if (typeof views !== 'undefined' && views.championshipAdmin) {
-            await views.championshipAdmin('signups');
+            await views.championshipAdmin('matchups');
         }
     } catch(err) {
         console.error("saveChampSeasonSetup error:", err);
         if (window.showToast) window.showToast("Failed to save schedule: " + err.message, "error");
         if (saveBtn) {
             saveBtn.disabled = false;
-            saveBtn.innerHTML = '💾 Save Schedule & Unlock Member Signups ➔';
+            saveBtn.innerHTML = '💾 Save Schedule & Unlock Matchups ➔';
         }
     }
 };
@@ -37631,7 +37631,7 @@ const views = {
        return;
     }
 
-    const isAlreadyMounted = Boolean(document.getElementById('champTableBody') || document.getElementById('adm_champ_season_name') || document.getElementById('champSignupsLockedCard') || document.getElementById('champCooldownGateCard') || document.getElementById('champ_setup_season_name'));
+    const isAlreadyMounted = Boolean(document.getElementById('champTableBody') || document.getElementById('adm_champ_season_name') || document.getElementById('champSignupsLockedCard') || document.getElementById('champMatchupsLockedCard') || document.getElementById('champCooldownGateCard') || document.getElementById('champ_setup_season_name'));
     const savedScrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
 
     if (!isAlreadyMounted) {
@@ -37656,15 +37656,12 @@ const views = {
         window._champBypassCooldown = false;
         const isCooldownGated = !isScheduleDone && Boolean(schedStatus && schedStatus.isOnCooldown);
 
-        if (!isScheduleDone && isCooldownGated && activeTab && activeTab !== 'cooldown') {
-            window.showChampSetupLockedAlert(activeTab);
-            activeTab = 'cooldown';
-        } else if (!isScheduleDone && !isCooldownGated && activeTab && activeTab !== 'setup' && activeTab !== 'cooldown') {
-            window.showChampSetupLockedAlert(activeTab);
-            activeTab = 'setup';
+        if (!isScheduleDone && activeTab === 'matchups') {
+            window.showChampSetupLockedAlert('matchups');
+            activeTab = isCooldownGated ? 'cooldown' : 'setup';
         }
 
-        let effectiveTab = isScheduleDone ? (activeTab || 'signups') : (isCooldownGated ? 'cooldown' : 'setup');
+        let effectiveTab = activeTab || (isCooldownGated ? 'cooldown' : 'signups');
 
         let rosterList = [];
         const seenGids = new Set();
@@ -37713,8 +37710,8 @@ const views = {
                 <button id="tabBtnSetupOrCooldown" onclick="${isCooldownGated ? "views.championshipAdmin('cooldown')" : "views.championshipAdmin('setup')"}" style="padding:10px 4px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-align:center; gap:4px; transition:0.2s; min-height:42px; ${(effectiveTab === 'setup' || effectiveTab === 'cooldown') ? (effectiveTab === 'cooldown' ? 'background:linear-gradient(135deg, #f59e0b, #d97706); color:#000; border:none; box-shadow:0 4px 12px rgba(245,158,11,0.35);' : 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);') : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
                     ${isCooldownGated ? '1. ⏳ Cooldown' : '1. 🛠️ Setup'}
                 </button>
-                <button id="tabBtnSignups" onclick="${isScheduleDone ? "views.championshipAdmin('signups')" : "window.showChampSetupLockedAlert('signups')"}" style="padding:10px 4px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-align:center; gap:4px; transition:0.2s; min-height:42px; ${effectiveTab === 'signups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : (!isScheduleDone ? 'background:rgba(239,68,68,0.1); color:#ef4444; border:1px dashed rgba(239,68,68,0.4);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);')}">
-                    ${!isScheduleDone ? '2. 🔒 Signups' : '2. 📋 Signups'}
+                <button id="tabBtnSignups" onclick="views.championshipAdmin('signups')" style="padding:10px 4px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-align:center; gap:4px; transition:0.2s; min-height:42px; ${effectiveTab === 'signups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
+                    2. 📋 Signups
                 </button>
                 <button id="tabBtnMatchups" onclick="${isScheduleDone ? "views.championshipAdmin('matchups')" : "window.showChampSetupLockedAlert('matchups')"}" style="padding:10px 4px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-align:center; gap:4px; transition:0.2s; min-height:42px; ${effectiveTab === 'matchups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : (!isScheduleDone ? 'background:rgba(239,68,68,0.1); color:#ef4444; border:1px dashed rgba(239,68,68,0.4);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);')}">
                     ${!isScheduleDone ? '3. 🔒 Matchups' : '3. ⚔️ Matchups'}
@@ -37903,7 +37900,7 @@ const views = {
 
                     <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
                         <button id="btnSaveChampSeasonSetup" onclick="window.saveChampSeasonSetup()" style="width:100%; background:var(--success); color:#fff; border:none; padding:13px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 15px rgba(16,185,129,0.3); display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px;">
-                            💾 Save Schedule & Unlock Signups ➔
+                            💾 Save Schedule & Unlock Matchups ➔
                         </button>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; width:100%;">
                             <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:12.5px; display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:40px;">
@@ -37917,27 +37914,7 @@ const views = {
                 </div>
             `;
         } else if (effectiveTab === 'signups') {
-            if (!isScheduleDone) {
-                // Setup Lock Barrier Gate: Prevent access to signups until Step 1 is configured
-                mainContentHtml = `
-                    <div id="champSignupsLockedCard" style="background:var(--card-bg); border:2px dashed rgba(239,68,68,0.4); border-radius:16px; padding:36px 20px; text-align:center; max-width:640px; margin:20px auto; box-shadow:0 8px 30px rgba(0,0,0,0.2);">
-                        <div style="font-size:48px; margin-bottom:12px;">🔒</div>
-                        <h2 style="margin:0 0 10px 0; color:var(--text-main); font-size:20px;">Member Signups are Locked</h2>
-                        <p style="margin:0 auto 20px auto; font-size:13.5px; color:var(--text-muted); line-height:1.6; max-width:480px;">
-                            The championship check-in desk is locked until the upcoming tournament is initialized in <strong>Step 1: Season Setup</strong>. This dummy-proof safeguard ensures previous tournament attendance and battle records are never accidentally mixed with new event signups.
-                        </p>
-                        <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
-                            <button id="btnLockedGoToSetup" onclick="views.championshipAdmin('setup')" style="background:var(--accent); color:white; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(6,182,212,0.35); transition:0.2s;">
-                                🛠️ Go to Step 1: Season Setup ➔
-                            </button>
-                            <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:12px 20px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
-                                📜 Open Archive Vault
-                            </button>
-                        </div>
-                    </div>
-                `;
-            } else {
-                mainContentHtml = `
+            mainContentHtml = `
                     <!-- Summary KPI Cards -->
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:15px; margin-bottom:18px;">
                       <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center;">
@@ -38048,9 +38025,28 @@ const views = {
                         </div>
                     </div>
                 `;
-            }
         } else {
             // MATCHUPS EDITOR
+            if (!isScheduleDone) {
+                // Setup Lock Barrier Gate: Prevent access to matchups until Step 1 Schedule is configured
+                mainContentHtml = `
+                    <div id="champMatchupsLockedCard" style="background:var(--card-bg); border:2px dashed rgba(239,68,68,0.4); border-radius:16px; padding:36px 20px; text-align:center; max-width:640px; margin:20px auto; box-shadow:0 8px 30px rgba(0,0,0,0.2);">
+                        <div style="font-size:48px; margin-bottom:12px;">🔒</div>
+                        <h2 style="margin:0 0 10px 0; color:var(--text-main); font-size:20px;">Season Matchups are Locked</h2>
+                        <p style="margin:0 auto 20px auto; font-size:13.5px; color:var(--text-muted); line-height:1.6; max-width:480px;">
+                            The tournament matchups and battle scoring desk are locked until all 5 opponent rounds are scheduled in <strong>Step 1: Season Setup</strong>. Complete the schedule and opponents first to unlock round-by-round match scoring.
+                        </p>
+                        <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+                            <button id="btnLockedGoToSetup" onclick="views.championshipAdmin('setup')" style="background:var(--accent); color:white; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(6,182,212,0.35); transition:0.2s;">
+                                🛠️ Go to Step 1: Season Setup ➔
+                            </button>
+                            <button onclick="views.championshipAdmin('signups')" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:12px 20px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                                📋 Open Member Signups
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
             const seasonNameVal = champMatchupData.seasonName || 'Upcoming Season';
             const statusTextVal = champMatchupData.statusText || '0 Wins – 0 Losses (New Season)';
             const roundsData = champMatchupData.rounds || {};
@@ -38333,6 +38329,7 @@ const views = {
                     </div>
                 </div>
             `;
+            }
         }
 
         let html = `

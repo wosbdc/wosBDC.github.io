@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.141] - 2026-10-27
+- 📋 **Signups Unlocked**: Unlocked Championship Signups tab for immediate member check-in.
+- 🔒 **Matchups Gated**: Gated Matchups tab until 5-round schedule is saved.
+- 💾 **Setup Action**: Updated setup button to unlock Matchups upon saving.
+- ⚠️ **Guide Alert**: Added alert popup guiding admins to complete schedule.
+
 ## [3.3.140] - 2026-10-24
 - 🛡️ **Chief Protection**: Protected primary chiefs from receiving false ALT badges.
 - 😴 **Bulk Toolbar**: Added Set Sleeping button to floating bulk toolbar.

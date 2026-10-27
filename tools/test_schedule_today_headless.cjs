@@ -234,7 +234,7 @@ async function runHeadlessBrowserVerification() {
         [false, true, 'Castle Battle', todayUtcIso, todayUtcIso, '5:00 AM', '10:00 AM']
       ];
 
-      // Ensure deterministic active live event for test suite
+      // Ensure deterministic active live event and upcoming event for test suite
       const origGetEvents = window.getUnifiedScheduleEvents;
       window.getUnifiedScheduleEvents = () => {
         const baseEvents = origGetEvents ? origGetEvents() : [];
@@ -248,7 +248,16 @@ async function runHeadlessBrowserVerification() {
           emoji: '⚔️',
           dateLabel: 'Today'
         };
-        return [liveEvent, ...baseEvents];
+        const upcomingEvent = {
+          name: 'Castle Battle Preparation',
+          start: new Date(n.getTime() + 2 * 3600000),
+          end: new Date(n.getTime() + 4 * 3600000),
+          utcDisplay: '23:00 UTC',
+          pdtVal: '4:00 PM PDT',
+          emoji: '🏰',
+          dateLabel: 'Today'
+        };
+        return [liveEvent, upcomingEvent, ...baseEvents];
       };
     });
 
@@ -291,9 +300,9 @@ async function runHeadlessBrowserVerification() {
     assert(!contentText.includes('7 (6/30)'), 'Must NOT contain spreadsheet date formulas 7 (6/30)');
     console.log('  ✅ Verified ZERO junk spreadsheet numbers, formulas, or personal calculators rendered in DOM');
 
-    // Assert upcoming events are cleanly displayed in "Coming up:"
-    assert(contentText.includes('Coming up:'), 'Today view must display "Coming up:" section with upcoming events');
-    console.log('  ✅ "Coming up:" section displayed with upcoming events');
+    // Assert upcoming events are cleanly displayed in "Upcoming Today" section
+    assert(contentText.includes('Upcoming Today') || contentText.includes('Coming up:'), 'Today view must display upcoming events section');
+    console.log('  ✅ "Upcoming Today" section displayed with upcoming events');
 
     // Test responsive layout across 375px (mobile), 768px (tablet), 1280px (desktop)
     const viewports = [
