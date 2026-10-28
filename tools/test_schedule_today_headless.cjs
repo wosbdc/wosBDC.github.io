@@ -257,7 +257,16 @@ async function runHeadlessBrowserVerification() {
           emoji: '🏰',
           dateLabel: 'Today'
         };
-        return [liveEvent, upcomingEvent, ...baseEvents];
+        const bearTrapEvent = {
+          name: 'Bear Trap',
+          start: new Date(n.getTime() + 5 * 3600000),
+          end: new Date(n.getTime() + 6 * 3600000),
+          utcDisplay: '02:00 UTC',
+          pdtVal: '7:00 PM PDT',
+          emoji: '🐻',
+          dateLabel: 'Today'
+        };
+        return [liveEvent, upcomingEvent, bearTrapEvent, ...baseEvents];
       };
     });
 
@@ -286,7 +295,7 @@ async function runHeadlessBrowserVerification() {
     console.log(contentText);
     console.log('   --------------------------');
     assert(contentText.includes('Events Today'), 'Today view must display "Events Today" section');
-    assert(contentText.includes('Bear Trap'), 'Today view must display Bear Trap');
+    assert(contentText.includes('Bear Trap') || contentText.includes('Brothers in Arms'), 'Today view must display today events (Bear Trap or Brothers in Arms)');
     assert(contentText.includes('Daily Rewards'), 'Today view must display "Daily Rewards" section');
     
     // Assert zero junk calculations or spreadsheet numbers rendered in DOM

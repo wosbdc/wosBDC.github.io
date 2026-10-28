@@ -17386,7 +17386,7 @@ window.getChampionshipScheduleStatus = async (champMatchupData, forceFetch = fal
                 targetStartMs = Date.UTC(nextEndDay.getUTCFullYear(), nextEndDay.getUTCMonth(), nextEndDay.getUTCDate() + 1, startH, startM, 0, 0);
                 targetEndMs = targetStartMs + 5 * 86400000;
             } else {
-                // Event is active during current tournament week: keep Step 1 Setup open and accessible
+                // Event is active during current tournament week: keep Step 2 Schedule open and accessible
                 isOnCooldown = false;
                 targetStartMs = activeCycleStartMs;
                 targetEndMs = activeCycleEndMs;
@@ -17527,7 +17527,7 @@ window.showChampSetupLockedAlert = (targetTab = 'matchups') => {
         window.showToast(
             isCooldownActive
                 ? `⏳ Alliance Championship is on cooldown until ${schedStatus.nextStartUtcLabel}!`
-                : `⚠️ Please complete Step 1: Season Setup first before accessing ${tabName}!`,
+                : `⚠️ Please complete Step 2: Schedule first before accessing ${tabName}!`,
             'warning'
         );
     }
@@ -17557,14 +17557,14 @@ window.showChampSetupLockedAlert = (targetTab = 'matchups') => {
         <div style="background:var(--card-bg, #1e293b); border:2px solid #ef4444; border-radius:16px; max-width:480px; width:100%; padding:28px 24px; text-align:center; box-shadow:0 12px 35px rgba(0,0,0,0.5);">
             <div style="font-size:48px; margin-bottom:12px;">🔒</div>
             <h3 style="margin:0 0 10px 0; color:#ef4444; font-size:20px; font-weight:800;">
-                Go Back to Setup Tab!
+                Go to Step 2: Schedule!
             </h3>
             <p style="margin:0 0 20px 0; font-size:14px; color:var(--text-main, #f1f5f9); line-height:1.6;">
-                The <strong>${escapeHTML(tabName)}</strong> tab is locked! The tournament schedule is not set up yet. You must enter all 5 opponent days in <strong>Step 1: Season Setup</strong> and save it before you can view this page.
+                The <strong>${escapeHTML(tabName)}</strong> tab is locked! The tournament schedule is not set up yet. You must enter all 5 opponent days in <strong>Step 2: Schedule</strong> and save it before you can view this page.
             </p>
             <div style="display:flex; justify-content:center; gap:10px;">
                 <button id="btnAlertGoBackSetup" onclick="document.getElementById('champSetupLockedAlertModal')?.remove(); if(typeof views !== 'undefined' && views.championshipAdmin) views.championshipAdmin('setup');" style="background:#ef4444; color:white; border:none; padding:12px 26px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; box-shadow:0 3px 12px rgba(239,68,68,0.4); display:inline-flex; align-items:center; gap:6px;">
-                    🛠️ Go Back to Setup Tab ➔
+                    📅 Go to Step 2: Schedule ➔
                 </button>
             </div>
         </div>
@@ -37664,7 +37664,7 @@ const views = {
             activeTab = isCooldownGated ? 'cooldown' : 'setup';
         }
 
-        let effectiveTab = activeTab || (isCooldownGated ? 'cooldown' : 'signups');
+        let effectiveTab = activeTab || 'signups';
 
         let rosterList = [];
         const seenGids = new Set();
@@ -37710,11 +37710,11 @@ const views = {
 
         let tabNavHtml = `
             <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:6px; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px;">
-                <button id="tabBtnSetupOrCooldown" onclick="${isCooldownGated ? "views.championshipAdmin('cooldown')" : "views.championshipAdmin('setup')"}" style="padding:10px 4px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-align:center; gap:4px; transition:0.2s; min-height:42px; ${(effectiveTab === 'setup' || effectiveTab === 'cooldown') ? (effectiveTab === 'cooldown' ? 'background:linear-gradient(135deg, #f59e0b, #d97706); color:#000; border:none; box-shadow:0 4px 12px rgba(245,158,11,0.35);' : 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);') : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
-                    ${isCooldownGated ? '1. ⏳ Cooldown' : '1. 🛠️ Setup'}
-                </button>
                 <button id="tabBtnSignups" onclick="views.championshipAdmin('signups')" style="padding:10px 4px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-align:center; gap:4px; transition:0.2s; min-height:42px; ${effectiveTab === 'signups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
-                    2. 📋 Signups
+                    1. 📋 Signups
+                </button>
+                <button id="tabBtnSetupOrCooldown" onclick="${isCooldownGated ? "views.championshipAdmin('cooldown')" : "views.championshipAdmin('setup')"}" style="padding:10px 4px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-align:center; gap:4px; transition:0.2s; min-height:42px; ${(effectiveTab === 'setup' || effectiveTab === 'cooldown') ? (effectiveTab === 'cooldown' ? 'background:linear-gradient(135deg, #f59e0b, #d97706); color:#000; border:none; box-shadow:0 4px 12px rgba(245,158,11,0.35);' : 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);') : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
+                    ${isCooldownGated ? '2. ⏳ Cooldown' : '2. 📅 Schedule'}
                 </button>
                 <button id="tabBtnMatchups" onclick="${isScheduleDone ? "views.championshipAdmin('matchups')" : "window.showChampSetupLockedAlert('matchups')"}" style="padding:10px 4px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-align:center; gap:4px; transition:0.2s; min-height:42px; ${effectiveTab === 'matchups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : (!isScheduleDone ? 'background:rgba(239,68,68,0.1); color:#ef4444; border:1px dashed rgba(239,68,68,0.4);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);')}">
                     ${!isScheduleDone ? '3. 🔒 Matchups' : '3. ⚔️ Matchups'}
@@ -37741,7 +37741,7 @@ const views = {
                         Next Alliance Championship Countdown
                     </h3>
                     <p style="margin:0 auto 14px auto; font-size:12.5px; color:var(--text-muted); max-width:520px; line-height:1.45;">
-                        The previous tournament season has been archived and reset. <strong>Step 1: Season Setup</strong> is gated on cooldown and will automatically unlock when the next scheduled tournament begins.
+                        The previous tournament season has been archived and reset. <strong>Step 2: Schedule</strong> is gated on cooldown and will automatically unlock when the next scheduled tournament begins.
                     </p>
 
                     <!-- Live 4-Box Countdown Grid -->
@@ -37858,19 +37858,19 @@ const views = {
             }
 
             mainContentHtml = `
-                <!-- Step 1 Setup Card -->
+                <!-- Step 2 Schedule Card -->
                 <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:18px 14px; margin-bottom:18px;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
                         <div>
                             <h3 style="margin:0 0 4px 0; color:var(--text-main); font-size:17px; display:inline-flex; align-items:center; gap:8px;">
-                                🛠️ Step 1: Pre-Tournament Season Setup
+                                📅 Step 2: Season Schedule & Opponents
                             </h3>
                             <p style="margin:0; font-size:12.5px; color:var(--text-muted);">
-                                Enter the season date and scheduled 5-day opponent alliances. Saving resets member signups to NO and unlocks Step 2.
+                                Enter the season date and scheduled 5-day opponent alliances. Saving unlocks Step 3: Matchups.
                             </p>
                         </div>
                         <div style="display:flex; gap:8px; align-items:center;">
-                            <span style="font-size:11px; background:rgba(6,182,212,0.15); color:var(--accent); border:1px solid rgba(6,182,212,0.3); padding:4px 10px; border-radius:12px; font-weight:bold;">Step 1 of 3</span>
+                            <span style="font-size:11px; background:rgba(6,182,212,0.15); color:var(--accent); border:1px solid rgba(6,182,212,0.3); padding:4px 10px; border-radius:12px; font-weight:bold;">Step 2 of 3</span>
                         </div>
                     </div>
 
@@ -37898,12 +37898,12 @@ const views = {
                     </div>
 
                     <div style="background:linear-gradient(135deg, rgba(16,185,129,0.1), rgba(6,182,212,0.1)); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:14px; margin-bottom:20px; font-size:12.5px; color:var(--text-muted); line-height:1.5;">
-                        💡 <strong>Dummy-Proof Safeguard:</strong> Saving this schedule unlocks member check-in and resets previous attendance to NO so you never accidentally check in members over stale season data.
+                        💡 <strong>Dummy-Proof Safeguard:</strong> Saving this schedule unlocks Step 3: Matchups so leaders can assign member lanes and record match scoring.
                     </div>
 
                     <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
                         <button id="btnSaveChampSeasonSetup" onclick="window.saveChampSeasonSetup()" style="width:100%; background:var(--success); color:#fff; border:none; padding:13px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 15px rgba(16,185,129,0.3); display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px;">
-                            💾 Save Schedule & Unlock Matchups ➔
+                            💾 Save Schedule & Unlock Step 3: Matchups ➔
                         </button>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; width:100%;">
                             <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:12.5px; display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:40px;">
@@ -37964,7 +37964,7 @@ const views = {
                       <div id="champSearchTypeaheadResults" style="display:none; margin-top:12px;"></div>
                     </div>
 
-                    <!-- Filter Controls & Step 3 Advance -->
+                    <!-- Filter Controls & Step 2 Advance -->
                     <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
                       <div style="display:flex; gap:6px; flex-wrap:wrap;">
                         <button id="champFilterBtnNo" class="champ-filter-btn active" data-filter="no" onclick="window.setChampFilter('no')" style="padding:8px 14px; border-radius:8px; border:1px solid #f59e0b; background:#f59e0b; color:#fff; font-weight:bold; cursor:pointer; font-size:13px; box-shadow:0 2px 8px rgba(245,158,11,0.3);">⏳ Waiting Response (<span id="btnNoCount">${noCount}</span>)</button>
@@ -37975,8 +37975,8 @@ const views = {
                         <button id="btnToggleChampTable" onclick="window.toggleChampRosterTable()" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:8px 14px; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer;">
                           👁️ View Full Roster List
                         </button>
-                        <button onclick="views.championshipAdmin('matchups')" style="background:linear-gradient(135deg, #06b6d4, #0891b2); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(6,182,212,0.3);">
-                          ⚔️ Step 3: Matchups ➔
+                        <button onclick="views.championshipAdmin('setup')" style="background:linear-gradient(135deg, #06b6d4, #0891b2); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(6,182,212,0.3);">
+                          📅 Step 2: Schedule ➔
                         </button>
                       </div>
                     </div>
@@ -38031,20 +38031,20 @@ const views = {
         } else {
             // MATCHUPS EDITOR
             if (!isScheduleDone) {
-                // Setup Lock Barrier Gate: Prevent access to matchups until Step 1 Schedule is configured
+                // Schedule Lock Barrier Gate: Prevent access to matchups until Step 2 Schedule is configured
                 mainContentHtml = `
                     <div id="champMatchupsLockedCard" style="background:var(--card-bg); border:2px dashed rgba(239,68,68,0.4); border-radius:16px; padding:36px 20px; text-align:center; max-width:640px; margin:20px auto; box-shadow:0 8px 30px rgba(0,0,0,0.2);">
                         <div style="font-size:48px; margin-bottom:12px;">🔒</div>
                         <h2 style="margin:0 0 10px 0; color:var(--text-main); font-size:20px;">Season Matchups are Locked</h2>
                         <p style="margin:0 auto 20px auto; font-size:13.5px; color:var(--text-muted); line-height:1.6; max-width:480px;">
-                            The tournament matchups and battle scoring desk are locked until all 5 opponent rounds are scheduled in <strong>Step 1: Season Setup</strong>. Complete the schedule and opponents first to unlock round-by-round match scoring.
+                            The tournament matchups and battle scoring desk are locked until all 5 opponent rounds are scheduled in <strong>Step 2: Schedule</strong>. Complete the schedule and opponents first to unlock round-by-round match scoring.
                         </p>
                         <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
                             <button id="btnLockedGoToSetup" onclick="views.championshipAdmin('setup')" style="background:var(--accent); color:white; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(6,182,212,0.35); transition:0.2s;">
-                                🛠️ Go to Step 1: Season Setup ➔
+                                📅 Go to Step 2: Schedule ➔
                             </button>
                             <button onclick="views.championshipAdmin('signups')" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:12px 20px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
-                                📋 Open Member Signups
+                                📋 Open Step 1: Signups
                             </button>
                         </div>
                     </div>

@@ -86,12 +86,12 @@ function runStaticVerification() {
   assert(!code.includes('pastRegistrationWindow'), 'main.js must NOT contain pastRegistrationWindow cutoff (prevents false mid-week lockouts)');
   assert(code.includes('window.showChampSetupLockedAlert ='), 'main.js must define window.showChampSetupLockedAlert');
 
-  // Step 1 setup elements
+  // Step 2 schedule elements
   assert(code.includes('champ_setup_season_name'), 'main.js must support season name setup input');
   assert(code.includes('Season Date :'), 'main.js must label season name as Season Date :');
   assert(code.includes('Fixed Round #'), 'main.js must display locked fixed round # badge');
   assert(code.includes('champSetupLockedAlertModal'), 'main.js must define #champSetupLockedAlertModal');
-  assert(code.includes('Go Back to Setup Tab!'), 'main.js must display Go Back to Setup Tab! alert heading');
+  assert(code.includes('Go to Step 2: Schedule!'), 'main.js must display Go to Step 2: Schedule! alert heading');
   assert(code.includes('btnSaveChampSeasonSetup'), 'main.js must provide save schedule & unlock matchups button');
   assert(code.includes('btnAutoFillChampDatesInline'), 'main.js must provide inline auto-fill button adjacent to season date');
   assert(!code.includes('champ_setup_r${i}_enemy_tag'), 'Redundant separate opponent tag input must be removed from Step 1');
@@ -213,8 +213,8 @@ async function runHeadlessVerification() {
       window.cleanChiefName = n => n;
     });
 
-    // 1. Verify Cooldown Gate & Step 1 defaults
-    console.log('  🔍 Testing Schedule-Driven Cooldown Countdown Gate and Early Setup Override...');
+    // 1. Verify Default Landing on Tab 1 Signups & Cooldown Gate on Tab 2
+    console.log('  🔍 Testing Default Landing on Tab 1 Signups and Cooldown Gate on Tab 2...');
     await page.evaluate(async () => {
       window._champBypassCooldown = false;
       const cdStatus = {
@@ -232,7 +232,17 @@ async function runHeadlessVerification() {
       await views.championshipAdmin();
     });
 
+    // Verify Tab 1 Signups is active by default
+    await page.waitForSelector('#champStatYes', { timeout: 5000 });
+    const tab1BtnText = await page.$eval('#tabBtnSignups', el => el.textContent.trim());
+    assert(tab1BtnText.includes('1. 📋 Signups'), 'Tab 1 button must be labeled 1. 📋 Signups');
+
+    // Switch to Tab 2: ⏳ Cooldown
+    await page.click('#tabBtnSetupOrCooldown');
     await page.waitForSelector('#champCooldownGateCard', { timeout: 5000 });
+    const tab2BtnText = await page.$eval('#tabBtnSetupOrCooldown', el => el.textContent.trim());
+    assert(tab2BtnText.includes('2. ⏳ Cooldown'), 'Tab 2 button must be labeled 2. ⏳ Cooldown');
+
     const setupInputWhileCooldown = await page.$('#champ_setup_season_name');
     assert(!setupInputWhileCooldown, 'Setup page must NOT show while event is on cooldown');
 
@@ -305,23 +315,23 @@ async function runHeadlessVerification() {
     console.log('  🔍 Testing Strict Tab Lockdown: Matchups must NOT be accessible when schedule incomplete...');
     const signupsBtnText = await page.$eval('#tabBtnSignups', el => el.textContent.trim());
     const matchupsLockedBtnText = await page.$eval('#tabBtnMatchups', el => el.textContent.trim());
-    assert(signupsBtnText.includes('📋 Signups'), 'Signups tab button must be unlocked without lock icon');
-    assert(matchupsLockedBtnText.includes('🔒 Matchups'), 'Matchups tab button must be locked with lock icon');
+    assert(signupsBtnText.includes('1. 📋 Signups'), 'Signups tab button must be labeled 1. 📋 Signups without lock icon');
+    assert(matchupsLockedBtnText.includes('3. 🔒 Matchups'), 'Matchups tab button must be labeled 3. 🔒 Matchups with lock icon');
 
     // Confirm that matchups editor is not rendered in the DOM when schedule is incomplete
     const matchupsSaveBtnInDOM = await page.evaluate(() => Boolean(document.getElementById('adm_champ_save_btn')));
     assert(!matchupsSaveBtnInDOM, 'Matchups editor must NOT be rendered in DOM when schedule is incomplete');
     console.log('  ✅ Matchups tab is completely guarded (strict tab lockdown verified)');
 
-    // 3. Test Clicking Locked Matchups Tab pops up "Go Back to Setup Tab!" alert modal
+    // 3. Test Clicking Locked Matchups Tab pops up "Go to Step 2: Schedule!" alert modal
     console.log('  🔍 Testing Alert Modal on locked Matchups tab click...');
     await page.click('#tabBtnMatchups');
     await page.waitForSelector('#champSetupLockedAlertModal', { timeout: 3000 });
 
     const alertHeader = await page.$eval('#champSetupLockedAlertModal h3', el => el.textContent.trim());
-    assert.strictEqual(alertHeader, 'Go Back to Setup Tab!', 'Alert modal header must say "Go Back to Setup Tab!"');
+    assert.strictEqual(alertHeader, 'Go to Step 2: Schedule!', 'Alert modal header must say "Go to Step 2: Schedule!"');
 
-    // Click "Go Back to Setup Tab" button inside the alert modal
+    // Click "Go to Step 2: Schedule" button inside the alert modal
     await page.evaluate(() => {
       const modalBtn = document.querySelector('#champSetupLockedAlertModal button');
       if (modalBtn) modalBtn.click();
@@ -330,7 +340,7 @@ async function runHeadlessVerification() {
 
     const alertModalClosed = await page.evaluate(() => !document.getElementById('champSetupLockedAlertModal'));
     assert(alertModalClosed, 'Alert modal must close cleanly when button clicked');
-    console.log('  ✅ "Go Back to Setup Tab!" alert modal verified on locked matchups tab navigation');
+    console.log('  ✅ "Go to Step 2: Schedule!" alert modal verified on locked matchups tab navigation');
 
     // Test that Signups tab can be clicked and viewed immediately even when schedule is incomplete!
     console.log('  🔍 Testing immediate access to Signups check-in desk before schedule setup...');

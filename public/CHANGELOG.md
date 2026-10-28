@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.143] - 2026-10-28
+- 📋 **Signups Tab 1**: Reordered Signups to Tab 1 for immediate check-in.
+- 📅 **Schedule Tab 2**: Reordered Season Schedule and Cooldown countdown to Tab 2.
+- ⚔️ **Matchups Tab 3**: Reordered tournament Matchups editor to Step 3.
+- 🚀 **Streamlined Flow**: Natural tournament lifecycle progression from signups to scoring.
+
 ## [3.3.142] - 2026-10-27
 - 🛡️ **Cooldown Fixed**: Eliminated false mid-week cooldown during active tournament.
 - 🛠️ **Setup Kept Open**: Step 1 Setup remains accessible throughout tournament week.
