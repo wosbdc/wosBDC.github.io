@@ -83,6 +83,7 @@ function runStaticVerification() {
   assert(code.includes('window.startChampCooldownTicker ='), 'main.js must define window.startChampCooldownTicker');
   assert(code.includes('window.unlockChampSetupEarly ='), 'main.js must define window.unlockChampSetupEarly');
   assert(code.includes('champCooldownGateCard'), 'main.js must define #champCooldownGateCard for pre-event cooldown');
+  assert(!code.includes('pastRegistrationWindow'), 'main.js must NOT contain pastRegistrationWindow cutoff (prevents false mid-week lockouts)');
   assert(code.includes('window.showChampSetupLockedAlert ='), 'main.js must define window.showChampSetupLockedAlert');
 
   // Step 1 setup elements

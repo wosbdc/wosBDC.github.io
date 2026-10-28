@@ -1,16 +1,16 @@
 {
-  "version": "3.3.141",
+  "version": "3.3.142",
   "releaseDate": "2026-10-27",
-  "title": "What's New in v3.3.141",
+  "title": "What's New in v3.3.142",
   "notes": [
-    "Unlocked Championship Signups tab for immediate member check-in.",
-    "Gated Matchups tab until 5-round schedule is saved.",
-    "Updated setup button to unlock Matchups upon saving.",
-    "Added alert popup guiding admins to complete schedule."
+    "Eliminated false mid-week cooldown during active tournament.",
+    "Step 1 Setup remains accessible throughout tournament week.",
+    "Leadership can configure tournament opponents at any time."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.141",
+    "version": "3.3.142",
     "latestChanges": [
+      "v3.3.142: Eliminated false mid-week cooldown cutoff during active Championship tournament",
       "v3.3.141: Swapped Championship tab restriction to unlock Signups and lock Matchups",
       "v3.3.140: Fixed false ALT badges on main chiefs and added Sleeping to all Bulk tools",
       "v3.3.139: Added Sleeping membership status to exclude inactive members from event reports",

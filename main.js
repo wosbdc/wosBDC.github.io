@@ -17370,12 +17370,15 @@ window.getChampionshipScheduleStatus = async (champMatchupData, forceFetch = fal
             previousCycleLabel = formatRangeShort(prevStartMs, prevEndMs);
         } else {
             // Case B: activeCycleStartMs <= nowMs <= activeCycleEndMs
-            // Check if this week's tournament already ran and was reset/archived (e.g., past the initial 48h Mon-Tue setup window, or explicitly reset during this cycle)
+            // Event is actively in progress this week (Monday through Sunday)
+            // Only gate into cooldown if leadership explicitly archived and reset this season into cooldown
             const updatedAtMs = Number(champMatchupData?.updatedAt || 0);
-            const pastRegistrationWindow = (nowMs - activeCycleStartMs) >= (2 * 86400000);
-            const resetDuringCurrentCycle = (updatedAtMs > activeCycleStartMs + 12 * 3600000) && (champMatchupData?.seasonState === 'cooldown' || /Upcoming Season/i.test(champMatchupData?.seasonName || '') || pastRegistrationWindow);
+            const resetDuringCurrentCycle = Boolean(
+                updatedAtMs > activeCycleStartMs + 12 * 3600000 &&
+                champMatchupData?.seasonState === 'cooldown'
+            );
 
-            if (pastRegistrationWindow || resetDuringCurrentCycle) {
+            if (resetDuringCurrentCycle) {
                 isOnCooldown = true;
                 previousCycleLabel = formatRangeShort(activeCycleStartMs, activeCycleEndMs);
                 // Next scheduled tournament starts immediately after activeCycleEndMs (Monday 00:00 UTC)
@@ -17383,7 +17386,7 @@ window.getChampionshipScheduleStatus = async (champMatchupData, forceFetch = fal
                 targetStartMs = Date.UTC(nextEndDay.getUTCFullYear(), nextEndDay.getUTCMonth(), nextEndDay.getUTCDate() + 1, startH, startM, 0, 0);
                 targetEndMs = targetStartMs + 5 * 86400000;
             } else {
-                // Event has started (within Monday/Tuesday setup window and not yet reset for next week)
+                // Event is active during current tournament week: keep Step 1 Setup open and accessible
                 isOnCooldown = false;
                 targetStartMs = activeCycleStartMs;
                 targetEndMs = activeCycleEndMs;

@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.142] - 2026-10-27
+- 🛡️ **Cooldown Fixed**: Eliminated false mid-week cooldown during active tournament.
+- 🛠️ **Setup Kept Open**: Step 1 Setup remains accessible throughout tournament week.
+- ⚔️ **Matchup Entry**: Leadership can configure tournament opponents at any time.
+
 ## [3.3.141] - 2026-10-27
 - 📋 **Signups Unlocked**: Unlocked Championship Signups tab for immediate member check-in.
 - 🔒 **Matchups Gated**: Gated Matchups tab until 5-round schedule is saved.
