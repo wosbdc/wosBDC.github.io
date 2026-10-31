@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.146] - 2026-10-31
+- 🎫 **Table Layout Fixed**: Fixed Admin Tickets table column width and layout.
+- 📐 **Column Guard**: Protected Title & Details column from narrow tube collapse.
+- 💬 **Clean Reply Card**: Leadership reply notes now render in wide legible cards.
+- 🔝 **Top Alignment**: Aligned all row controls and dropdowns to the top.
+
 ## [3.3.145] - 2026-10-30
 - 🔒 **Private Tickets**: Members only see their own submitted support tickets.
 - 👑 **Admin Ticket Desk**: Master ticket directory restricted behind Admin Menu.

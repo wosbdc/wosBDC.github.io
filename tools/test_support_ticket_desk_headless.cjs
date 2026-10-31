@@ -63,6 +63,10 @@ console.log('  ✅ openAdminNoteModal includes adminNoteUrgencyInput');
 assert(mainJs.includes('repliedByName') && mainJs.includes('repliedByLevel'), 'Must record repliedByName and repliedByLevel');
 console.log('  ✅ Staff reply hardcoded metadata (repliedByName, repliedByLevel) verified');
 
+assert(mainJs.includes('min-width:280px') || mainJs.includes('min-width: 280px'), 'Title & Details column must have min-width:280px to prevent narrow vertical tube collapse');
+assert(mainJs.includes('min-width:980px') || mainJs.includes('min-width: 980px'), 'Admin ticket table must have min-width:980px to prevent table column crushing');
+console.log('  ✅ Admin ticket table and Title & Details min-width defenses verified');
+
 assert(mainJs.includes('filterTicketsForViewer'), 'Must define filterTicketsForViewer for privacy isolation');
 console.log('  ✅ Member ticket isolation filter (filterTicketsForViewer) verified');
 
@@ -360,6 +364,78 @@ async function runHeadlessSuite() {
     assert(visibleCards[0].includes('Replied by: LeaderBrian (R5)'), 'Staff reply with hardcoded name and level must be physically rendered');
     assert(visibleCards[0].includes('We have received your request'), 'Admin note text must be physically rendered');
     console.log('  ✅ Hardcoded Staff Reply Assert: "Replied by: LeaderBrian (R5)" rendered in card');
+
+    // Test Admin Menu -> Tickets tab table layout & column squishing prevention
+    console.log('  🔍 Testing Admin Tickets Table layout & reply card width...');
+    await page.evaluate(async () => {
+      // Re-elevate user to R5 Admin
+      const adminUser = {
+        displayName: 'BrianDCox',
+        email: 'brian@example.com',
+        uid: 'user_brian_1',
+        gameId: '10012345'
+      };
+      window.currentUser = adminUser;
+      localStorage.setItem('currentUser', JSON.stringify(adminUser));
+      window.getAdminLevel = () => 'R5';
+      window.isAdminUser = () => true;
+
+      // Provide container and mock data
+      let container = document.getElementById('adminFeedbackTabContainer');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'adminFeedbackTabContainer';
+        document.body.appendChild(container);
+      }
+
+      window.fetchFeedbackItems = async () => [
+        {
+          id: 'admin_test_ticket_1',
+          type: 'bug',
+          urgency: 'normal',
+          category: 'Mercenary Prestige',
+          title: 'test',
+          description: 'test',
+          status: 'pending',
+          submittedBy: { name: 'BrianDCox', gameId: '10012345' },
+          voteCount: 1,
+          adminNote: 'test',
+          repliedByName: 'BrianDCox',
+          repliedByLevel: 'R5',
+          repliedAt: Date.now() - 172800000,
+          createdAt: Date.now() - 518400000
+        }
+      ];
+
+      await window.renderAdminFeedbackTab();
+    });
+
+    await page.waitForSelector('#adminFeedbackTabContainer table', { timeout: 5000 });
+
+    const tableLayoutMetrics = await page.evaluate(() => {
+      const table = document.querySelector('#adminFeedbackTabContainer table');
+      const thTitle = Array.from(table.querySelectorAll('th')).find(th => th.textContent.includes('Title & Details'));
+      const tdTitle = table.querySelector('tbody tr td:nth-child(4)');
+      const replyCard = tdTitle ? tdTitle.querySelector('div[style*="background:rgba(56,189,248"]') : null;
+      const allTds = Array.from(table.querySelectorAll('tbody tr td'));
+
+      return {
+        tableWidth: table ? table.offsetWidth : 0,
+        thTitleWidth: thTitle ? thTitle.offsetWidth : 0,
+        tdTitleWidth: tdTitle ? tdTitle.offsetWidth : 0,
+        replyCardWidth: replyCard ? replyCard.offsetWidth : 0,
+        replyCardText: replyCard ? replyCard.textContent.trim() : '',
+        allTdsTopAligned: allTds.every(td => td.style.verticalAlign === 'top')
+      };
+    });
+
+    assert(tableLayoutMetrics.tableWidth >= 960, `Table width must be at least 960px, got ${tableLayoutMetrics.tableWidth}px`);
+    assert(tableLayoutMetrics.thTitleWidth >= 280, `Title & Details column header must be >= 280px, got ${tableLayoutMetrics.thTitleWidth}px`);
+    assert(tableLayoutMetrics.tdTitleWidth >= 280, `Title & Details cell must be >= 280px, got ${tableLayoutMetrics.tdTitleWidth}px`);
+    assert(tableLayoutMetrics.replyCardWidth >= 240, `Reply card width must be >= 240px, got ${tableLayoutMetrics.replyCardWidth}px`);
+    assert(tableLayoutMetrics.replyCardText.includes('Replied by: BrianDCox (R5)'), 'Reply card must include properly formatted "Replied by: BrianDCox (R5)"');
+    assert(tableLayoutMetrics.allTdsTopAligned, 'All table row cells must be top-aligned (vertical-align: top)');
+    console.log(`  ✅ Admin Tickets Table Assert: Table width=${tableLayoutMetrics.tableWidth}px, Title column=${tableLayoutMetrics.tdTitleWidth}px, Reply card=${tableLayoutMetrics.replyCardWidth}px, top-aligned=true (Zero narrow tube collapse!)`);
 
     // Responsive layout audits
     console.log('  🔍 Running viewport responsiveness audits...');

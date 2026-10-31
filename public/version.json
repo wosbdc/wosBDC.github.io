@@ -1,16 +1,17 @@
 {
-  "version": "3.3.145",
-  "releaseDate": "2026-10-30",
-  "title": "What's New in v3.3.145",
+  "version": "3.3.146",
+  "releaseDate": "2026-10-31",
+  "title": "What's New in v3.3.146",
   "notes": [
-    "Members now only see their own submitted support tickets.",
-    "Master ticket directory restricted behind the Admin Menu.",
-    "Staff replies permanently capture verified staff name and level.",
-    "Added quick support ticket launcher to sidebar settings."
+    "Fixed Admin Tickets table column width and layout.",
+    "Protected Title & Details column from collapsing into narrow strip.",
+    "Leadership reply notes now render in clean wide cards.",
+    "All table row actions and dropdowns are cleanly top-aligned."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.145",
+    "version": "3.3.146",
     "latestChanges": [
+      "v3.3.146: Fixed Admin Tickets table reply card layout and column squishing",
       "v3.3.145: Confidential Support Tickets isolation and Admin Tickets Desk",
       "v3.3.144: Resolved Championship signups reset across portal and Google Sheets",
       "v3.3.143: Reordered Championship tabs to 1. Signups, 2. Schedule, 3. Matchups",

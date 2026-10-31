@@ -20115,18 +20115,18 @@ window.renderAdminFeedbackTab = async () => {
                 const urgency = item.urgency || 'normal';
                 const rowBg = isCompleted ? 'rgba(16,185,129,0.04)' : isInProgress ? 'rgba(59,130,246,0.04)' : isArchived ? 'rgba(255,255,255,0.02)' : 'transparent';
                 return `
-                <tr style="border-bottom:1px solid var(--border); background:${rowBg}; opacity:${isArchived ? '0.6' : '1'};">
-                    <td style="padding:12px; text-align:center;">
-                        <input type="checkbox" onchange="window.toggleFeedbackCompleted('${item.id}', this.checked)" ${isCompleted ? 'checked' : ''} style="width:18px; height:18px; accent-color:#10b981; cursor:pointer;" title="Mark Completed / Done">
+                <tr style="border-bottom:1px solid var(--border); background:${rowBg}; opacity:${isArchived ? '0.6' : '1'}; vertical-align:top;">
+                    <td style="padding:12px; text-align:center; vertical-align:top;">
+                        <input type="checkbox" onchange="window.toggleFeedbackCompleted('${item.id}', this.checked)" ${isCompleted ? 'checked' : ''} style="width:18px; height:18px; accent-color:#10b981; cursor:pointer; margin-top:2px;" title="Mark Completed / Done">
                     </td>
-                    <td style="padding:12px; white-space:nowrap;">
+                    <td style="padding:12px; white-space:nowrap; vertical-align:top;">
                         <select onchange="window.updateFeedbackUrgency('${item.id}', this.value)" style="padding:4px 6px; border-radius:6px; border:1px solid ${urgency === 'urgent' ? 'rgba(239,68,68,0.4)' : urgency === 'high' ? 'rgba(234,179,8,0.4)' : 'rgba(16,185,129,0.3)'}; background:${urgency === 'urgent' ? 'rgba(239,68,68,0.15)' : urgency === 'high' ? 'rgba(234,179,8,0.15)' : 'rgba(16,185,129,0.1)'}; color:${urgency === 'urgent' ? '#ef4444' : urgency === 'high' ? '#eab308' : '#10b981'}; font-size:11px; font-weight:bold; cursor:pointer;" title="Change Urgency Priority">
                             <option value="normal" ${urgency !== 'high' && urgency !== 'urgent' ? 'selected' : ''}>🟢 Normal</option>
                             <option value="high" ${urgency === 'high' ? 'selected' : ''}>🟡 High</option>
                             <option value="urgent" ${urgency === 'urgent' ? 'selected' : ''}>🔴 Urgent</option>
                         </select>
                     </td>
-                    <td style="padding:12px; white-space:nowrap;">
+                    <td style="padding:12px; white-space:nowrap; vertical-align:top;">
                         <select onchange="window.updateFeedbackType('${item.id}', this.value)" style="padding:4px 6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; font-weight:bold; cursor:pointer;" title="Change Ticket Type">
                             <option value="support_account" ${item.type === 'support_account' ? 'selected' : ''}>🆘 Account</option>
                             <option value="bug" ${item.type === 'bug' ? 'selected' : ''}>🐞 Bug</option>
@@ -20134,31 +20134,33 @@ window.renderAdminFeedbackTab = async () => {
                             <option value="general" ${item.type === 'general' ? 'selected' : ''}>❓ General</option>
                         </select>
                     </td>
-                    <td style="padding:12px;">
+                    <td style="padding:12px; min-width:280px; vertical-align:top;">
                         <div style="font-weight:bold; font-size:13px; color:var(--text-main); ${isCompleted ? 'text-decoration:line-through; opacity:0.75;' : ''}">${escapeHTML(item.title || '')}</div>
-                        ${item.description ? `<div style="font-size:11.5px; color:var(--text-muted); margin-top:3px; max-width:380px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(item.description)}</div>` : ''}
+                        ${item.description ? `<div style="font-size:11.5px; color:var(--text-muted); margin-top:3px; max-width:420px; line-height:1.45; word-break:break-word;">${escapeHTML(item.description)}</div>` : ''}
                         ${item.videoUrl ? `<div style="margin-top:4px;"><a href="javascript:void(0)" onclick="window.openFeedbackMediaLightbox({ type:'${(item.mediaType === 'gdrive_video' || item.videoUrl.includes('drive.google.com')) ? 'gdrive_video' : 'video'}', url:'${escapeHTML(item.videoUrl)}', title:'${escapeHTML(item.title || '')}', name:'${escapeHTML(item.mediaName || 'feedback_clip.mp4')}' })" style="font-size:11px; color:#38bdf8; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:4px; background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); padding:2px 8px; border-radius:4px;">${(item.mediaType === 'gdrive_video' || item.videoUrl.includes('drive.google.com')) ? '📁 View Drive Video' : `🎥 View Video Clip ${item.mediaDuration ? '(' + window.formatVideoDuration(item.mediaDuration) + ')' : ''}`}</a></div>` : (item.imageUrl ? `<div style="margin-top:4px;"><a href="javascript:void(0)" onclick="window.openFeedbackMediaLightbox('${escapeHTML(item.imageUrl)}')" style="font-size:11px; color:#38bdf8; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:4px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:2px 8px; border-radius:4px;">🖼️ View Screenshot</a></div>` : '')}
                         ${item.adminNote ? `
-                            <div style="font-size:11.5px; color:#38bdf8; font-weight:bold; margin-top:5px; white-space:pre-wrap; word-break:break-word; background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.2); padding:6px 10px; border-radius:6px; line-height:1.45;">
-                                <div style="font-size:10px; color:#38bdf8; font-weight:900; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px; display:flex; align-items:center; gap:4px;">
-                                    <span>👑</span> <span>Replied by: <strong>${escapeHTML(item.repliedByName || item.repliedBy?.name || 'Staff')}</strong> ${(item.repliedByLevel || item.repliedBy?.level) ? `(${escapeHTML(item.repliedByLevel || item.repliedBy?.level)})` : ''}</span>
-                                    ${item.repliedAt ? `<span style="font-size:9.5px; color:var(--text-muted); font-weight:normal;">• ${window.formatTimeAgo(item.repliedAt)}</span>` : ''}
+                            <div style="font-size:11.5px; margin-top:6px; background:rgba(56,189,248,0.07); border:1px solid rgba(56,189,248,0.25); padding:8px 10px; border-radius:8px; line-height:1.45; min-width:240px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:4px;">
+                                    <div style="font-size:10px; color:#38bdf8; font-weight:900; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:4px; white-space:nowrap;">
+                                        <span>👑</span> <span>Replied by: <strong>${escapeHTML(item.repliedByName || item.repliedBy?.name || 'Staff')}</strong> ${(item.repliedByLevel || item.repliedBy?.level) ? `(${escapeHTML(item.repliedByLevel || item.repliedBy?.level)})` : ''}</span>
+                                    </div>
+                                    ${item.repliedAt ? `<span style="font-size:9.5px; color:var(--text-muted); font-weight:normal; white-space:nowrap;">• ${window.formatTimeAgo(item.repliedAt)}</span>` : ''}
                                 </div>
-                                ✨ ${escapeHTML(item.adminNote)}
+                                <div style="color:var(--text-main); font-weight:normal; font-size:12px; white-space:pre-wrap; word-break:break-word;">✨ ${escapeHTML(item.adminNote)}</div>
                             </div>
                         ` : ''}
                     </td>
-                    <td style="padding:12px; white-space:nowrap;">
+                    <td style="padding:12px; white-space:nowrap; vertical-align:top;">
                         <select onchange="window.updateFeedbackCategory('${item.id}', this.value)" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; font-weight:bold; cursor:pointer;" title="Reclassify Category">
                             ${window.FEEDBACK_CATEGORIES.map(c => `<option value="${c.value}" ${(item.category || 'General UI') === c.value ? 'selected' : ''}>${c.label}</option>`).join('')}
                         </select>
                     </td>
-                    <td style="padding:12px; white-space:nowrap; font-size:12px; color:var(--text-muted);">
+                    <td style="padding:12px; white-space:nowrap; font-size:12px; color:var(--text-muted); vertical-align:top;">
                         <strong style="color:var(--text-main);">${escapeHTML(item.submittedBy?.name || 'Chief')}</strong><br>
                         <span style="font-size:10.5px;">${window.formatTimeAgo(item.createdAt)}</span>
                     </td>
-                    <td style="padding:12px; text-align:center; font-weight:bold; color:var(--accent); font-family:var(--mono);">👍 ${item.voteCount || 0}</td>
-                    <td style="padding:12px; white-space:nowrap;">
+                    <td style="padding:12px; text-align:center; font-weight:bold; color:var(--accent); font-family:var(--mono); vertical-align:top;">👍 ${item.voteCount || 0}</td>
+                    <td style="padding:12px; white-space:nowrap; vertical-align:top;">
                         <select onchange="window.updateFeedbackStatus('${item.id}', this.value)" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; font-weight:bold;">
                             <option value="pending" ${isPending ? 'selected' : ''}>🟡 Under Review</option>
                             <option value="in_progress" ${isInProgress ? 'selected' : ''}>🔵 In Progress</option>
@@ -20166,7 +20168,7 @@ window.renderAdminFeedbackTab = async () => {
                             <option value="archived" ${isArchived ? 'selected' : ''}>⚪ Archived</option>
                         </select>
                     </td>
-                    <td style="padding:12px; white-space:nowrap; text-align:right;">
+                    <td style="padding:12px; white-space:nowrap; text-align:right; vertical-align:top;">
                         <button onclick="window.openAdminNoteModal('${item.id}', '${escapeHTML(item.adminNote || '')}', '${escapeHTML(item.category || '')}', '${escapeHTML(item.type || 'general')}', '${escapeHTML(item.urgency || 'normal')}')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:var(--accent); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Add or edit resolution note">✏️ Note</button>
                         <button onclick="window.deleteFeedbackItem('${item.id}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; margin-left:4px;" title="Delete ticket">🗑️</button>
                     </td>
@@ -20186,15 +20188,15 @@ window.renderAdminFeedbackTab = async () => {
             </div>
             <!-- Ticket Table -->
             <div style="overflow-x:auto;">
-                <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+                <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px; min-width:980px;">
                     <thead>
                         <tr style="border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">
-                            <th style="padding:10px 12px; text-align:center; width:40px;">Done</th>
+                            <th style="padding:10px 12px; text-align:center; width:45px;">Done</th>
                             <th style="padding:10px 12px; width:95px;">Priority</th>
                             <th style="padding:10px 12px; width:95px;">Type</th>
-                            <th style="padding:10px 12px;">Title & Details</th>
-                            <th style="padding:10px 12px; width:130px;">Category</th>
-                            <th style="padding:10px 12px; width:120px;">Submitted By</th>
+                            <th style="padding:10px 12px; min-width:280px;">Title & Details</th>
+                            <th style="padding:10px 12px; width:140px;">Category</th>
+                            <th style="padding:10px 12px; width:130px;">Submitted By</th>
                             <th style="padding:10px 12px; text-align:center; width:60px;">Votes</th>
                             <th style="padding:10px 12px; width:130px;">Status</th>
                             <th style="padding:10px 12px; text-align:right; width:100px;">Actions</th>
