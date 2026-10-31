@@ -200,13 +200,18 @@
       <!-- Section 3: Help & Support Tickets -->
       <div class="sidebar-section" id="sidebarFeedbackSection" style="margin-bottom:14px; background:var(--bg-main); padding:12px; border-radius:10px; border:1px solid rgba(6,182,212,0.35); box-shadow:0 4px 15px rgba(6,182,212,0.08);">
         <h3 style="margin-top:0; margin-bottom:6px; font-size:12px; color:var(--text-muted); border-bottom:1px solid var(--border); padding-bottom:5px; display:flex; align-items:center; justify-content:space-between; text-transform:uppercase; letter-spacing:0.5px;">
-          <span style="display:flex; align-items:center; gap:5px; color:var(--accent);">🎫 Support & Tickets</span>
-          <span style="background:rgba(6,182,212,0.15); color:var(--accent); font-size:9px; font-weight:bold; padding:1px 6px; border-radius:8px; border:1px solid rgba(6,182,212,0.3);">HELP DESK</span>
+          <span style="display:flex; align-items:center; gap:5px; color:var(--accent);">🎫 Help & Support Tickets</span>
+          <span style="background:rgba(6,182,212,0.15); color:var(--accent); font-size:9px; font-weight:bold; padding:1px 6px; border-radius:8px; border:1px solid rgba(6,182,212,0.3);">CONFIDENTIAL</span>
         </h3>
-        <p style="margin:4px 0 10px 0; font-size:11px; color:var(--text-muted); line-height:1.4;">Submit help requests, report bugs, suggest features, and track leadership replies!</p>
-        <button id="feedbackSidebarBtn" onclick="if(window.closeSidebarFunc) window.closeSidebarFunc(); if(window.views && window.views.feedback) window.views.feedback();" class="sidebar-action-btn primary sidebar-mini-btn" style="width:100%; display:flex; align-items:center; justify-content:center; gap:6px; font-weight:bold; background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2)); border:1px solid rgba(6,182,212,0.4); color:var(--text-main);">
-          🎫 Help & Support Tickets
-        </button>
+        <p style="margin:4px 0 10px 0; font-size:11px; color:var(--text-muted); line-height:1.4;">Submit private support requests, account help, and bug reports directly to leadership!</p>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <button id="submitTicketSidebarBtn" onclick="if(window.closeSidebarFunc) window.closeSidebarFunc(); if(window.openSubmitFeedbackModal) window.openSubmitFeedbackModal();" class="sidebar-action-btn primary sidebar-mini-btn" style="width:100%; display:flex; align-items:center; justify-content:center; gap:6px; font-weight:bold; background:linear-gradient(135deg, #06b6d4, #8b5cf6); color:#fff; border:none; box-shadow:0 2px 8px rgba(6,182,212,0.3);">
+            ➕ Submit Support Ticket
+          </button>
+          <button id="feedbackSidebarBtn" onclick="if(window.closeSidebarFunc) window.closeSidebarFunc(); if(window.views && window.views.feedback) window.views.feedback();" class="sidebar-action-btn sidebar-mini-btn" style="width:100%; display:flex; align-items:center; justify-content:center; gap:6px; font-weight:bold; background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-muted);">
+            📋 My Submitted Tickets
+          </button>
+        </div>
       </div>
 
       <!-- Section 4: Preferences & Appearance (Mini Grid) -->

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.145] - 2026-10-30
+- 🔒 **Private Tickets**: Members only see their own submitted support tickets.
+- 👑 **Admin Ticket Desk**: Master ticket directory restricted behind Admin Menu.
+- ✍️ **Hardcoded Replies**: Leadership replies permanently stamp staff name and rank.
+- ➕ **Direct Submission**: Fast ticket launcher added directly to sidebar settings.
+- 🔔 **Alert Privacy**: Notification bell only alerts members on own tickets.
+
 ## [3.3.144] - 2026-10-30
 - 🔄 **Signups Reset**: Full and Signups reset wipes all members to NO.
 - 🧹 **Dual-Key Sweep**: Cleared both numeric ID and chief name keys.

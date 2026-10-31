@@ -1,16 +1,17 @@
 {
-  "version": "3.3.144",
+  "version": "3.3.145",
   "releaseDate": "2026-10-30",
-  "title": "What's New in v3.3.144",
+  "title": "What's New in v3.3.145",
   "notes": [
-    "Fixed Championship reset to wipe signups for all members.",
-    "Cleared numeric and chief name keys in Firebase.",
-    "Added automatic sweep for lingering championship signup flags.",
-    "Fixed Google Sheets reset tab name and sync triggers."
+    "Members now only see their own submitted support tickets.",
+    "Master ticket directory restricted behind the Admin Menu.",
+    "Staff replies permanently capture verified staff name and level.",
+    "Added quick support ticket launcher to sidebar settings."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.144",
+    "version": "3.3.145",
     "latestChanges": [
+      "v3.3.145: Confidential Support Tickets isolation and Admin Tickets Desk",
       "v3.3.144: Resolved Championship signups reset across portal and Google Sheets",
       "v3.3.143: Reordered Championship tabs to 1. Signups, 2. Schedule, 3. Matchups",
       "v3.3.142: Eliminated false mid-week cooldown cutoff during active Championship tournament",

@@ -19170,17 +19170,39 @@ window.updateFeedbackStatus = async (itemId, newStatus, adminNote = null) => {
         return;
     }
     try {
+        const activeStaff = currentUser || window.currentUser;
+        const staffName = (activeStaff && window.idToNameMap && activeStaff.gameId && window.idToNameMap[activeStaff.gameId]) ||
+                          activeStaff?.displayName ||
+                          activeStaff?.name ||
+                          activeStaff?.chiefName ||
+                          'Alliance Staff';
+        const staffLevel = (typeof window.getAdminLevel === 'function' ? window.getAdminLevel(activeStaff) : '') || 'Staff';
+
         const updates = {
             status: newStatus,
             updatedAt: Date.now(),
-            updatedBy: currentUser.displayName || currentUser.email || 'Admin'
+            updatedBy: staffName
         };
         if (newStatus === 'completed') {
             updates.completedAt = Date.now();
-            updates.completedBy = currentUser.displayName || currentUser.email || 'Admin';
+            updates.completedBy = staffName;
         }
         if (adminNote !== null && adminNote !== undefined) {
             updates.adminNote = adminNote;
+            if (adminNote.trim()) {
+                updates.repliedByName = staffName;
+                updates.repliedByLevel = staffLevel;
+                updates.repliedByUid = activeStaff?.uid || '';
+                updates.repliedByGameId = activeStaff?.gameId || '';
+                updates.repliedAt = Date.now();
+                updates.repliedBy = {
+                    name: staffName,
+                    level: staffLevel,
+                    uid: activeStaff?.uid || '',
+                    gameId: activeStaff?.gameId || '',
+                    timestamp: Date.now()
+                };
+            }
         }
         await update(ref(db, `community_feedback/${itemId}`), updates);
         if (window.showToast) window.showToast(`Updated status to ${newStatus.toUpperCase()}!`, "success");
@@ -19413,6 +19435,14 @@ window.openAdminNoteModal = (itemId, currentNote = '', currentCategory = '', cur
             const catVal = document.getElementById('adminNoteCategoryInput')?.value;
             const typeVal = document.getElementById('adminNoteTypeInput')?.value;
             const urgencyVal = document.getElementById('adminNoteUrgencyInput')?.value;
+            const activeStaff = currentUser || window.currentUser;
+            const staffName = (activeStaff && window.idToNameMap && activeStaff.gameId && window.idToNameMap[activeStaff.gameId]) ||
+                              activeStaff?.displayName ||
+                              activeStaff?.name ||
+                              activeStaff?.chiefName ||
+                              'Alliance Staff';
+            const staffLevel = (typeof window.getAdminLevel === 'function' ? window.getAdminLevel(activeStaff) : '') || 'Staff';
+
             const updatePayload = {
                 adminNote: noteVal,
                 updatedAt: Date.now()
@@ -19420,6 +19450,21 @@ window.openAdminNoteModal = (itemId, currentNote = '', currentCategory = '', cur
             if (catVal) updatePayload.category = catVal;
             if (typeVal) updatePayload.type = typeVal;
             if (urgencyVal) updatePayload.urgency = urgencyVal;
+
+            if (noteVal) {
+                updatePayload.repliedByName = staffName;
+                updatePayload.repliedByLevel = staffLevel;
+                updatePayload.repliedByUid = activeStaff?.uid || '';
+                updatePayload.repliedByGameId = activeStaff?.gameId || '';
+                updatePayload.repliedAt = Date.now();
+                updatePayload.repliedBy = {
+                    name: staffName,
+                    level: staffLevel,
+                    uid: activeStaff?.uid || '',
+                    gameId: activeStaff?.gameId || '',
+                    timestamp: Date.now()
+                };
+            }
             await update(ref(db, `community_feedback/${itemId}`), updatePayload);
             overlay.remove();
             if (window.showToast) window.showToast("Admin changes saved!", "success");
@@ -20093,7 +20138,15 @@ window.renderAdminFeedbackTab = async () => {
                         <div style="font-weight:bold; font-size:13px; color:var(--text-main); ${isCompleted ? 'text-decoration:line-through; opacity:0.75;' : ''}">${escapeHTML(item.title || '')}</div>
                         ${item.description ? `<div style="font-size:11.5px; color:var(--text-muted); margin-top:3px; max-width:380px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(item.description)}</div>` : ''}
                         ${item.videoUrl ? `<div style="margin-top:4px;"><a href="javascript:void(0)" onclick="window.openFeedbackMediaLightbox({ type:'${(item.mediaType === 'gdrive_video' || item.videoUrl.includes('drive.google.com')) ? 'gdrive_video' : 'video'}', url:'${escapeHTML(item.videoUrl)}', title:'${escapeHTML(item.title || '')}', name:'${escapeHTML(item.mediaName || 'feedback_clip.mp4')}' })" style="font-size:11px; color:#38bdf8; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:4px; background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); padding:2px 8px; border-radius:4px;">${(item.mediaType === 'gdrive_video' || item.videoUrl.includes('drive.google.com')) ? '📁 View Drive Video' : `🎥 View Video Clip ${item.mediaDuration ? '(' + window.formatVideoDuration(item.mediaDuration) + ')' : ''}`}</a></div>` : (item.imageUrl ? `<div style="margin-top:4px;"><a href="javascript:void(0)" onclick="window.openFeedbackMediaLightbox('${escapeHTML(item.imageUrl)}')" style="font-size:11px; color:#38bdf8; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:4px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:2px 8px; border-radius:4px;">🖼️ View Screenshot</a></div>` : '')}
-                        ${item.adminNote ? `<div style="font-size:11.5px; color:#38bdf8; font-weight:bold; margin-top:5px; white-space:pre-wrap; word-break:break-word; background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.2); padding:5px 10px; border-radius:6px; line-height:1.45;">✨ ${escapeHTML(item.adminNote)}</div>` : ''}
+                        ${item.adminNote ? `
+                            <div style="font-size:11.5px; color:#38bdf8; font-weight:bold; margin-top:5px; white-space:pre-wrap; word-break:break-word; background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.2); padding:6px 10px; border-radius:6px; line-height:1.45;">
+                                <div style="font-size:10px; color:#38bdf8; font-weight:900; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px; display:flex; align-items:center; gap:4px;">
+                                    <span>👑</span> <span>Replied by: <strong>${escapeHTML(item.repliedByName || item.repliedBy?.name || 'Staff')}</strong> ${(item.repliedByLevel || item.repliedBy?.level) ? `(${escapeHTML(item.repliedByLevel || item.repliedBy?.level)})` : ''}</span>
+                                    ${item.repliedAt ? `<span style="font-size:9.5px; color:var(--text-muted); font-weight:normal;">• ${window.formatTimeAgo(item.repliedAt)}</span>` : ''}
+                                </div>
+                                ✨ ${escapeHTML(item.adminNote)}
+                            </div>
+                        ` : ''}
                     </td>
                     <td style="padding:12px; white-space:nowrap;">
                         <select onchange="window.updateFeedbackCategory('${item.id}', this.value)" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; font-weight:bold; cursor:pointer;" title="Reclassify Category">
@@ -23075,14 +23128,15 @@ window.openAllianceAlertsModal = async () => {
         })).filter(f => f && !dismissedBellItems.includes(f.id));
         allFeedback.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
-        // Attention Rule: Only show open/pending, in_progress, or user's ticket with developer note
+        // Attention Rule: Only show open/pending, in_progress for staff; or user's own ticket with leadership reply
         feedbackList = allFeedback.filter(f => {
           const normStatus = (f.status || 'open').toLowerCase();
           const isMyTicket = u && (
+            (u.uid && f.submittedBy?.uid && String(u.uid) === String(f.submittedBy.uid)) ||
             (u.gameId && f.submittedBy?.gameId && String(u.gameId).trim() === String(f.submittedBy.gameId).trim()) ||
             (u.name && f.submittedBy?.name && String(u.name).trim().toLowerCase() === String(f.submittedBy.name).trim().toLowerCase())
           );
-          if (isMyTicket && f.adminNote) return true;
+          if (isMyTicket && (f.adminNote || f.repliedByName)) return true;
           if (isStaff && (normStatus === 'open' || normStatus === 'pending' || normStatus === 'in_progress')) return true;
           return false;
         });
@@ -46461,6 +46515,7 @@ window.resetBearTrapEvent = async () => {
 
         let items = [];
         const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
+        const isStaffAdmin = Boolean((typeof window.isAdminUser === 'function' && window.isAdminUser(activeUser)) || isManager);
 
         const getPillStyle = (isActive, color) => {
             if (isActive) {
@@ -46520,8 +46575,9 @@ window.resetBearTrapEvent = async () => {
                 cardsHtml = `
                     <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:40px 20px; text-align:center; color:var(--text-muted);">
                         <div style="font-size:36px; margin-bottom:10px;">🎫</div>
-                        <div style="font-size:16px; font-weight:bold; color:var(--text-main);">No support tickets match your filter</div>
-                        <p style="font-size:12px; margin-top:4px;">Try selecting a different filter or click "➕ Open Support Ticket" to create one!</p>
+                        <div style="font-size:16px; font-weight:bold; color:var(--text-main);">${isStaffAdmin ? 'No support tickets match your filter' : 'You have no submitted tickets in this category'}</div>
+                        <p style="font-size:12px; margin-top:4px;">${isStaffAdmin ? 'Try selecting a different filter or click "➕ Open Support Ticket" to create one!' : 'Need help with your account, found a bug, or have a suggestion? Open a confidential ticket anytime!'}</p>
+                        ${!isStaffAdmin ? `<button onclick="window.openSubmitFeedbackModal()" style="margin-top:14px; background:linear-gradient(135deg, #06b6d4, #8b5cf6); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; box-shadow:0 3px 12px rgba(6,182,212,0.3);">➕ Open Support Ticket</button>` : ''}
                     </div>
                 `;
             } else {
@@ -46647,7 +46703,14 @@ window.resetBearTrapEvent = async () => {
                             </div>
                             ${item.adminNote ? `
                                 <div style="background:rgba(56,189,248,0.07); border:1px solid rgba(56,189,248,0.25); border-radius:10px; padding:10px 14px; margin-top:2px;">
-                                    <div style="font-size:11px; font-weight:bold; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; display:flex; align-items:center; gap:5px;"><span>✨</span> Leadership / Resolution Note</div>
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:6px;">
+                                        <div style="font-size:11px; font-weight:bold; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:5px;"><span>👑</span> Leadership Reply</div>
+                                        ${(item.repliedByName || item.repliedBy?.name) ? `
+                                            <span style="font-size:10.5px; font-weight:bold; color:#38bdf8; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); padding:2px 8px; border-radius:6px;">
+                                                Replied by: <strong>${escapeHTML(item.repliedByName || item.repliedBy?.name)}</strong> ${(item.repliedByLevel || item.repliedBy?.level) ? `(${escapeHTML(item.repliedByLevel || item.repliedBy?.level)})` : ''}
+                                            </span>
+                                        ` : ''}
+                                    </div>
                                     <div style="font-size:12.5px; color:var(--text-main); line-height:1.5; white-space:pre-wrap; word-break:break-word;">${escapeHTML(item.adminNote)}</div>
                                 </div>
                             ` : ''}
@@ -46669,13 +46732,19 @@ window.resetBearTrapEvent = async () => {
                 <div style="max-width:960px; margin:0 auto; padding-bottom:50px; display:flex; flex-direction:column; gap:18px; animation: fadeIn 0.3s ease;">
                     <div style="background:linear-gradient(135deg, rgba(6,182,212,0.12) 0%, rgba(168,85,247,0.06) 100%); border:1px solid rgba(6,182,212,0.35); border-radius:16px; padding:22px 24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; box-shadow:0 6px 25px rgba(0,0,0,0.3);">
                         <div style="display:flex; align-items:center; gap:14px;">
-                            <div style="width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, #06b6d4, #8b5cf6); display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 4px 15px rgba(6,182,212,0.4); flex-shrink:0;">🎫</div>
+                            <div style="width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, #06b6d4, #8b5cf6); display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 4px 15px rgba(6,182,212,0.4); flex-shrink:0;">${isStaffAdmin ? '👑' : '🔒'}</div>
                             <div>
-                                <h1 style="margin:0; font-size:22px; font-weight:900; color:var(--text-main); letter-spacing:0.5px;">Alliance Help & Support Tickets</h1>
-                                <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Submit support requests, report bugs, suggest features, and track resolutions with alliance leadership.</p>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <h1 style="margin:0; font-size:22px; font-weight:900; color:var(--text-main); letter-spacing:0.5px;">${isStaffAdmin ? 'Alliance Help & Support Tickets' : 'My Confidential Support Tickets'}</h1>
+                                    <span style="background:${isStaffAdmin ? 'rgba(234,179,8,0.15)' : 'rgba(16,185,129,0.15)'}; border:1px solid ${isStaffAdmin ? 'rgba(234,179,8,0.35)' : 'rgba(16,185,129,0.35)'}; color:${isStaffAdmin ? '#eab308' : '#10b981'}; font-size:10px; font-weight:800; padding:2px 8px; border-radius:10px; letter-spacing:0.5px;">${isStaffAdmin ? 'STAFF DESK' : 'CONFIDENTIAL'}</span>
+                                </div>
+                                <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">${isStaffAdmin ? 'Manage member support tickets, account issues, bug reports, and resolution notes.' : 'Confidential ticket submission. Only you and Alliance Leadership (R4/R5) can view your tickets and replies.'}</p>
                             </div>
                         </div>
-                        <button onclick="window.openSubmitFeedbackModal()" style="background:linear-gradient(135deg, #06b6d4, #8b5cf6); color:#fff; border:none; padding:10px 18px; border-radius:10px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 14px rgba(6,182,212,0.35); transition:0.2s;">➕ Open Support Ticket</button>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            ${isStaffAdmin ? `<button onclick="views.admin('tab-feedback')" style="background:var(--card-bg); border:1px solid var(--accent); color:var(--accent); padding:10px 16px; border-radius:10px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px;">📊 Open Admin Tickets Desk</button>` : ''}
+                            <button onclick="window.openSubmitFeedbackModal()" style="background:linear-gradient(135deg, #06b6d4, #8b5cf6); color:#fff; border:none; padding:10px 18px; border-radius:10px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 14px rgba(6,182,212,0.35); transition:0.2s;">➕ Open Support Ticket</button>
+                        </div>
                     </div>
                     <div style="display:flex; flex-direction:column; gap:12px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
@@ -46717,8 +46786,24 @@ window.resetBearTrapEvent = async () => {
             });
         };
 
+        const filterTicketsForViewer = (rawList) => {
+            if (!Array.isArray(rawList)) return [];
+            if (isStaffAdmin) return rawList;
+            const uUid = activeUser?.uid;
+            const uGid = activeUser?.gameId ? String(activeUser.gameId).trim() : '';
+            const uName = (activeUser?.name || activeUser?.displayName || '').trim().toLowerCase();
+            return rawList.filter(item => {
+                if (!item) return false;
+                if (uUid && item.submittedBy?.uid && item.submittedBy.uid === uUid) return true;
+                if (uGid && item.submittedBy?.gameId && String(item.submittedBy.gameId).trim() === uGid) return true;
+                if (uName && item.submittedBy?.name && item.submittedBy.name.trim().toLowerCase() === uName) return true;
+                return false;
+            });
+        };
+
         window.activeFeedbackRender = async () => {
-            items = await window.fetchFeedbackItems();
+            const allRaw = await window.fetchFeedbackItems();
+            items = filterTicketsForViewer(allRaw);
             renderFeedbackUI();
         };
 
@@ -46728,8 +46813,9 @@ window.resetBearTrapEvent = async () => {
                 items = [];
             } else {
                 const data = snap.val() || {};
-                items = Object.keys(data).map(k => ({ id: k, ...data[k] }));
-                items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                const allRaw = Object.keys(data).map(k => ({ id: k, ...data[k] }));
+                allRaw.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                items = filterTicketsForViewer(allRaw);
             }
             renderFeedbackUI();
         }, (err) => {

@@ -60,9 +60,16 @@ console.log('  ✅ Urgency selector radios rendered in modal template');
 assert(mainJs.includes('adminNoteUrgencyInput'), 'Must include urgency selector in admin note modal');
 console.log('  ✅ openAdminNoteModal includes adminNoteUrgencyInput');
 
+assert(mainJs.includes('repliedByName') && mainJs.includes('repliedByLevel'), 'Must record repliedByName and repliedByLevel');
+console.log('  ✅ Staff reply hardcoded metadata (repliedByName, repliedByLevel) verified');
+
+assert(mainJs.includes('filterTicketsForViewer'), 'Must define filterTicketsForViewer for privacy isolation');
+console.log('  ✅ Member ticket isolation filter (filterTicketsForViewer) verified');
+
 const indexHtml = fs.readFileSync(path.join(ROOT_DIR, 'index.html'), 'utf8');
 assert(indexHtml.includes('Help & Support Tickets'), 'Sidebar in index.html must reference Help & Support Tickets');
-console.log('  ✅ index.html sidebar button updated to "Help & Support Tickets"');
+assert(indexHtml.includes('Submit Support Ticket'), 'Sidebar must include direct Submit Support Ticket button');
+console.log('  ✅ index.html sidebar buttons updated to "Submit Support Ticket" & "My Submitted Tickets"');
 
 async function runHeadlessSuite() {
   if (!puppeteer) {
@@ -284,6 +291,75 @@ async function runHeadlessSuite() {
     await page.evaluate(() => {
       document.getElementById('submitFeedbackModal')?.remove();
     });
+
+    // Test Regular Member Privacy Isolation:
+    console.log('  🔍 Testing Regular Member Privacy Isolation (Non-Admin View)...');
+    await page.evaluate(async () => {
+      const regularMember = {
+        displayName: 'MemberDave',
+        email: 'dave@example.com',
+        uid: 'user_dave_99',
+        gameId: '99887766'
+      };
+      window.currentUser = regularMember;
+      localStorage.setItem('currentUser', JSON.stringify(regularMember));
+      window.getAdminLevel = () => false;
+      window.isAdminUser = () => false;
+
+      // Mock tickets with one belonging to MemberDave and others to other users
+      const allTickets = [
+        {
+          id: 'ticket_dave_1',
+          type: 'support_account',
+          urgency: 'urgent',
+          category: 'Account Hub',
+          title: 'My private account transfer request',
+          description: 'Secret details about my secondary chief.',
+          status: 'pending',
+          submittedBy: { name: 'MemberDave', gameId: '99887766', uid: 'user_dave_99' },
+          repliedByName: 'LeaderBrian',
+          repliedByLevel: 'R5',
+          adminNote: 'We have received your request and are processing the bind.',
+          createdAt: Date.now() - 100000
+        },
+        {
+          id: 'ticket_other_2',
+          type: 'bug',
+          urgency: 'high',
+          category: 'Shield Alerts',
+          title: 'Someone else confidential ticket',
+          description: 'This ticket belongs to someone else and must NOT be visible to Dave!',
+          status: 'pending',
+          submittedBy: { name: 'Officer Sarah', gameId: '20045678', uid: 'user_sarah' },
+          createdAt: Date.now() - 200000
+        }
+      ];
+
+      window.fetchFeedbackItems = async () => allTickets;
+      await window.views.feedback();
+    });
+
+    await page.waitForSelector('#feedbackCardsContainer', { timeout: 5000 });
+
+    const memberHeader = await page.$eval('#app h1', el => el.textContent.trim());
+    assert(memberHeader.includes('My Confidential Support Tickets'), `Non-admin header must be "My Confidential Support Tickets", got: ${memberHeader}`);
+    console.log(`  ✅ Non-Admin Header Assert: "${memberHeader}"`);
+
+    const confidentialBadge = await page.$eval('#app', el => el.textContent.includes('CONFIDENTIAL'));
+    assert(confidentialBadge, 'Non-admin view must display CONFIDENTIAL badge');
+    console.log('  ✅ Visual DOM Assert: CONFIDENTIAL badge rendered');
+
+    // Assert only Dave's ticket is rendered
+    const visibleCards = await page.$$eval('#feedbackCardsContainer .feedback-card', cards => cards.map(c => c.textContent));
+    assert.strictEqual(visibleCards.length, 1, `Regular member must strictly see 1 card (their own), got ${visibleCards.length}`);
+    assert(visibleCards[0].includes('My private account transfer request'), 'Card rendered must be Dave\'s ticket');
+    assert(!visibleCards[0].includes('Someone else confidential ticket'), 'Must NOT contain other members\' tickets');
+    console.log('  ✅ Privacy Isolation Assert: Regular member ONLY sees their own ticket (other tickets strictly hidden)');
+
+    // Assert hardcoded staff reply is rendered
+    assert(visibleCards[0].includes('Replied by: LeaderBrian (R5)'), 'Staff reply with hardcoded name and level must be physically rendered');
+    assert(visibleCards[0].includes('We have received your request'), 'Admin note text must be physically rendered');
+    console.log('  ✅ Hardcoded Staff Reply Assert: "Replied by: LeaderBrian (R5)" rendered in card');
 
     // Responsive layout audits
     console.log('  🔍 Running viewport responsiveness audits...');
