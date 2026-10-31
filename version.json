@@ -1,16 +1,17 @@
 {
-  "version": "3.3.143",
-  "releaseDate": "2026-10-28",
-  "title": "What's New in v3.3.143",
+  "version": "3.3.144",
+  "releaseDate": "2026-10-30",
+  "title": "What's New in v3.3.144",
   "notes": [
-    "Reordered Signups to Tab 1 for immediate check-in.",
-    "Reordered Season Schedule and Cooldown countdown to Tab 2.",
-    "Reordered tournament Matchups editor to Step 3.",
-    "Natural tournament lifecycle progression from signups to scoring."
+    "Fixed Championship reset to wipe signups for all members.",
+    "Cleared numeric and chief name keys in Firebase.",
+    "Added automatic sweep for lingering championship signup flags.",
+    "Fixed Google Sheets reset tab name and sync triggers."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.143",
+    "version": "3.3.144",
     "latestChanges": [
+      "v3.3.144: Resolved Championship signups reset across portal and Google Sheets",
       "v3.3.143: Reordered Championship tabs to 1. Signups, 2. Schedule, 3. Matchups",
       "v3.3.142: Eliminated false mid-week cooldown cutoff during active Championship tournament",
       "v3.3.141: Swapped Championship tab restriction to unlock Signups and lock Matchups",

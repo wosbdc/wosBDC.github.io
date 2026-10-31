@@ -4222,13 +4222,17 @@ window.fetchChampionshipData = async () => {
     const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
     const addEntry = (gid, chiefName, isSigned, lastUpdated) => {
-        const cleanN = window.cleanChiefName(chiefName);
+        const cleanN = window.cleanChiefName ? window.cleanChiefName(chiefName) : chiefName;
         const entry = {
             gameId: gid,
             name: cleanN || chiefName,
             signedUp: isSigned,
             lastUpdated: lastUpdated || Date.now()
         };
+        const existing = (gid && result[gid]) || (chiefName && result[chiefName]);
+        if (existing && existing.lastUpdated && entry.lastUpdated && entry.lastUpdated < existing.lastUpdated) {
+            return;
+        }
         if (gid) result[gid] = entry;
         if (chiefName) {
             result[chiefName] = entry;
@@ -5322,13 +5326,17 @@ window.fetchPolarTerrorsData = async () => {
     const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
     const addEntry = (gid, chiefName, isSigned, lastUpdated) => {
-        const cleanN = window.cleanChiefName(chiefName);
+        const cleanN = window.cleanChiefName ? window.cleanChiefName(chiefName) : chiefName;
         const entry = {
             gameId: gid,
             name: cleanN || chiefName,
             signedUp: isSigned,
             lastUpdated: lastUpdated || Date.now()
         };
+        const existing = (gid && result[gid]) || (chiefName && result[chiefName]);
+        if (existing && existing.lastUpdated && entry.lastUpdated && entry.lastUpdated < existing.lastUpdated) {
+            return;
+        }
         if (gid) result[gid] = entry;
         if (chiefName) {
             result[chiefName] = entry;
@@ -16682,6 +16690,9 @@ window.showResetAndArchiveChampionshipModal = async (initialScope = 'full') => {
                                     <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
                                         Archives 5-round battle scores & opponent info to Vault History, and resets matchups to New Season template. Leaves member signups untouched.
                                     </div>
+                                    <div style="font-size: 11px; color: #f59e0b; margin-top: 4px; font-weight: 600;">
+                                        ⚠️ Note: Leaves member signups untouched. Choose Full Season Reset or Member Signups Only to reset signups to NO.
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -17037,17 +17048,78 @@ window.showResetAndArchiveChampionshipModal = async (initialScope = 'full') => {
 
                 // Reset Signups if full or signups scope
                 if (scope === 'full' || scope === 'signups') {
+                    const multiUpdates = {};
                     for (const p of rosterList) {
                         const rawGid = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
                         const gidStr = (rawGid && typeof rawGid === 'string') ? rawGid.trim() : '';
-                        if (!gidStr || /[.#$\[\]/]/.test(gidStr)) continue;
-                        try {
-                            await update(ref(db, `activity_live/${gidStr}`), { championship: false, updatedAt: timestamp });
-                        } catch(e) {
-                            await set(ref(db, `activity_live/${gidStr}/championship`), false).catch(() => null);
+                        const chiefName = (p.name || p.chiefName || '').trim();
+                        const nameKey = chiefName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                        const cleanN = window.cleanChiefName ? window.cleanChiefName(chiefName) : chiefName;
+                        const cleanKey = cleanN ? cleanN.toLowerCase().replace(/[^a-z0-9]/g, '_') : '';
+
+                        if (gidStr && !/[.#$\[\]/]/.test(gidStr)) {
+                            multiUpdates[`activity_live/${gidStr}/championship`] = false;
+                            multiUpdates[`activity_live/${gidStr}/updatedAt`] = timestamp;
+                            multiUpdates[`championship/${gidStr}`] = { gameId: gidStr, name: chiefName, signedUp: false, lastUpdated: timestamp, updatedBy: adminName };
                         }
-                        await set(ref(db, `championship/${gidStr}`), { gameId: gidStr, name: p.name, signedUp: false, lastUpdated: timestamp, updatedBy: adminName }).catch(() => null);
+                        if (nameKey && !/[.#$\[\]/]/.test(nameKey) && nameKey !== gidStr) {
+                            multiUpdates[`activity_live/${nameKey}/championship`] = false;
+                            multiUpdates[`activity_live/${nameKey}/updatedAt`] = timestamp;
+                            multiUpdates[`championship/${nameKey}`] = { gameId: gidStr || '', name: chiefName, signedUp: false, lastUpdated: timestamp, updatedBy: adminName };
+                        }
+                        if (cleanKey && !/[.#$\[\]/]/.test(cleanKey) && cleanKey !== nameKey && cleanKey !== gidStr) {
+                            multiUpdates[`activity_live/${cleanKey}/championship`] = false;
+                            multiUpdates[`activity_live/${cleanKey}/updatedAt`] = timestamp;
+                            multiUpdates[`championship/${cleanKey}`] = { gameId: gidStr || '', name: chiefName, signedUp: false, lastUpdated: timestamp, updatedBy: adminName };
+                        }
                     }
+
+                    // Sweep entire activity_live root for any remaining championship: true flags
+                    try {
+                        const actSnap = await get(ref(db, 'activity_live')).catch(() => null);
+                        if (actSnap && actSnap.exists()) {
+                            const actVal = actSnap.val() || {};
+                            Object.entries(actVal).forEach(([k, rec]) => {
+                                if (rec && typeof rec === 'object' && (rec.championship === true || rec.championship === 'true' || rec.championship === 'yes' || rec.championship === 'YES')) {
+                                    if (!/[.#$\[\]/]/.test(k)) {
+                                        multiUpdates[`activity_live/${k}/championship`] = false;
+                                        multiUpdates[`activity_live/${k}/updatedAt`] = timestamp;
+                                    }
+                                }
+                            });
+                        }
+                    } catch(e) { console.warn("Sweep activity_live error:", e); }
+
+                    // Sweep entire championship root for any remaining signedUp: true flags
+                    try {
+                        const champSnap = await get(ref(db, 'championship')).catch(() => null);
+                        if (champSnap && champSnap.exists()) {
+                            const champVal = champSnap.val() || {};
+                            Object.entries(champVal).forEach(([k, rec]) => {
+                                if (rec && typeof rec === 'object' && (rec.signedUp === true || rec.signedUp === 'true' || rec.signedUp === 'yes' || rec.signedUp === 'YES')) {
+                                    if (!/[.#$\[\]/]/.test(k)) {
+                                        multiUpdates[`championship/${k}/signedUp`] = false;
+                                        multiUpdates[`championship/${k}/lastUpdated`] = timestamp;
+                                        multiUpdates[`championship/${k}/updatedBy`] = adminName;
+                                    }
+                                }
+                            });
+                        }
+                    } catch(e) { console.warn("Sweep championship error:", e); }
+
+                    if (Object.keys(multiUpdates).length > 0) {
+                        try {
+                            await update(ref(db), multiUpdates);
+                        } catch(batchErr) {
+                            console.warn("Championship multi-update failed, falling back to individual sets:", batchErr);
+                            for (const [pathStr, val] of Object.entries(multiUpdates)) {
+                                await set(ref(db, pathStr), val).catch(() => null);
+                            }
+                        }
+                    }
+
+                    // Explicitly purge all caches
+                    window.championshipCache = null;
                 }
             }
             updateStep(5, 'done', 'Reset ✓', 95);
@@ -17058,6 +17130,7 @@ window.showResetAndArchiveChampionshipModal = async (initialScope = 'full') => {
             await sleep(300);
 
             if (!isDemo) {
+                window.championshipCache = null;
                 window.clearAllEventCaches();
 
                 if (window.logAdminAction) {

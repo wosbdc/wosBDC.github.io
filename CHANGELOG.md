@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.144] - 2026-10-30
+- 🔄 **Signups Reset**: Full and Signups reset wipes all members to NO.
+- 🧹 **Dual-Key Sweep**: Cleared both numeric ID and chief name keys.
+- ☁️ **Ghost Purge**: Automatic Firebase sweep eliminates all lingering signup flags.
+- 📊 **Sheets Sync**: Fixed tab name check and added sync triggers.
+
 ## [3.3.143] - 2026-10-28
 - 📋 **Signups Tab 1**: Reordered Signups to Tab 1 for immediate check-in.
 - 📅 **Schedule Tab 2**: Reordered Season Schedule and Cooldown countdown to Tab 2.
