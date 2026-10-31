@@ -65,7 +65,10 @@ console.log('  ✅ Staff reply hardcoded metadata (repliedByName, repliedByLevel
 
 assert(mainJs.includes('min-width:280px') || mainJs.includes('min-width: 280px'), 'Title & Details column must have min-width:280px to prevent narrow vertical tube collapse');
 assert(mainJs.includes('min-width:980px') || mainJs.includes('min-width: 980px'), 'Admin ticket table must have min-width:980px to prevent table column crushing');
-console.log('  ✅ Admin ticket table and Title & Details min-width defenses verified');
+assert(mainJs.includes('window.openViewFeedbackReplyModal ='), 'Must define window.openViewFeedbackReplyModal');
+assert(mainJs.includes('btnViewReply_'), 'Must include click-to-view reply button in table rows');
+assert(mainJs.includes('feedbackReplyViewModal'), 'Must define #feedbackReplyViewModal overlay');
+console.log('  ✅ Admin ticket table, click-to-view button, and reply modal defenses verified');
 
 assert(mainJs.includes('filterTicketsForViewer'), 'Must define filterTicketsForViewer for privacy isolation');
 console.log('  ✅ Member ticket isolation filter (filterTicketsForViewer) verified');
@@ -416,15 +419,17 @@ async function runHeadlessSuite() {
       const table = document.querySelector('#adminFeedbackTabContainer table');
       const thTitle = Array.from(table.querySelectorAll('th')).find(th => th.textContent.includes('Title & Details'));
       const tdTitle = table.querySelector('tbody tr td:nth-child(4)');
-      const replyCard = tdTitle ? tdTitle.querySelector('div[style*="background:rgba(56,189,248"]') : null;
+      const replyBtn = tdTitle ? tdTitle.querySelector('button[id^="btnViewReply_"]') : null;
       const allTds = Array.from(table.querySelectorAll('tbody tr td'));
+      const rowHeight = table.querySelector('tbody tr')?.offsetHeight || 0;
 
       return {
         tableWidth: table ? table.offsetWidth : 0,
         thTitleWidth: thTitle ? thTitle.offsetWidth : 0,
         tdTitleWidth: tdTitle ? tdTitle.offsetWidth : 0,
-        replyCardWidth: replyCard ? replyCard.offsetWidth : 0,
-        replyCardText: replyCard ? replyCard.textContent.trim() : '',
+        hasReplyBtn: Boolean(replyBtn),
+        replyBtnText: replyBtn ? replyBtn.textContent.trim() : '',
+        rowHeight,
         allTdsTopAligned: allTds.every(td => td.style.verticalAlign === 'top')
       };
     });
@@ -432,10 +437,45 @@ async function runHeadlessSuite() {
     assert(tableLayoutMetrics.tableWidth >= 960, `Table width must be at least 960px, got ${tableLayoutMetrics.tableWidth}px`);
     assert(tableLayoutMetrics.thTitleWidth >= 280, `Title & Details column header must be >= 280px, got ${tableLayoutMetrics.thTitleWidth}px`);
     assert(tableLayoutMetrics.tdTitleWidth >= 280, `Title & Details cell must be >= 280px, got ${tableLayoutMetrics.tdTitleWidth}px`);
-    assert(tableLayoutMetrics.replyCardWidth >= 240, `Reply card width must be >= 240px, got ${tableLayoutMetrics.replyCardWidth}px`);
-    assert(tableLayoutMetrics.replyCardText.includes('Replied by: BrianDCox (R5)'), 'Reply card must include properly formatted "Replied by: BrianDCox (R5)"');
+    assert(tableLayoutMetrics.hasReplyBtn, 'Table row must render click-to-view reply button');
+    assert(tableLayoutMetrics.replyBtnText.includes('View Reply'), 'Button must say "View Reply"');
+    assert(tableLayoutMetrics.replyBtnText.includes('BrianDCox'), 'Button must include author "BrianDCox"');
+    assert(tableLayoutMetrics.rowHeight < 100, `Table row height must stay compact (< 100px), got ${tableLayoutMetrics.rowHeight}px`);
     assert(tableLayoutMetrics.allTdsTopAligned, 'All table row cells must be top-aligned (vertical-align: top)');
-    console.log(`  ✅ Admin Tickets Table Assert: Table width=${tableLayoutMetrics.tableWidth}px, Title column=${tableLayoutMetrics.tdTitleWidth}px, Reply card=${tableLayoutMetrics.replyCardWidth}px, top-aligned=true (Zero narrow tube collapse!)`);
+    console.log(`  ✅ Admin Tickets Table Assert: Table width=${tableLayoutMetrics.tableWidth}px, Row height=${tableLayoutMetrics.rowHeight}px (Ultra-compact!), Button="${tableLayoutMetrics.replyBtnText}"`);
+
+    // Click the button to test opening the mobile-friendly modal
+    console.log('  🔍 Testing opening Leadership Reply Modal on button click...');
+    await page.click('#btnViewReply_admin_test_ticket_1');
+    await page.waitForSelector('#feedbackReplyViewModal', { timeout: 3000 });
+
+    const modalData = await page.evaluate(() => {
+      const modal = document.getElementById('feedbackReplyViewModal');
+      const title = modal ? modal.querySelector('h3')?.textContent : '';
+      const text = modal ? modal.textContent : '';
+      return {
+        hasModal: Boolean(modal),
+        title,
+        hasAuthor: text.includes('BrianDCox') && text.includes('R5'),
+        hasReplyText: text.includes('test'),
+        hasEditBtn: text.includes('Edit Reply Note'),
+        hasCloseBtn: Boolean(modal && modal.querySelector('button[title="Close"]'))
+      };
+    });
+
+    assert(modalData.hasModal, 'Reply modal must be open in DOM');
+    assert(modalData.title.includes('Leadership Reply'), `Modal title must announce Leadership Reply, got "${modalData.title}"`);
+    assert(modalData.hasAuthor, 'Modal must display author BrianDCox (R5)');
+    assert(modalData.hasReplyText, 'Modal must display reply resolution text');
+    assert(modalData.hasEditBtn, 'Modal must feature "Edit Reply Note" button');
+    console.log('  ✅ Mobile-Friendly Leadership Reply Modal verified with full resolution text & action controls');
+
+    // Test closing modal
+    await page.click('#feedbackReplyViewModal button[title="Close"]');
+    await new Promise(r => setTimeout(r, 150));
+    const modalClosed = await page.evaluate(() => !document.getElementById('feedbackReplyViewModal'));
+    assert(modalClosed, 'Modal must close cleanly when close button is clicked');
+    console.log('  ✅ Modal dismissed cleanly');
 
     // Responsive layout audits
     console.log('  🔍 Running viewport responsiveness audits...');

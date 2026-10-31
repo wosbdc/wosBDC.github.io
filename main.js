@@ -19474,6 +19474,86 @@ window.openAdminNoteModal = (itemId, currentNote = '', currentCategory = '', cur
     }
 };
 
+window.openViewFeedbackReplyModal = async (itemId) => {
+    let item = (window._adminFeedbackItemsCache || []).find(i => i.id === itemId);
+    if (!item) {
+        const items = await window.fetchFeedbackItems().catch(() => []);
+        window._adminFeedbackItemsCache = items;
+        item = items.find(i => i.id === itemId);
+    }
+    if (!item) {
+        if (window.showToast) window.showToast("Ticket not found.", "error");
+        return;
+    }
+
+    const existing = document.getElementById('feedbackReplyViewModal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'feedbackReplyViewModal';
+    overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); z-index:999999; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; animation:fadeIn 0.2s ease;';
+
+    const authorName = escapeHTML(item.repliedByName || item.repliedBy?.name || 'Staff');
+    const authorLevel = (item.repliedByLevel || item.repliedBy?.level) ? `(${escapeHTML(item.repliedByLevel || item.repliedBy?.level)})` : '';
+    const timeAgo = item.repliedAt ? window.formatTimeAgo(item.repliedAt) : '';
+
+    overlay.innerHTML = `
+        <div style="background:var(--card-bg, #1e293b); border:1px solid rgba(6,182,212,0.4); border-radius:16px; max-width:560px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 12px 35px rgba(0,0,0,0.5); padding:22px; display:flex; flex-direction:column; gap:16px; box-sizing:border-box;">
+            <!-- Modal Header -->
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid var(--border); padding-bottom:14px; gap:10px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:38px; height:38px; border-radius:10px; background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.3); display:flex; align-items:center; justify-content:center; font-size:18px;">💬</div>
+                    <div>
+                        <h3 style="margin:0; font-size:16px; font-weight:800; color:var(--text-main);">Leadership Reply & Resolution</h3>
+                        <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">Ticket ID: <span style="font-family:var(--mono);">${escapeHTML(item.id)}</span></div>
+                    </div>
+                </div>
+                <button type="button" onclick="document.getElementById('feedbackReplyViewModal')?.remove()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted); width:32px; height:32px; border-radius:8px; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center;" title="Close">✕</button>
+            </div>
+
+            <!-- Original Ticket Context Box -->
+            <div style="background:var(--bg-main, #0f172a); border:1px solid var(--border); border-radius:10px; padding:12px 14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:6px;">
+                    <span style="font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted);">Original Submission</span>
+                    <span style="font-size:11px; color:var(--text-muted);">by <strong style="color:var(--text-main);">${escapeHTML(item.submittedBy?.name || 'Chief')}</strong> ${item.createdAt ? `• ${window.formatTimeAgo(item.createdAt)}` : ''}</span>
+                </div>
+                <div style="font-weight:bold; font-size:14px; color:var(--text-main); margin-bottom:4px;">${escapeHTML(item.title || '')}</div>
+                ${item.description ? `<div style="font-size:12.5px; color:var(--text-muted); line-height:1.45; white-space:pre-wrap; word-break:break-word;">${escapeHTML(item.description)}</div>` : ''}
+                ${item.videoUrl ? `<div style="margin-top:8px;"><a href="javascript:void(0)" onclick="window.openFeedbackMediaLightbox({ type:'${(item.mediaType === 'gdrive_video' || item.videoUrl.includes('drive.google.com')) ? 'gdrive_video' : 'video'}', url:'${escapeHTML(item.videoUrl)}', title:'${escapeHTML(item.title || '')}', name:'${escapeHTML(item.mediaName || 'feedback_clip.mp4')}' })" style="font-size:11.5px; color:#38bdf8; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:5px; background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); padding:4px 10px; border-radius:6px;">${(item.mediaType === 'gdrive_video' || item.videoUrl.includes('drive.google.com')) ? '📁 View Drive Video' : `🎥 View Video Clip ${item.mediaDuration ? '(' + window.formatVideoDuration(item.mediaDuration) + ')' : ''}`}</a></div>` : (item.imageUrl ? `<div style="margin-top:8px;"><a href="javascript:void(0)" onclick="window.openFeedbackMediaLightbox('${escapeHTML(item.imageUrl)}')" style="font-size:11.5px; color:#38bdf8; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:5px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:4px 10px; border-radius:6px;">🖼️ View Screenshot</a></div>` : '')}
+            </div>
+
+            <!-- Glowing Staff Response Box -->
+            <div style="background:rgba(56,189,248,0.08); border:1.5px solid rgba(56,189,248,0.35); border-radius:12px; padding:14px; box-shadow:0 4px 18px rgba(6,182,212,0.15);">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px; border-bottom:1px solid rgba(56,189,248,0.2); padding-bottom:8px;">
+                    <div style="font-size:11px; font-weight:900; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:6px;">
+                        <span>👑</span> <span>Replied by: <strong>${authorName}</strong> ${authorLevel}</span>
+                    </div>
+                    ${timeAgo ? `<span style="font-size:11px; color:var(--text-muted);">🕒 ${timeAgo}</span>` : ''}
+                </div>
+                <div style="color:var(--text-main); font-size:13px; line-height:1.6; white-space:pre-wrap; word-break:break-word;">
+                    ${escapeHTML(item.adminNote || 'No resolution note recorded.')}
+                </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:4px;">
+                <button type="button" onclick="document.getElementById('feedbackReplyViewModal')?.remove(); window.openAdminNoteModal('${item.id}', '${escapeHTML(item.adminNote || '')}', '${escapeHTML(item.category || '')}', '${escapeHTML(item.type || 'general')}', '${escapeHTML(item.urgency || 'normal')}');" style="background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.35); color:#38bdf8; padding:8px 16px; border-radius:8px; font-size:12.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                    ✏️ Edit Reply Note
+                </button>
+                <button type="button" onclick="document.getElementById('feedbackReplyViewModal')?.remove()" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:8px 18px; border-radius:8px; font-size:12.5px; font-weight:bold; cursor:pointer;">
+                    Close
+                </button>
+            </div>
+        </div>
+    `;
+
+    overlay.onclick = (e) => {
+        if (e.target === overlay) overlay.remove();
+    };
+
+    document.body.appendChild(overlay);
+};
+
 window.openSubmitFeedbackModal = (defaultType = '') => {
     const activeUser = currentUser || window.currentUser;
     if (!activeUser) {
@@ -20059,6 +20139,7 @@ window.renderAdminFeedbackTab = async () => {
 
     try {
         const items = await window.fetchFeedbackItems();
+        window._adminFeedbackItemsCache = items;
         if (items.length === 0) {
             container.innerHTML = `
                 <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:30px; text-align:center; color:var(--text-muted);">
@@ -20139,14 +20220,10 @@ window.renderAdminFeedbackTab = async () => {
                         ${item.description ? `<div style="font-size:11.5px; color:var(--text-muted); margin-top:3px; max-width:420px; line-height:1.45; word-break:break-word;">${escapeHTML(item.description)}</div>` : ''}
                         ${item.videoUrl ? `<div style="margin-top:4px;"><a href="javascript:void(0)" onclick="window.openFeedbackMediaLightbox({ type:'${(item.mediaType === 'gdrive_video' || item.videoUrl.includes('drive.google.com')) ? 'gdrive_video' : 'video'}', url:'${escapeHTML(item.videoUrl)}', title:'${escapeHTML(item.title || '')}', name:'${escapeHTML(item.mediaName || 'feedback_clip.mp4')}' })" style="font-size:11px; color:#38bdf8; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:4px; background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); padding:2px 8px; border-radius:4px;">${(item.mediaType === 'gdrive_video' || item.videoUrl.includes('drive.google.com')) ? '📁 View Drive Video' : `🎥 View Video Clip ${item.mediaDuration ? '(' + window.formatVideoDuration(item.mediaDuration) + ')' : ''}`}</a></div>` : (item.imageUrl ? `<div style="margin-top:4px;"><a href="javascript:void(0)" onclick="window.openFeedbackMediaLightbox('${escapeHTML(item.imageUrl)}')" style="font-size:11px; color:#38bdf8; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:4px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:2px 8px; border-radius:4px;">🖼️ View Screenshot</a></div>` : '')}
                         ${item.adminNote ? `
-                            <div style="font-size:11.5px; margin-top:6px; background:rgba(56,189,248,0.07); border:1px solid rgba(56,189,248,0.25); padding:8px 10px; border-radius:8px; line-height:1.45; min-width:240px;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:4px;">
-                                    <div style="font-size:10px; color:#38bdf8; font-weight:900; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:4px; white-space:nowrap;">
-                                        <span>👑</span> <span>Replied by: <strong>${escapeHTML(item.repliedByName || item.repliedBy?.name || 'Staff')}</strong> ${(item.repliedByLevel || item.repliedBy?.level) ? `(${escapeHTML(item.repliedByLevel || item.repliedBy?.level)})` : ''}</span>
-                                    </div>
-                                    ${item.repliedAt ? `<span style="font-size:9.5px; color:var(--text-muted); font-weight:normal; white-space:nowrap;">• ${window.formatTimeAgo(item.repliedAt)}</span>` : ''}
-                                </div>
-                                <div style="color:var(--text-main); font-weight:normal; font-size:12px; white-space:pre-wrap; word-break:break-word;">✨ ${escapeHTML(item.adminNote)}</div>
+                            <div style="margin-top:6px;">
+                                <button type="button" id="btnViewReply_${item.id}" onclick="window.openViewFeedbackReplyModal('${item.id}')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.35); color:#38bdf8; padding:5px 11px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.22)'" onmouseout="this.style.background='rgba(6,182,212,0.12)'" title="Click to view leadership reply in modal">
+                                    <span>💬</span> <span>View Reply</span> <span style="font-size:10px; opacity:0.9; background:rgba(6,182,212,0.2); padding:1px 6px; border-radius:4px;">${escapeHTML(item.repliedByName || item.repliedBy?.name || 'Staff')}</span> <span>➔</span>
+                                </button>
                             </div>
                         ` : ''}
                     </td>

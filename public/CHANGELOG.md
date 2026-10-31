@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.147] - 2026-10-31
+- 💬 **Reply Button**: Replaced bulky table reply text with 1-click button.
+- 📱 **Mobile Modal**: Added mobile-friendly popup for viewing leadership ticket responses.
+- 📏 **Compact Rows**: Table rows stay ultra-slim across smartphone and desktop.
+- ✏️ **Fast Editing**: Edit reply note directly from resolution modal popup.
+
 ## [3.3.146] - 2026-10-31
 - 🎫 **Table Layout Fixed**: Fixed Admin Tickets table column width and layout.
 - 📐 **Column Guard**: Protected Title & Details column from narrow tube collapse.

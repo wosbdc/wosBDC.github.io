@@ -1,16 +1,17 @@
 {
-  "version": "3.3.146",
+  "version": "3.3.147",
   "releaseDate": "2026-10-31",
-  "title": "What's New in v3.3.146",
+  "title": "What's New in v3.3.147",
   "notes": [
-    "Fixed Admin Tickets table column width and layout.",
-    "Protected Title & Details column from collapsing into narrow strip.",
-    "Leadership reply notes now render in clean wide cards.",
-    "All table row actions and dropdowns are cleanly top-aligned."
+    "Replaced table reply text with 1-click view button.",
+    "Added mobile-optimized modal dialog for leadership ticket responses.",
+    "Table rows now remain ultra-compact on smartphones and desktop.",
+    "Integrated 1-tap reply editing directly from resolution modal."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.146",
+    "version": "3.3.147",
     "latestChanges": [
+      "v3.3.147: Click-to-view modal for staff replies on smartphone and desktop",
       "v3.3.146: Fixed Admin Tickets table reply card layout and column squishing",
       "v3.3.145: Confidential Support Tickets isolation and Admin Tickets Desk",
       "v3.3.144: Resolved Championship signups reset across portal and Google Sheets",
