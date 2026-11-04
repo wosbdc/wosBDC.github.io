@@ -21312,7 +21312,8 @@ window.openShowdownDiscordPostModal = async (initialDay = null) => {
         }
 
         // Generate Post 1 Text
-        const post1Text = `Day ${d} - ${dayTitle} vs ${enemyName}
+        const post1Text = `Day ${d} - ${dayTitle}
+vs ${enemyName}
 Won or Lost: ${wonOrLostText}
 Daily goal: ${dailyGoalText}
 Goal Left: ${goalLeftText}

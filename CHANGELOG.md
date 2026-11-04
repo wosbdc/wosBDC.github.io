@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.149] - 2026-11-04
+- ⚔️ **Enemy Alliance Line**: Separated enemy alliance onto its own line in post.
+- 📋 **Cleaner Discord Layout**: Cleaner daily battle summary layout for Discord sharing.
+
 ## [3.3.148] - 2026-11-04
 - 💬 **Discord Post Hub**: Added Showdown Daily Discord Post Hub with 1-click copying.
 - 🎯 **Daily Battle Titles**: Supports official battle titles and dynamic enemy alliance.

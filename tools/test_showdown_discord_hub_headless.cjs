@@ -38,6 +38,7 @@ console.log("  ✅ PASS: openShowdownDiscordPostModal and localStorage tracking 
 console.log("\nTest 3: Post Formatting Template Logic Assertions");
 
 // Post 1 Assertions
+assert(mainCode.includes('Day ${d} - ${dayTitle}\nvs ${enemyName}'), 'Post 1 must place vs enemy alliance on its own line');
 assert(mainCode.includes('Won or Lost:'), 'Post 1 must contain Won or Lost: field');
 assert(mainCode.includes('Daily goal:'), 'Post 1 must contain Daily goal: field');
 assert(mainCode.includes('Goal Left:'), 'Post 1 must contain Goal Left: field');
@@ -94,7 +95,7 @@ const daysLeft = 6 - day; // 5
 
 const diffStr = diff >= 0 ? `+${diff.toLocaleString()}` : diff.toLocaleString();
 
-let post1 = `Day ${day} - ${dayTitles[day]} vs ${enemyAllianceName}\n`;
+let post1 = `Day ${day} - ${dayTitles[day]}\nvs ${enemyAllianceName}\n`;
 post1 += `Won or Lost: Won\n`;
 post1 += `Daily goal: ${diffStr}\n`;
 post1 += `Goal Left: ${goalLeft.toLocaleString()}\n`;
@@ -102,7 +103,7 @@ post1 += `Days Left: ${daysLeft}\n\n`;
 post1 += `people who scored 0\n`;
 post1 += `• ChiefZero\n`;
 
-assert(post1.includes('Day 1 - Rise of the city vs DragonSlayers [DS]'), 'Post 1 title matches specification');
+assert(post1.includes('Day 1 - Rise of the city\nvs DragonSlayers [DS]'), 'Post 1 title and separate enemy line match specification');
 assert(post1.includes('Daily goal: +766,667'), 'Post 1 daily goal diff formatted correctly');
 assert(post1.includes('Goal Left: 15,900,000'), 'Post 1 goal left calculated correctly');
 assert(post1.includes('Days Left: 5'), 'Post 1 days left calculated correctly');
