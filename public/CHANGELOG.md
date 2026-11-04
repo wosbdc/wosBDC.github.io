@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.148] - 2026-11-04
+- 💬 **Discord Post Hub**: Added Showdown Daily Discord Post Hub with 1-click copying.
+- 🎯 **Daily Battle Titles**: Supports official battle titles and dynamic enemy alliance.
+- ☑️ **Post Tracking**: Integrated persistent checkbox tracking for posted daily announcements.
+- 🔄 **Reset Bug Fixed**: Fixed Showdown reset bug to prevent false missed reports.
+
 ## [3.3.147] - 2026-10-31
 - 💬 **Reply Button**: Replaced bulky table reply text with 1-click button.
 - 📱 **Mobile Modal**: Added mobile-friendly popup for viewing leadership ticket responses.

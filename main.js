@@ -20708,7 +20708,7 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
             let dayHasScore = Object.values(sdLiveData).some(scores => scores && Number(scores['d'+d] || 0) > 0);
             if (dayHasScore) maxActiveDay = d;
         }
-        if (maxActiveDay === 0) maxActiveDay = 1;
+        // When event is reset or no scores are entered yet, maxActiveDay remains 0 (Pending)
 
         // Build Candidate Lists for Dual Views
         // 1. Active Showdown Participants: chiefs who actively have entered Showdown scores
@@ -20775,6 +20775,13 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
             const listToUse = filterMode === 'active_roster' ? activeListSorted : allListSorted;
             const { playerMissedMap, playersWithMisses } = computeMissedData(listToUse);
             const modeLabel = filterMode === 'active_roster' ? 'Active Showdown Participants' : 'All Alliance Members';
+            if (maxActiveDay === 0) {
+                let copyText = `📅 ALLIANCE SHOWDOWN MISSED DAYS REPORT (${modeLabel})\n`;
+                copyText += `----------------------------------------\n`;
+                copyText += `⏳ Event Reset / Pending — No days active yet. Day 1 scores have not been entered.\n`;
+                copyText += `----------------------------------------\nTotal Players with Missed Days: 0`;
+                return copyText;
+            }
             let copyText = `📅 ALLIANCE SHOWDOWN MISSED DAYS REPORT (${modeLabel}, Days 1-${maxActiveDay})\n`;
             copyText += `----------------------------------------\n`;
             if (playersWithMisses.length === 0) {
@@ -20797,6 +20804,11 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
             const modeLabel = filterMode === 'active_roster' ? 'Active Showdown Participants' : 'All Alliance Members';
             let copyText = `📅 ALLIANCE SHOWDOWN - DAY ${dayNum} MISSED REPORT (${modeLabel})\n`;
             copyText += `----------------------------------------\n`;
+            if (maxActiveDay === 0 || dayNum > maxActiveDay) {
+                copyText += `⏳ Day ${dayNum} is Pending / Not Started. No scores have been recorded yet.\n`;
+                copyText += `----------------------------------------\nTotal Missed Day ${dayNum}: 0`;
+                return copyText;
+            }
             if (missedList.length === 0) {
                 copyText += `🎉 100% Perfect Attendance! 0 chiefs missed Day ${dayNum} missions.\n`;
             } else {
@@ -20821,7 +20833,7 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
 
             let dayCardsHtml = '';
             for (let d = 1; d <= 6; d++) {
-                const active = d <= maxActiveDay;
+                const active = maxActiveDay > 0 && d <= maxActiveDay;
                 const missedList = Array.from(new Set(dayMissedMap[d] || []));
                 if (!active) {
                     dayCardsHtml += `
@@ -20851,16 +20863,23 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
                                     </div>
                                 `}
                             </div>
-                            <button class="copy-day-missed-btn" data-day="${d}" id="copyDayBtn_${d}" style="margin-top:10px; width:100%; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); border-radius:6px; padding:6px 8px; font-size:11.5px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; transition:0.2s;" title="Copy Day ${d} missed list to clipboard">
-                                📋 Copy Day ${d}
-                            </button>
+                            <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
+                                <button class="copy-day-missed-btn" data-day="${d}" id="copyDayBtn_${d}" style="width:100%; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); border-radius:6px; padding:6px 8px; font-size:11.5px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; transition:0.2s;" title="Copy Day ${d} missed list to clipboard">
+                                    📋 Copy Day ${d} Missed
+                                </button>
+                                <button type="button" onclick="if(window.openShowdownDiscordPostModal) window.openShowdownDiscordPostModal(${d})" style="width:100%; background:rgba(88,101,242,0.14); border:1px solid rgba(88,101,242,0.4); color:#818cf8; border-radius:6px; padding:6px 8px; font-size:11.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; transition:0.2s;" title="Open Discord Post Hub for Day ${d}">
+                                    💬 Discord Post Hub
+                                </button>
+                            </div>
                         </div>
                     `;
                 }
             }
 
             let playerRowsHtml = '';
-            if (playersWithMisses.length === 0) {
+            if (maxActiveDay === 0) {
+                playerRowsHtml = `<tr><td colspan="3" style="padding:24px; text-align:center; color:var(--text-muted); font-weight:600; font-size:13px;">⏳ Event Reset / Pending — No scores have been recorded yet. 0 players flagged for misses.</td></tr>`;
+            } else if (playersWithMisses.length === 0) {
                 playerRowsHtml = `<tr><td colspan="3" style="padding:24px; text-align:center; color:var(--success); font-weight:bold; font-size:14px;">🎉 100% Perfect Attendance! 0 players missed any active days.</td></tr>`;
             } else {
                 playerRowsHtml = playersWithMisses.map(pName => {
@@ -20884,7 +20903,7 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
                                 <span>📋 Showdown Missed Days Report</span>
                                 <span style="font-size:11px; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:12px; font-weight:normal;">⚡ Live Updated: ${nowSyncTime}</span>
                             </h3>
-                            <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">Showing active Days 1 through ${maxActiveDay} &bull; ${playersWithMisses.length} player(s) flagged for misses</div>
+                            <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">${maxActiveDay === 0 ? 'Event Pending / Reset &bull; 0 players flagged for misses' : `Showing active Days 1 through ${maxActiveDay} &bull; ${playersWithMisses.length} player(s) flagged for misses`}</div>
                         </div>
                         <div style="display:flex; align-items:center; gap:8px;">
                             <button id="refreshMissedReportBtn" style="background:rgba(255,255,255,0.08); border:1px solid var(--border); color:var(--text-main); padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:4px;" title="Re-fetch live data from Firebase">
@@ -21053,6 +21072,473 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
             btnEl.innerHTML = origHtml;
         }
     }
+};
+
+window.SHOWDOWN_DAY_TITLES = {
+    1: "Rise of the city",
+    2: "Hero Development",
+    3: "Pet Training",
+    4: "Gear Enhancement",
+    5: "Trade Dominion",
+    6: "Full-Scale Competition"
+};
+
+// ⚔️ Alliance Showdown Daily Discord Post Hub
+window.openShowdownDiscordPostModal = async (initialDay = null) => {
+    const existing = document.getElementById('showdownDiscordPostModal');
+    if (existing) existing.remove();
+
+    let sdRes = {};
+    let rosterRawData = {};
+    let metaData = {};
+    try {
+        const [sdFetched, rosterFetched, metaSnap] = await Promise.all([
+            window.fetchMergedShowdown ? window.fetchMergedShowdown().catch(() => ({})) : Promise.resolve({}),
+            window.fetchRoster ? window.fetchRoster(true).catch(() => ({})) : Promise.resolve({}),
+            get(ref(db, 'showdown_meta')).catch(() => null)
+        ]);
+        sdRes = sdFetched || {};
+        rosterRawData = rosterFetched || {};
+        if (metaSnap && metaSnap.exists && metaSnap.exists()) {
+            metaData = metaSnap.val() || {};
+        }
+    } catch(e) {
+        console.warn("Error fetching data for showdown discord hub:", e);
+    }
+
+    let sdLiveData = (sdRes && sdRes.sdLiveData) || {};
+    if (window._currentSdLiveData && typeof window._currentSdLiveData === 'object') {
+        sdLiveData = { ...sdLiveData, ...window._currentSdLiveData };
+    }
+
+    // Dynamic enemy alliance name
+    const enemyAlliance = (metaData && metaData.enemyAlliance && typeof metaData.enemyAlliance === 'object') ? metaData.enemyAlliance : {};
+    const enemyName = enemyAlliance.name || window._currentSdEnemyName || "[WWA] Whiteoutwarriors";
+    const enemyScores = (enemyAlliance.scores && typeof enemyAlliance.scores === 'object') ? enemyAlliance.scores : {};
+    const eventDate = metaData.eventDate || (enemyAlliance && enemyAlliance.eventDate) || '';
+
+    // Determine latest active day
+    let latestActiveDay = 1;
+    for (let di = 6; di >= 1; di--) {
+        const hasScore = Object.values(sdLiveData).some(scores => scores && Number(scores['d' + di] || 0) > 0);
+        if (hasScore) {
+            latestActiveDay = di;
+            break;
+        }
+    }
+    let selectedDay = (initialDay && initialDay >= 1 && initialDay <= 6) ? Number(initialDay) : latestActiveDay;
+
+    // Checkbox storage key
+    const storageKey = `wos_sd_discord_posted_${(eventDate || 'current').replace(/[^a-zA-Z0-9]/g, '_')}`;
+    const getPostedState = () => {
+        try {
+            return JSON.parse(localStorage.getItem(storageKey) || '{}');
+        } catch(e) {
+            return {};
+        }
+    };
+    const setPostedState = (postKey, isChecked) => {
+        try {
+            const state = getPostedState();
+            state[postKey] = Boolean(isChecked);
+            localStorage.setItem(storageKey, JSON.stringify(state));
+        } catch(e) {}
+    };
+
+    // Calculate Leaderboard (Horns & Wins across all days)
+    const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
+    let topDayPlayers = { d1:{score:0}, d2:{score:0}, d3:{score:0}, d4:{score:0}, d5:{score:0}, d6:{score:0} };
+    let playerList = [];
+
+    Object.entries(sdLiveData).forEach(([k, scores]) => {
+        if (!scores || typeof scores !== 'object') return;
+        const cleanName = window.cleanChiefName(scores.name || k);
+        if (!cleanName) return;
+        const pObj = {
+            name: cleanName,
+            d1: Number(scores.d1 || 0),
+            d2: Number(scores.d2 || 0),
+            d3: Number(scores.d3 || 0),
+            d4: Number(scores.d4 || 0),
+            d5: Number(scores.d5 || 0),
+            d6: Number(scores.d6 || 0),
+            total: 0,
+            horns: 0,
+            wins: 0
+        };
+        pObj.total = pObj.d1 + pObj.d2 + pObj.d3 + pObj.d4 + pObj.d5 + pObj.d6;
+        for (let di = 1; di <= 6; di++) {
+            if (pObj['d' + di] > topDayPlayers['d' + di].score) {
+                topDayPlayers['d' + di] = { score: pObj['d' + di] };
+            }
+        }
+        playerList.push(pObj);
+    });
+
+    // Compute horns and wins
+    playerList.forEach(p => {
+        for (let di = 1; di <= 6; di++) {
+            const dVal = p['d' + di];
+            const topSc = topDayPlayers['d' + di].score;
+            if (dVal > 0 && dVal === topSc) {
+                p.horns += staticHorns['d' + di];
+                p.wins += 1;
+            }
+        }
+    });
+
+    // Sort by Horns descending, then total descending
+    playerList.sort((a, b) => (b.horns !== a.horns) ? b.horns - a.horns : b.total - a.total);
+    const top4 = playerList.slice(0, 4);
+
+    // Active members for 0-score calculation (excluding bots and departed)
+    const eligibleChiefs = new Set();
+    if (rosterRawData && typeof rosterRawData === 'object') {
+        Object.values(rosterRawData).forEach(p => {
+            if (p && p.name && !window.isBotAccount?.(p.name, p.gameId) && (typeof window.isPlayerActiveMember !== 'function' || window.isPlayerActiveMember(p))) {
+                const cName = window.cleanChiefName(p.name);
+                if (cName) eligibleChiefs.add(cName);
+            }
+        });
+    }
+    // Also add all current showdown players
+    playerList.forEach(p => {
+        if (!window.isBotAccount?.(p.name)) eligibleChiefs.add(p.name);
+    });
+    const sortedEligibleChiefs = Array.from(eligibleChiefs).sort((a, b) => a.localeCompare(b));
+
+    // Fallback clipboard helper
+    const copyToClipboard = (text, btnId, successMsg) => {
+        const proceed = () => {
+            if (window.showToast) window.showToast(successMsg, "success");
+            const b = document.getElementById(btnId);
+            if (b) {
+                const orig = b.innerHTML;
+                b.style.background = "#10b981";
+                b.innerHTML = "✅ Copied to Clipboard!";
+                setTimeout(() => {
+                    b.style.background = "";
+                    b.innerHTML = orig;
+                }, 2000);
+            }
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(proceed).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                proceed();
+            });
+        } else {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            proceed();
+        }
+    };
+
+    const modal = document.createElement('div');
+    modal.id = 'showdownDiscordPostModal';
+    modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); z-index:10003; display:flex; justify-content:center; align-items:center; animation:fadeIn 0.2s ease; padding:15px; box-sizing:border-box;';
+
+    const renderModalContent = () => {
+        const d = selectedDay;
+        const dayTitle = window.SHOWDOWN_DAY_TITLES[d] || `Day ${d}`;
+        const postedState = getPostedState();
+        const isPost1Checked = Boolean(postedState[`day${d}_post1`]);
+        const isPost2Checked = Boolean(postedState[`day${d}_post2`]);
+
+        // 1. Calculate Day Stats
+        let ourDayScore = 0;
+        playerList.forEach(p => { ourDayScore += p['d' + d] || 0; });
+        const enemyDayScore = Number(enemyScores['d' + d] || 0);
+
+        // Won or Lost
+        let wonOrLostText = "";
+        if (ourDayScore === 0 && enemyDayScore === 0) {
+            wonOrLostText = "Pending / In Progress ⏳";
+        } else if (ourDayScore > enemyDayScore) {
+            wonOrLostText = `Won 🏆 (${ourDayScore.toLocaleString()} vs ${enemyDayScore.toLocaleString()})`;
+        } else if (enemyDayScore > ourDayScore) {
+            wonOrLostText = `Lost ❌ (${ourDayScore.toLocaleString()} vs ${enemyDayScore.toLocaleString()})`;
+        } else {
+            wonOrLostText = `Tied 🤝 (${ourDayScore.toLocaleString()} vs ${enemyDayScore.toLocaleString()})`;
+        }
+
+        // Daily Goal (3,333,333)
+        const dailyGoal = 3333333;
+        const diff = ourDayScore - dailyGoal;
+        let dailyGoalText = "";
+        if (ourDayScore === 0) {
+            dailyGoalText = `Pending (-${dailyGoal.toLocaleString()})`;
+        } else if (diff >= 0) {
+            dailyGoalText = `+${diff.toLocaleString()}`;
+        } else {
+            dailyGoalText = `-${Math.abs(diff).toLocaleString()}`;
+        }
+
+        // Cumulative alliance total score through Day d
+        let cumulativeScore = 0;
+        for (let di = 1; di <= d; di++) {
+            playerList.forEach(p => { cumulativeScore += p['d' + di] || 0; });
+        }
+        const remainingTo20M = 20000000 - cumulativeScore;
+        const goalLeftText = remainingTo20M <= 0 ? "0 (20M Goal Reached! 🎉)" : remainingTo20M.toLocaleString();
+        const daysLeft = 6 - d;
+
+        // Zero-score chiefs on Day d
+        const zeroScoreChiefs = [];
+        sortedEligibleChiefs.forEach(cName => {
+            const p = playerList.find(pl => pl.name.toLowerCase() === cName.toLowerCase());
+            const score = p ? Number(p['d' + d] || 0) : 0;
+            if (score === 0) {
+                zeroScoreChiefs.push(cName);
+            }
+        });
+
+        let zeroScoreFormatted = "";
+        if (ourDayScore === 0) {
+            zeroScoreFormatted = "people who scored 0:\n(Pending Day scores entry...)";
+        } else if (zeroScoreChiefs.length === 0) {
+            zeroScoreFormatted = "people who scored 0:\n🎉 100% Participation! Everyone scored!";
+        } else {
+            zeroScoreFormatted = `people who scored 0 (${zeroScoreChiefs.length}):\n` + zeroScoreChiefs.map(name => `• ${name}`).join('\n');
+        }
+
+        // Generate Post 1 Text
+        const post1Text = `Day ${d} - ${dayTitle} vs ${enemyName}
+Won or Lost: ${wonOrLostText}
+Daily goal: ${dailyGoalText}
+Goal Left: ${goalLeftText}
+Days Left: ${daysLeft}
+
+${zeroScoreFormatted}`;
+
+        // Generate Post 2 Text
+        let top4Lines = "";
+        if (top4.length === 0 || ourDayScore === 0) {
+            top4Lines = "1: Pending...\n2: Pending...\n3: Pending...\n4: Pending...";
+        } else {
+            top4Lines = top4.map((p, idx) => `${idx + 1}: @${p.name}`).join('\n');
+        }
+
+        const post2Text = `Showdown Leaderboard
+
+Congrats Top 4
+
+${top4Lines}
+
+See all results at
+
+https://tiny.cc/wosBDC`;
+
+        const combinedText = `${post1Text}\n\n---\n\n${post2Text}`;
+
+        // Day tab pill buttons
+        const tabsHtml = [1, 2, 3, 4, 5, 6].map(di => {
+            const isSel = di === d;
+            const diP1 = Boolean(postedState[`day${di}_post1`]);
+            const diP2 = Boolean(postedState[`day${di}_post2`]);
+            const bothDone = diP1 && diP2;
+            const partiallyDone = diP1 || diP2;
+            const badgeIcon = bothDone ? '✅' : (partiallyDone ? '🟡' : '');
+            return `
+                <button type="button" class="sd-day-tab" data-day="${di}" style="padding:7px 12px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer; transition:0.2s; white-space:nowrap; display:flex; align-items:center; gap:5px; ${isSel ? 'background:rgba(6,182,212,0.22); border:1.5px solid #06b6d4; color:#38bdf8; box-shadow:0 0 10px rgba(6,182,212,0.3);' : 'background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text-muted);'}">
+                    <span>Day ${di}</span>
+                    <span style="font-size:10.5px; opacity:0.85; max-width:85px; overflow:hidden; text-overflow:ellipsis;">${window.SHOWDOWN_DAY_TITLES[di]}</span>
+                    ${badgeIcon ? `<span style="font-size:11px;">${badgeIcon}</span>` : ''}
+                </button>
+            `;
+        }).join('');
+
+        return `
+            <div style="background:var(--card-bg, #1e293b); border:1px solid var(--accent, #06b6d4); border-radius:16px; width:100%; max-width:750px; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 25px 60px rgba(0,0,0,0.8); overflow:hidden;">
+                <!-- Header -->
+                <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg, rgba(88,101,242,0.15), transparent); flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <h3 style="margin:0; color:var(--text-main); font-size:18px; display:flex; align-items:center; gap:8px;">
+                            <span>⚔️ Alliance Showdown Daily Discord Hub</span>
+                        </h3>
+                        <div style="font-size:12px; color:var(--text-muted); margin-top:3px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <span>Active Match: <strong style="color:var(--text-main);">${window.escapeHTML(enemyName)}</strong></span>
+                            ${eventDate ? `<span style="background:rgba(6,182,212,0.15); color:#38bdf8; border:1px solid rgba(6,182,212,0.3); padding:1px 7px; border-radius:10px; font-size:11px;">📅 ${window.escapeHTML(eventDate)}</span>` : ''}
+                        </div>
+                    </div>
+                    <button type="button" id="closeSdDiscordModalX" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted); width:32px; height:32px; border-radius:8px; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;">✕</button>
+                </div>
+
+                <!-- Day Tabs Navigation -->
+                <div style="padding:10px 18px; background:rgba(0,0,0,0.2); border-bottom:1px solid var(--border); overflow-x:auto; display:flex; gap:8px;">
+                    ${tabsHtml}
+                </div>
+
+                <!-- Modal Body -->
+                <div style="padding:18px 20px; overflow-y:auto; display:flex; flex-direction:column; gap:16px;">
+                    <!-- Active Day Subheader -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; background:rgba(255,255,255,0.02); padding:10px 14px; border-radius:10px; border:1px solid var(--border);">
+                        <div>
+                            <div style="font-size:15px; font-weight:800; color:var(--text-main);">
+                                Day ${d} &bull; <span style="color:#38bdf8;">${window.SHOWDOWN_DAY_TITLES[d]}</span>
+                            </div>
+                            <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                                Status: <strong style="color:${ourDayScore > 0 ? '#10b981' : '#eab308'};">${ourDayScore > 0 ? 'Active Scores Recorded' : 'Pending Day Scores'}</strong>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span style="font-size:11px; color:var(--text-muted);">Posted Status:</span>
+                            <span style="font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px; ${isPost1Checked && isPost2Checked ? 'background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3);' : (isPost1Checked || isPost2Checked ? 'background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.3);' : 'background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border);')}">
+                                ${isPost1Checked && isPost2Checked ? '✅ Fully Posted (2/2)' : (isPost1Checked || isPost2Checked ? '🟡 Partial (1/2)' : '⬜ Unposted (0/2)')}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Post 1 Card -->
+                    <div style="background:var(--bg-main, #0f172a); border:1px solid var(--border); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:14px;">📊</span>
+                                <strong style="font-size:13px; color:var(--text-main);">Post 1: Daily Battle &amp; Goals Summary</strong>
+                            </div>
+                            <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:11.5px; font-weight:700; color:${isPost1Checked ? '#10b981' : 'var(--text-muted)'}; background:rgba(255,255,255,0.04); padding:3px 8px; border-radius:6px; border:1px solid ${isPost1Checked ? 'rgba(16,185,129,0.35)' : 'var(--border)'};">
+                                <input type="checkbox" id="chkPost1" ${isPost1Checked ? 'checked' : ''} style="width:15px; height:15px; accent-color:#10b981; cursor:pointer;">
+                                <span>${isPost1Checked ? '✅ Posted to Discord' : 'Mark as Posted'}</span>
+                            </label>
+                        </div>
+                        <pre id="prePost1" style="margin:0; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:8px; padding:12px; color:var(--text-main); font-family:var(--mono, monospace); font-size:12px; line-height:1.45; white-space:pre-wrap; word-break:break-word; max-height:140px; overflow-y:auto;">${window.escapeHTML(post1Text)}</pre>
+                        <div style="display:flex; justify-content:flex-end;">
+                            <button type="button" id="btnCopyPost1" style="background:linear-gradient(135deg, #5865F2, #4752C4); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12.5px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(88,101,242,0.3); transition:0.2s;">
+                                📋 Copy Post 1
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Post 2 Card -->
+                    <div style="background:var(--bg-main, #0f172a); border:1px solid var(--border); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:14px;">🏆</span>
+                                <strong style="font-size:13px; color:var(--text-main);">Post 2: Showdown Leaderboard &amp; Top 4</strong>
+                            </div>
+                            <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:11.5px; font-weight:700; color:${isPost2Checked ? '#10b981' : 'var(--text-muted)'}; background:rgba(255,255,255,0.04); padding:3px 8px; border-radius:6px; border:1px solid ${isPost2Checked ? 'rgba(16,185,129,0.35)' : 'var(--border)'};">
+                                <input type="checkbox" id="chkPost2" ${isPost2Checked ? 'checked' : ''} style="width:15px; height:15px; accent-color:#10b981; cursor:pointer;">
+                                <span>${isPost2Checked ? '✅ Posted to Discord' : 'Mark as Posted'}</span>
+                            </label>
+                        </div>
+                        <pre id="prePost2" style="margin:0; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:8px; padding:12px; color:var(--text-main); font-family:var(--mono, monospace); font-size:12px; line-height:1.45; white-space:pre-wrap; word-break:break-word; max-height:140px; overflow-y:auto;">${window.escapeHTML(post2Text)}</pre>
+                        <div style="display:flex; justify-content:flex-end;">
+                            <button type="button" id="btnCopyPost2" style="background:linear-gradient(135deg, #06b6d4, #0891b2); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12.5px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(6,182,212,0.3); transition:0.2s;">
+                                📋 Copy Post 2
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Action Buttons -->
+                <div style="padding:14px 20px; border-top:1px solid var(--border); background:rgba(0,0,0,0.25); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div style="display:flex; gap:8px;">
+                        <button type="button" id="btnCopyBothPosts" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:9px 18px; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">
+                            🚀 Copy Both Posts (All-in-One)
+                        </button>
+                        <button type="button" id="btnResetDayChecks" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted); padding:9px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;" title="Reset checkboxes for Day ${d}">
+                            🔄 Reset Day Checks
+                        </button>
+                    </div>
+                    <button type="button" id="closeSdDiscordModalBtn" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:9px 18px; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;">
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
+    };
+
+    const attachEvents = () => {
+        const closeModal = () => modal.remove();
+        modal.querySelector('#closeSdDiscordModalX')?.addEventListener('click', closeModal);
+        modal.querySelector('#closeSdDiscordModalBtn')?.addEventListener('click', closeModal);
+
+        modal.querySelectorAll('.sd-day-tab').forEach(tabBtn => {
+            tabBtn.addEventListener('click', () => {
+                const dayVal = Number(tabBtn.getAttribute('data-day'));
+                if (dayVal && dayVal >= 1 && dayVal <= 6) {
+                    selectedDay = dayVal;
+                    modal.innerHTML = renderModalContent();
+                    attachEvents();
+                }
+            });
+        });
+
+        const d = selectedDay;
+        const post1Text = modal.querySelector('#prePost1')?.textContent || '';
+        const post2Text = modal.querySelector('#prePost2')?.textContent || '';
+        const combinedText = `${post1Text}\n\n---\n\n${post2Text}`;
+
+        // Checkbox events
+        modal.querySelector('#chkPost1')?.addEventListener('change', (e) => {
+            setPostedState(`day${d}_post1`, e.target.checked);
+            modal.innerHTML = renderModalContent();
+            attachEvents();
+        });
+
+        modal.querySelector('#chkPost2')?.addEventListener('change', (e) => {
+            setPostedState(`day${d}_post2`, e.target.checked);
+            modal.innerHTML = renderModalContent();
+            attachEvents();
+        });
+
+        // Copy Post 1
+        modal.querySelector('#btnCopyPost1')?.addEventListener('click', () => {
+            copyToClipboard(post1Text, 'btnCopyPost1', `📋 Day ${d} Post 1 copied & marked as posted!`);
+            setPostedState(`day${d}_post1`, true);
+            setTimeout(() => {
+                modal.innerHTML = renderModalContent();
+                attachEvents();
+            }, 600);
+        });
+
+        // Copy Post 2
+        modal.querySelector('#btnCopyPost2')?.addEventListener('click', () => {
+            copyToClipboard(post2Text, 'btnCopyPost2', `📋 Day ${d} Post 2 copied & marked as posted!`);
+            setPostedState(`day${d}_post2`, true);
+            setTimeout(() => {
+                modal.innerHTML = renderModalContent();
+                attachEvents();
+            }, 600);
+        });
+
+        // Copy Both
+        modal.querySelector('#btnCopyBothPosts')?.addEventListener('click', () => {
+            copyToClipboard(combinedText, 'btnCopyBothPosts', `🚀 Day ${d} Both posts copied & marked as posted!`);
+            setPostedState(`day${d}_post1`, true);
+            setPostedState(`day${d}_post2`, true);
+            setTimeout(() => {
+                modal.innerHTML = renderModalContent();
+                attachEvents();
+            }, 600);
+        });
+
+        // Reset Day Checks
+        modal.querySelector('#btnResetDayChecks')?.addEventListener('click', () => {
+            setPostedState(`day${d}_post1`, false);
+            setPostedState(`day${d}_post2`, false);
+            modal.innerHTML = renderModalContent();
+            attachEvents();
+            if (window.showToast) window.showToast(`🔄 Reset posted checks for Day ${d}`, "info");
+        });
+    };
+
+    modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+    };
+
+    modal.innerHTML = renderModalContent();
+    document.body.appendChild(modal);
+    attachEvents();
 };
 
 const getAutocompleteShield = () => {
@@ -37503,6 +37989,7 @@ const views = {
                   <button onclick="window.restoreDefaultShowdownHistory()" style="background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.4); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;" title="Write original 5 historical cycles into Firebase RTDB">👑 Restore All 5 Cycles</button>
                   <button onclick="window.openShowdownArchiveVaultModal('all', true)" style="background:linear-gradient(135deg, rgba(139,92,246,0.3) 0%, rgba(124,58,237,0.15) 100%); color:#a78bfa; border:1px solid rgba(139,92,246,0.5); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📂 Vault Manager</button>
                   <button onclick="window.showMissedDaysReportModal(this)" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📋 Missed Days Report</button>
+                  <button onclick="window.openShowdownDiscordPostModal()" style="background:linear-gradient(135deg, rgba(88,101,242,0.3) 0%, rgba(88,101,242,0.12) 100%); color:#818cf8; border:1px solid rgba(88,101,242,0.45); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:5px;" title="Open Showdown Daily Discord Post Hub">💬 Discord Post Hub</button>
                   <button onclick="window.restoreLatestShowdownArchive()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">↩️ Restore Choice</button>
                   <button onclick="window.showResetEventModal()" style="background:linear-gradient(135deg, rgba(239,68,68,0.2) 0%, rgba(239,68,68,0.08) 100%); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">🔄 Reset Event</button>
                 </div>
@@ -43979,7 +44466,11 @@ window.resetBearTrapEvent = async () => {
          
          const dailyGoal = 3333333;
          
-         let goalsCard = `<div class="card" style="margin-bottom:20px; animation:fadeIn 0.3s ease;"><div class="card-title">🎯 Event Goals</div>`;
+         let goalsCard = `<div class="card" style="margin-bottom:20px; animation:fadeIn 0.3s ease;">
+            <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+              <span>🎯 Event Goals</span>
+              <button onclick="window.openShowdownDiscordPostModal()" style="background:linear-gradient(135deg, rgba(88,101,242,0.2) 0%, rgba(88,101,242,0.08) 100%); border:1px solid rgba(88,101,242,0.4); color:#818cf8; padding:4px 10px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;" title="Open Showdown Daily Discord Post Hub">💬 Discord Post Hub</button>
+            </div>`;
          goalsCard += `<div style="margin-bottom:20px;">
              <div style="display:flex; justify-content:flex-start; align-items:center; gap:10px; margin-bottom:5px;">
                <div style="font-weight:bold; color:var(--text-main);">The 20M Challenge</div>
@@ -44051,6 +44542,11 @@ window.resetBearTrapEvent = async () => {
                <div style="display: flex; justify-content: space-between;">
                  <span style="color: var(--text-muted); font-size: 0.9em;">Daily Amount</span>
                  <span style="${dailyAmtStyle}">${dailyAmt}</span>
+               </div>
+               <div style="margin-top:10px; border-top:1px dashed var(--border); padding-top:10px;">
+                 <button type="button" onclick="window.openShowdownDiscordPostModal(${i})" style="width:100%; background:rgba(88,101,242,0.12); border:1px solid rgba(88,101,242,0.35); color:#818cf8; border-radius:6px; padding:6px 10px; font-size:11.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; transition:0.2s;" title="Generate Discord Post for Day ${i}">
+                   💬 Discord Post
+                 </button>
                </div>
              </div>`;
          }

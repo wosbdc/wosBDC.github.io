@@ -347,6 +347,9 @@ async function runHeadlessVerification() {
       window.isAdminUser = () => true;
       window.getAdminLevel = () => 'R5';
       window.isGoogleAuthVerified = async () => true;
+      // Inject test score so Day 1 is treated as active for missed report calculations
+      window._currentSdLiveData = window._currentSdLiveData || {};
+      window._currentSdLiveData['TestChiefActive'] = { name: 'TestChiefActive', d1: 250000 };
       if (typeof window.views?.showdownAdmin === 'function') {
         await window.views.showdownAdmin();
       }
@@ -356,6 +359,8 @@ async function runHeadlessVerification() {
 
     // Trigger Missed Days Report Modal
     await page.evaluate(async () => {
+      window._currentSdLiveData = window._currentSdLiveData || {};
+      window._currentSdLiveData['TestChiefActive'] = { name: 'TestChiefActive', d1: 250000 };
       await window.showMissedDaysReportModal();
     });
 
