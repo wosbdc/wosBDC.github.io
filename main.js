@@ -21085,6 +21085,10 @@ window.SHOWDOWN_DAY_TITLES = {
 
 // ⚔️ Alliance Showdown Daily Discord Post Hub
 window.openShowdownDiscordPostModal = async (initialDay = null) => {
+    if (typeof window.isAdminUser === 'function' && !window.isAdminUser()) {
+        if (window.showToast) window.showToast("Access Restricted: Discord Post Hub is only available in the Admin Menu.", "error");
+        return;
+    }
     const existing = document.getElementById('showdownDiscordPostModal');
     if (existing) existing.remove();
 
@@ -44467,11 +44471,7 @@ window.resetBearTrapEvent = async () => {
          
          const dailyGoal = 3333333;
          
-         let goalsCard = `<div class="card" style="margin-bottom:20px; animation:fadeIn 0.3s ease;">
-            <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-              <span>🎯 Event Goals</span>
-              <button onclick="window.openShowdownDiscordPostModal()" style="background:linear-gradient(135deg, rgba(88,101,242,0.2) 0%, rgba(88,101,242,0.08) 100%); border:1px solid rgba(88,101,242,0.4); color:#818cf8; padding:4px 10px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;" title="Open Showdown Daily Discord Post Hub">💬 Discord Post Hub</button>
-            </div>`;
+         let goalsCard = `<div class="card" style="margin-bottom:20px; animation:fadeIn 0.3s ease;"><div class="card-title">🎯 Event Goals</div>`;
          goalsCard += `<div style="margin-bottom:20px;">
              <div style="display:flex; justify-content:flex-start; align-items:center; gap:10px; margin-bottom:5px;">
                <div style="font-weight:bold; color:var(--text-main);">The 20M Challenge</div>
@@ -44543,11 +44543,6 @@ window.resetBearTrapEvent = async () => {
                <div style="display: flex; justify-content: space-between;">
                  <span style="color: var(--text-muted); font-size: 0.9em;">Daily Amount</span>
                  <span style="${dailyAmtStyle}">${dailyAmt}</span>
-               </div>
-               <div style="margin-top:10px; border-top:1px dashed var(--border); padding-top:10px;">
-                 <button type="button" onclick="window.openShowdownDiscordPostModal(${i})" style="width:100%; background:rgba(88,101,242,0.12); border:1px solid rgba(88,101,242,0.35); color:#818cf8; border-radius:6px; padding:6px 10px; font-size:11.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; transition:0.2s;" title="Generate Discord Post for Day ${i}">
-                   💬 Discord Post
-                 </button>
                </div>
              </div>`;
          }

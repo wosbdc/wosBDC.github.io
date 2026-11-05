@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.150] - 2026-11-04
+- 🔒 **Admin Only Hub**: Restricted Showdown Discord Post Hub strictly to Admin Menu.
+- 🚫 **Public View Cleaned**: Removed Discord post buttons from public member showdown view.
+- 🛡️ **Access Guard**: Added admin authentication gate to Discord Post Hub launcher.
+
 ## [3.3.149] - 2026-11-04
 - ⚔️ **Enemy Alliance Line**: Separated enemy alliance onto its own line in post.
 - 📋 **Cleaner Discord Layout**: Cleaner daily battle summary layout for Discord sharing.

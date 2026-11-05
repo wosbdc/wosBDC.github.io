@@ -1,14 +1,16 @@
 {
-  "version": "3.3.149",
+  "version": "3.3.150",
   "releaseDate": "2026-11-04",
-  "title": "What's New in v3.3.149",
+  "title": "What's New in v3.3.150",
   "notes": [
-    "Separated enemy alliance onto its own line in post.",
-    "Cleaner daily battle summary layout for Discord sharing."
+    "Restricted Showdown Discord Post Hub strictly to Admin Menu.",
+    "Removed Discord post buttons from public member showdown view.",
+    "Added admin authentication gate to Discord Post Hub launcher."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.149",
+    "version": "3.3.150",
     "latestChanges": [
+      "v3.3.150: Restricted Showdown Discord Post Hub strictly to Admin Menu",
       "v3.3.149: Enemy alliance separated onto dedicated line in Discord post",
       "v3.3.148: Showdown Daily Discord Post Hub and reset missed report fix",
       "v3.3.147: Click-to-view modal for staff replies on smartphone and desktop",

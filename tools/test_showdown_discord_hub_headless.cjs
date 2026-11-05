@@ -30,9 +30,18 @@ assert(mainCode.includes('Full-Scale Competition'), 'Day 6 title must be Full-Sc
 console.log("  ✅ PASS: Official Day 1-6 titles verified");
 
 assert(mainCode.includes('window.openShowdownDiscordPostModal = async'), 'window.openShowdownDiscordPostModal must be defined');
+assert(mainCode.includes('!window.isAdminUser()'), 'window.openShowdownDiscordPostModal must guard access with isAdminUser check');
 assert(mainCode.includes('showdownDiscordPostModal'), 'Modal id showdownDiscordPostModal must be present');
 assert(mainCode.includes('wos_sd_discord_posted_'), 'LocalStorage key pattern for posted tracking must be present');
-console.log("  ✅ PASS: openShowdownDiscordPostModal and localStorage tracking key verified");
+console.log("  ✅ PASS: openShowdownDiscordPostModal, admin-only guard, and localStorage tracking key verified");
+
+// Assert strictly restricted behind Admin Menu
+const adminShowdownSection = mainCode.split('showdownAdmin: async')[1]?.split('championshipAdmin: async')[0] || '';
+assert(adminShowdownSection.includes('window.openShowdownDiscordPostModal()'), 'views.showdownAdmin must render Discord Post Hub button in Admin Menu');
+
+const publicShowdownSection = mainCode.split('leaderboards: async')[1]?.split('profile: async')[0] || '';
+assert(!publicShowdownSection.includes('openShowdownDiscordPostModal'), 'Public views.showdown must strictly NOT render Discord Post buttons');
+console.log("  ✅ PASS: Verified Discord Post Hub is strictly behind Admin Menu and omitted from public view");
 
 // 3. Post Formatting Assertions
 console.log("\nTest 3: Post Formatting Template Logic Assertions");
