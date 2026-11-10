@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.152] - 2026-11-10
+- 🟢 **Green Safe Cards**: Bot fleet boxes remain green Safe to Login during cooldown.
+- ✅ **Clear Summary**: Fleet summary cleanly displays 0 Occupied and All Safe.
+
 ## [3.3.151] - 2026-11-09
 - ⏳ **Live Cooldown Radar**: Restored live Bot Radar cooldown display when GnBots rests.
 - ⏸️ **Parked Rest Status**: Shows amber Parked status instead of false offline alerts.

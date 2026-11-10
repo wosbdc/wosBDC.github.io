@@ -1004,6 +1004,10 @@ server.listen(PORT, async () => {
         timestamp: Date.now(),
         stage: 'Routine Rotation Rest (GnBots Parked)',
         cooldownReason: 'Routine Rotation Rest (GnBots Parked)',
+        fleet: [
+          { name: 'Sentinel Frost', status: 'COOLDOWN', safeToLogin: true, secondsLeft: 3600, instance: 2 },
+          { name: 'Bisquick', status: 'COOLDOWN', safeToLogin: true, secondsLeft: 3600, instance: 11 }
+        ],
         totalBots: 0,
         shortTime: 'Just now',
         receivedAt: Date.now()
@@ -1023,6 +1027,9 @@ server.listen(PORT, async () => {
       const serverBoxHasBlackout = document.getElementById('bot-radar-server-box')?.classList?.contains('is-blackout');
       const busyPillText = document.getElementById('bot-fleet-busy-count')?.textContent?.trim();
       const safePillText = document.getElementById('bot-fleet-safe-count')?.textContent?.trim();
+      const safeCardsCount = document.querySelectorAll('.bot-fleet-item.safe').length;
+      const cooldownCardsCount = document.querySelectorAll('.bot-fleet-item.cooldown').length;
+      const greenDotsCount = document.querySelectorAll('.bot-fleet-dot.safe').length;
 
       return {
         isOffline: health.isOffline,
@@ -1036,7 +1043,10 @@ server.listen(PORT, async () => {
         hubVal,
         serverBoxHasBlackout,
         busyPillText,
-        safePillText
+        safePillText,
+        safeCardsCount,
+        cooldownCardsCount,
+        greenDotsCount
       };
     });
 
@@ -1055,10 +1065,13 @@ server.listen(PORT, async () => {
     if (!cooldownRestResult.hubVal.includes('Online') || !cooldownRestResult.serverVal.includes('Parked') || !cooldownRestResult.serverBoxHasBlackout) {
       throw new Error(`Assertion Failed: Expected Hub Online & Server Parked (amber), got hub="${cooldownRestResult.hubVal}", server="${cooldownRestResult.serverVal}"`);
     }
-    if (!cooldownRestResult.busyPillText.includes('COOLDOWN REST') || !cooldownRestResult.safePillText.includes('ALL SAFE TO LOGIN')) {
-      throw new Error(`Assertion Failed: Expected COOLDOWN REST & ALL SAFE TO LOGIN summary pills, got "${cooldownRestResult.busyPillText}" / "${cooldownRestResult.safePillText}"`);
+    if (!cooldownRestResult.busyPillText.includes('0 OCCUPIED') || !cooldownRestResult.safePillText.includes('ALL SAFE TO LOGIN')) {
+      throw new Error(`Assertion Failed: Expected 0 OCCUPIED & ALL SAFE TO LOGIN summary pills, got "${cooldownRestResult.busyPillText}" / "${cooldownRestResult.safePillText}"`);
     }
-    console.log(`  ✅ 4D Verified: Managed Cooldown Rest displays Hub Online + Server "${cooldownRestResult.serverVal}", clock="${cooldownRestResult.cdClock}", summary="${cooldownRestResult.busyPillText}".`);
+    if (cooldownRestResult.cooldownCardsCount !== 0 || cooldownRestResult.safeCardsCount !== 17 || cooldownRestResult.greenDotsCount !== 17) {
+      throw new Error(`Assertion Failed: All 17 bot boxes must remain green (.safe) instead of turning amber .cooldown! Result: ${JSON.stringify(cooldownRestResult)}`);
+    }
+    console.log(`  ✅ 4D Verified: Managed Cooldown Rest displays Hub Online + Server "${cooldownRestResult.serverVal}", clock="${cooldownRestResult.cdClock}", summary="${cooldownRestResult.busyPillText} / ${cooldownRestResult.safePillText}", all 17 fleet boxes green (.safe).`);
 
     // Restore offline state prior to Phase 5 offline alert verification
     await page.evaluate(() => {

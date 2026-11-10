@@ -7063,26 +7063,17 @@ window.getBotDualTagHtml = (health) => {
 window.getBotFleetSummaryHtml = (health, occupiedCount = 0, safeCount = 0, showCountWhenSafe = true) => {
   const isOffline = Boolean(health.isOffline);
   const isRestMode = !isOffline && (Boolean(health.isCooldownRest) || Boolean(health.isBlackout)) && !health.isServerOnline;
-  let leftBadgeHtml = '';
-  if (isOffline) {
-    leftBadgeHtml = `
+  const leftBadgeHtml = isOffline
+    ? `
       <div id="bot-fleet-busy-count" class="bot-fleet-summary-pill offline" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4);">
         <span>🔴 AUTOMATION OFFLINE</span>
       </div>
-    `;
-  } else if (isRestMode) {
-    leftBadgeHtml = `
-      <div id="bot-fleet-busy-count" class="bot-fleet-summary-pill cooldown" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);">
-        <span>⏳ ${health.isBlackout ? 'EVENT BLACKOUT' : 'COOLDOWN REST'}</span>
-      </div>
-    `;
-  } else {
-    leftBadgeHtml = `
+    `
+    : `
       <div id="bot-fleet-busy-count" class="bot-fleet-summary-pill busy">
         <span>🔴 ${occupiedCount} OCCUPIED</span>
       </div>
     `;
-  }
   const rightText = (isOffline || isRestMode || !showCountWhenSafe) ? 'ALL SAFE TO LOGIN' : `${safeCount} SAFE TO LOGIN`;
   return `
     <div class="bot-fleet-summary">
@@ -7522,9 +7513,9 @@ window.getBotFleetSafetyHtml = () => {
       matchesAccount(data.activeAccount, bot)
     );
       
-    const isBotCooldown = !isOffline && !isBotActive && (
+    const isWholeFleetParked = Boolean(!health.isServerOnline && (health.isCooldownRest || health.isBlackout)) || cooldownAccount === 'All Bot Accounts';
+    const isBotCooldown = !isOffline && !isBotActive && !isWholeFleetParked && (
       (fleetItem && fleetItem.status === 'COOLDOWN') ||
-      (health.isCooldownRest && !health.isServerOnline) ||
       (status === 'COOLDOWN' && (matchesAccount(cooldownAccount, bot) || matchesAccount(data.account, bot))) || 
       (matchesAccount(cooldownAccount, bot) && secondsLeft > 0)
     );
@@ -7533,7 +7524,7 @@ window.getBotFleetSafetyHtml = () => {
     let badgeClass = 'safe';
     let badgeTitle = '● IDLE';
     let actionTag = '✅ Safe to log in';
-    let detail = 'Routines completed • Idle';
+    let detail = isWholeFleetParked ? 'Automation resting • Safe to log in' : 'Routines completed • Idle';
     let botCdText = '';
 
     if (isOffline) {
