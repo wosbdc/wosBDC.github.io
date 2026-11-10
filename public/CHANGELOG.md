@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.154] - 2026-11-10
+- ✨ **Blended Pill**: Moved alt events toggle under Auto Redeem pill.
+- 📐 **Compact Cards**: Removed extra toggle row for zero height bloat.
+
 ## [3.3.153] - 2026-11-10
 - 📅 **Alt Toggle**: Added switch to include alts across events.
 - 👥 **Admin Control**: One-click alt event toggle inside Admin Users.

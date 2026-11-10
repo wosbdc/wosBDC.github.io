@@ -1,15 +1,15 @@
 {
-  "version": "3.3.153",
+  "version": "3.3.154",
   "releaseDate": "2026-11-10",
-  "title": "What's New in v3.3.153",
+  "title": "What's New in v3.3.154",
   "notes": [
-    "Added per-alt Include in All Events toggle on cards.",
-    "One-click alt event toggle added inside Admin Users.",
-    "Hidden alts stay excluded unless toggled ON or active."
+    "Moved alt events toggle under Auto Redeem pill.",
+    "Removed extra card toggle bar for compact blended layout."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.153",
+    "version": "3.3.154",
     "latestChanges": [
+      "v3.3.154: Redesigned Account Hub alt event toggle into compact cyan-blended pill under Auto Redeem",
       "v3.3.153: Added per-alt Include in All Events toggle across Account Hub, Admin Users, and all event rosters",
       "v3.3.152: Keep bot fleet boxes green (Safe to Login) during master cooldown",
       "v3.3.151: Restored Bot Radar cooldown countdown during managed fleet rest",

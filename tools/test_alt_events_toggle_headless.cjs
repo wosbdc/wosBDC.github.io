@@ -69,8 +69,8 @@ function runStaticVerification() {
   assert(mainJs.includes('window.shouldIncludeMemberInEvents ='), 'Must define window.shouldIncludeMemberInEvents');
   assert(mainJs.includes('window.toggleAltEventVisibility ='), 'Must define window.toggleAltEventVisibility');
   assert(mainJs.includes('id="altEventsFilter"'), 'Account Hub must include altEventsFilter dropdown');
-  assert(mainJs.includes('id="altEventsSwitch-'), 'Account Hub alt cards must include altEventsSwitch toggle');
-  assert(mainJs.includes('data-alt-events-pill='), 'Admin Users alt rows must include 1-click events pill');
+  assert(mainJs.includes('id="altEventsPill-'), 'Account Hub alt cards must include compact header altEventsPill toggle');
+  assert(mainJs.includes('data-alt-events-pill='), 'Account Hub & Admin Users must include 1-click events pill');
   assert(mainJs.includes('id="altEventsDropdown-'), 'Admin Users alt dropdown must include events toggle item');
   console.log('  ✅ Static & AST checks passed.');
 }
@@ -213,10 +213,11 @@ async function runHeadlessBrowserTests() {
         window.currentUser.linkedAltsData[cleanGid].showInEvents = Boolean(next);
         const card = document.querySelector(`.alt-account-card[data-gid="${cleanGid}"]`);
         if (card) card.setAttribute('data-show-in-events', next ? 'true' : 'false');
-        const sw = document.getElementById(`altEventsSwitch-${cleanGid}`);
-        if (sw) { sw.checked = Boolean(next); sw.setAttribute('aria-checked', next ? 'true' : 'false'); }
-        const badge = document.getElementById(`altEventsBadge-${cleanGid}`);
-        if (badge) badge.textContent = next ? 'INCLUDED' : 'HIDDEN';
+        document.querySelectorAll(`[data-alt-events-pill="${cleanGid}"]`).forEach(pill => {
+          pill.setAttribute('data-show-in-events', next ? 'true' : 'false');
+          pill.setAttribute('aria-pressed', next ? 'true' : 'false');
+          pill.innerHTML = next ? '📅 Events: ON' : '📅 Events: OFF';
+        });
         if (typeof window.filterAltAccountsList === 'function' && document.getElementById('linkedAltsGrid')) {
           window.filterAltAccountsList();
         }
@@ -328,29 +329,27 @@ async function runHeadlessBrowserTests() {
     const ptAfterToggleText = await page.evaluate(() => document.getElementById('ptTableBody').innerText);
     assert(ptAfterToggleText.includes('FarmAlt02'), 'After toggling ON, FarmAlt02 must immediately appear in Polar Terrors');
 
-    // Test 4: Render Account Hub & verify switch DOM + filter dropdown + responsive viewports
+    // Test 4: Render Account Hub & verify compact header pill DOM + filter dropdown + responsive viewports
     await page.evaluate(async () => {
       await window.toggleAltEventVisibility('398112450', 'owner_uid_1', 'FarmAlt02', false);
       await window.views.account();
     });
-    await page.waitForSelector('#altEventsSwitch-345120987', { timeout: 6000 });
+    await page.waitForSelector('#altEventsPill-345120987', { timeout: 6000 });
 
     const hubDom = await page.evaluate(() => {
-      const swOn = document.getElementById('altEventsSwitch-345120987');
-      const swOff = document.getElementById('altEventsSwitch-398112450');
-      const badgeOn = document.getElementById('altEventsBadge-345120987');
-      const badgeOff = document.getElementById('altEventsBadge-398112450');
+      const pOn = document.getElementById('altEventsPill-345120987');
+      const pOff = document.getElementById('altEventsPill-398112450');
       return {
-        onChecked: Boolean(swOn && swOn.checked),
-        offChecked: Boolean(swOff && swOff.checked),
-        badgeOnText: badgeOn ? badgeOn.textContent.trim() : '',
-        badgeOffText: badgeOff ? badgeOff.textContent.trim() : ''
+        onPressed: pOn ? pOn.getAttribute('aria-pressed') : '',
+        offPressed: pOff ? pOff.getAttribute('aria-pressed') : '',
+        onText: pOn ? pOn.textContent.trim() : '',
+        offText: pOff ? pOff.textContent.trim() : ''
       };
     });
-    assert.strictEqual(hubDom.onChecked, true, 'Account Hub switch for BabyDiva must start ON');
-    assert.strictEqual(hubDom.offChecked, false, 'Account Hub switch for FarmAlt02 must start OFF');
-    assert.strictEqual(hubDom.badgeOnText, 'INCLUDED');
-    assert.strictEqual(hubDom.badgeOffText, 'HIDDEN');
+    assert.strictEqual(hubDom.onPressed, 'true', 'Account Hub pill for BabyDiva must start ON');
+    assert.strictEqual(hubDom.offPressed, 'false', 'Account Hub pill for FarmAlt02 must start OFF');
+    assert.strictEqual(hubDom.onText, '📅 Events: ON');
+    assert.strictEqual(hubDom.offText, '📅 Events: OFF');
 
     // Filter dropdown interaction + DOM assertion
     await page.select('#altEventsFilter', 'included');
@@ -366,14 +365,14 @@ async function runHeadlessBrowserTests() {
     assert.strictEqual(filteredCards.c2Display, 'none', 'Filtering Included must hide FarmAlt02 card');
     await page.select('#altEventsFilter', 'all');
 
-    // Toggle FarmAlt02 switch via real user click / change dispatch
+    // Toggle FarmAlt02 header pill via real user click
     await page.evaluate(() => {
-      const sw = document.getElementById('altEventsSwitch-398112450');
-      sw.click();
+      const pill = document.getElementById('altEventsPill-398112450');
+      pill.click();
     });
-    const toggledBadgeText = await page.evaluate(() => document.getElementById('altEventsBadge-398112450').textContent.trim());
-    assert.strictEqual(toggledBadgeText, 'INCLUDED', 'Clicking switch must mutate badge to INCLUDED in DOM');
-    console.log('  ✅ Account Hub switch interaction & event filter verified.');
+    const toggledPillText = await page.evaluate(() => document.getElementById('altEventsPill-398112450').textContent.trim());
+    assert.strictEqual(toggledPillText, '📅 Events: ON', 'Clicking header pill must mutate text to 📅 Events: ON in DOM');
+    console.log('  ✅ Account Hub compact header pill & event filter verified.');
 
     // Responsive overflow audit across Mobile (375), Tablet (768), Desktop (1280)
     for (const vp of [{ width: 375, height: 812 }, { width: 768, height: 1024 }, { width: 1280, height: 860 }]) {

@@ -340,49 +340,28 @@ window.toggleAltEventVisibility = async (altGid, targetUid, altName, explicitSta
             localStorage.setItem('cached_users_alts', JSON.stringify(cachedAlts));
         } catch(e) {}
 
-        // Update Account Hub DOM controls cleanly
-        const hubSwitch = document.getElementById(`altEventsSwitch-${cleanGid}`);
-        if (hubSwitch) {
-            hubSwitch.checked = showVal;
-            hubSwitch.setAttribute('aria-checked', showVal ? 'true' : 'false');
-        }
-        const hubTrack = document.getElementById(`altEventsTrack-${cleanGid}`);
-        if (hubTrack) hubTrack.style.background = showVal ? '#10b981' : '#334155';
-        const hubThumb = document.getElementById(`altEventsThumb-${cleanGid}`);
-        if (hubThumb) hubThumb.style.left = showVal ? '23px' : '3px';
-        const hubBadge = document.getElementById(`altEventsBadge-${cleanGid}`);
-        if (hubBadge) {
-            hubBadge.textContent = showVal ? 'INCLUDED' : 'HIDDEN';
-            hubBadge.style.background = showVal ? 'rgba(16,185,129,0.2)' : 'rgba(148,163,184,0.12)';
-            hubBadge.style.color = showVal ? '#10b981' : '#94a3b8';
-            hubBadge.style.border = showVal ? '1px solid rgba(16,185,129,0.45)' : '1px solid rgba(148,163,184,0.3)';
-        }
-        const hubSub = document.getElementById(`altEventsSub-${cleanGid}`);
-        if (hubSub) {
-            hubSub.textContent = showVal ? 'Showdown • Championship • Mercenary • Polar • Bear Trap' : 'Hidden unless active in event';
-            hubSub.style.color = showVal ? '#6ee7b7' : '#94a3b8';
-        }
-        const hubBar = document.getElementById(`altEventsBar-${cleanGid}`);
-        if (hubBar) {
-            hubBar.style.background = showVal ? 'rgba(16,185,129,0.09)' : 'rgba(255,255,255,0.025)';
-            hubBar.style.borderColor = showVal ? 'rgba(16,185,129,0.35)' : 'rgba(255,255,255,0.08)';
-        }
+        // Update Account Hub & Admin Users toggle pills cleanly
         document.querySelectorAll(`.alt-account-card[data-gid="${cleanGid}"]`).forEach(card => {
             card.setAttribute('data-show-in-events', showVal ? 'true' : 'false');
+        });
+        document.querySelectorAll(`[data-alt-events-pill="${cleanGid}"]`).forEach(pill => {
+            const isHubPill = Boolean(pill.id && pill.id.startsWith('altEventsPill-'));
+            pill.setAttribute('data-show-in-events', showVal ? 'true' : 'false');
+            pill.setAttribute('aria-pressed', showVal ? 'true' : 'false');
+            pill.innerHTML = showVal ? '📅 Events: ON' : '📅 Events: OFF';
+            pill.style.background = showVal
+                ? (isHubPill ? 'rgba(6,182,212,0.14)' : 'rgba(16,185,129,0.15)')
+                : (isHubPill ? 'rgba(255,255,255,0.04)' : 'rgba(100,116,139,0.18)');
+            pill.style.color = showVal ? (isHubPill ? '#22d3ee' : '#10b981') : '#94a3b8';
+            pill.style.borderColor = showVal
+                ? (isHubPill ? 'rgba(6,182,212,0.5)' : 'rgba(16,185,129,0.4)')
+                : (isHubPill ? 'rgba(255,255,255,0.12)' : 'rgba(148,163,184,0.3)');
+            if (isHubPill) pill.style.boxShadow = showVal ? '0 0 10px rgba(6,182,212,0.18)' : 'none';
+            pill.title = showVal ? 'Included in all events — click to hide (unless active)' : 'Hidden from events unless active — click to include in all events';
         });
         if (typeof window.filterAltAccountsList === 'function' && document.getElementById('linkedAltsGrid')) {
             window.filterAltAccountsList();
         }
-
-        // Update Admin Users DOM controls cleanly
-        document.querySelectorAll(`[data-alt-events-pill="${cleanGid}"]`).forEach(pill => {
-            pill.setAttribute('data-show-in-events', showVal ? 'true' : 'false');
-            pill.innerHTML = showVal ? '📅 Events: ON' : '📅 Events: OFF';
-            pill.style.background = showVal ? 'rgba(16,185,129,0.15)' : 'rgba(100,116,139,0.18)';
-            pill.style.color = showVal ? '#10b981' : '#94a3b8';
-            pill.style.borderColor = showVal ? 'rgba(16,185,129,0.4)' : 'rgba(148,163,184,0.3)';
-            pill.title = showVal ? 'Click to hide this alt from event lists (unless active)' : 'Click to include this alt in all alliance events';
-        });
         const adminDropdownItem = document.getElementById(`altEventsDropdown-${cleanGid}`);
         if (adminDropdownItem) {
             adminDropdownItem.setAttribute('data-show-in-events', showVal ? 'true' : 'false');
@@ -401,8 +380,6 @@ window.toggleAltEventVisibility = async (altGid, targetUid, altName, explicitSta
         return true;
     } catch (err) {
         console.error("Failed to toggle alt event visibility:", err);
-        const hubSwitch = document.getElementById(`altEventsSwitch-${cleanGid}`);
-        if (hubSwitch) hubSwitch.checked = !showVal;
         if (window.showToast) window.showToast("Failed to save event toggle setting.", "error");
         return false;
     }
@@ -42317,9 +42294,19 @@ window.resetBearTrapEvent = async () => {
                               </div>
                           </div>
                       </div>
-                      <!-- Perks Status -->
-                      <div style="flex-shrink:0;">
+                      <!-- Perks & Events Status -->
+                      <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
                           <span style="border:1px solid rgba(16,185,129,0.4); color:#10b981; background:rgba(16,185,129,0.12); border-radius:8px; padding:3px 8px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:3px;" title="Automatic Gift Code redemption is active for this claimed alt.">🎁 Auto Redeem</span>
+                          <button type="button"
+                                  id="altEventsPill-${cleanGid}"
+                                  data-alt-events-pill="${cleanGid}"
+                                  data-show-in-events="${showInEventsVal ? 'true' : 'false'}"
+                                  aria-pressed="${showInEventsVal ? 'true' : 'false'}"
+                                  onclick="window.toggleAltEventVisibility('${cleanGid}', '${window.escapeHTML(currentUser.uid)}', '${window.escapeHTML(altName.replace(/'/g, "\\'"))}', null, this)"
+                                  style="border:1px solid ${showInEventsVal ? 'rgba(6,182,212,0.5)' : 'rgba(255,255,255,0.12)'}; color:${showInEventsVal ? '#22d3ee' : '#94a3b8'}; background:${showInEventsVal ? 'rgba(6,182,212,0.14)' : 'rgba(255,255,255,0.04)'}; box-shadow:${showInEventsVal ? '0 0 10px rgba(6,182,212,0.18)' : 'none'}; border-radius:8px; padding:3px 8px; font-size:11px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; transition:0.2s;"
+                                  title="${showInEventsVal ? 'Included in all events — click to hide (unless active)' : 'Hidden from events unless active — click to include in all events'}">
+                              ${showInEventsVal ? '📅 Events: ON' : '📅 Events: OFF'}
+                          </button>
                       </div>
                   </div>
 
@@ -42352,27 +42339,6 @@ window.resetBearTrapEvent = async () => {
                               ${timeActiveVal}
                           </div>
                       </div>
-                  </div>
-
-                  <!-- Event Visibility Toggle Bar -->
-                  <div id="altEventsBar-${cleanGid}" style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:${showInEventsVal ? 'rgba(16,185,129,0.09)' : 'rgba(255,255,255,0.025)'}; border:1px solid ${showInEventsVal ? 'rgba(16,185,129,0.35)' : 'rgba(255,255,255,0.08)'}; border-radius:12px; padding:9px 12px; transition:0.2s;">
-                      <div style="display:flex; align-items:center; gap:9px; min-width:0;">
-                          <span style="font-size:15px; flex-shrink:0;">📅</span>
-                          <div style="min-width:0;">
-                              <div style="font-size:12px; font-weight:800; color:#f8fafc; line-height:1.25;">Include in All Events</div>
-                              <div id="altEventsSub-${cleanGid}" style="font-size:10.5px; color:${showInEventsVal ? '#6ee7b7' : '#94a3b8'}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                  ${showInEventsVal ? 'Showdown • Championship • Mercenary • Polar • Bear Trap' : 'Hidden unless active in event'}
-                              </div>
-                          </div>
-                      </div>
-                      <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; flex-shrink:0;" title="Toggle whether this alt is included in event rosters across all alliance events">
-                          <span id="altEventsBadge-${cleanGid}" style="font-size:10px; font-weight:800; letter-spacing:0.4px; padding:2px 8px; border-radius:999px; ${showInEventsVal ? 'background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.45);' : 'background:rgba(148,163,184,0.12); color:#94a3b8; border:1px solid rgba(148,163,184,0.3);'}">${showInEventsVal ? 'INCLUDED' : 'HIDDEN'}</span>
-                          <span style="position:relative; display:inline-block; width:44px; height:24px;">
-                              <input type="checkbox" role="switch" id="altEventsSwitch-${cleanGid}" aria-checked="${showInEventsVal ? 'true' : 'false'}" aria-label="Include ${window.escapeHTML(altName)} in All Events" ${showInEventsVal ? 'checked' : ''} onchange="window.toggleAltEventVisibility('${cleanGid}', '${window.escapeHTML(currentUser.uid)}', '${window.escapeHTML(altName.replace(/'/g, "\\'"))}', this.checked, this)" style="opacity:0; width:0; height:0; position:absolute;">
-                              <span id="altEventsTrack-${cleanGid}" style="position:absolute; inset:0; background:${showInEventsVal ? '#10b981' : '#334155'}; border-radius:999px; transition:0.25s;"></span>
-                              <span id="altEventsThumb-${cleanGid}" style="position:absolute; height:18px; width:18px; left:${showInEventsVal ? '23px' : '3px'}; bottom:3px; background:#ffffff; border-radius:50%; transition:0.25s; box-shadow:0 1px 3px rgba(0,0,0,0.4);"></span>
-                          </span>
-                      </label>
                   </div>
 
                   <!-- Bottom Row: Unified Action Buttons -->
