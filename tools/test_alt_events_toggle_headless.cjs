@@ -70,6 +70,8 @@ function runStaticVerification() {
   assert(mainJs.includes('window.toggleAltEventVisibility ='), 'Must define window.toggleAltEventVisibility');
   assert(mainJs.includes('id="altEventsFilter"'), 'Account Hub must include altEventsFilter dropdown');
   assert(mainJs.includes('id="altEventsPill-'), 'Account Hub alt cards must include compact header altEventsPill toggle');
+  assert(mainJs.includes('id="altSettingsBtn-'), 'Account Hub alt cards must include top-right gear settings button');
+  assert(mainJs.includes('window.toggleAltSettingsMenu ='), 'Must define window.toggleAltSettingsMenu');
   assert(mainJs.includes('data-alt-events-pill='), 'Account Hub & Admin Users must include 1-click events pill');
   assert(mainJs.includes('id="altEventsDropdown-'), 'Admin Users alt dropdown must include events toggle item');
   console.log('  ✅ Static & AST checks passed.');
@@ -372,7 +374,25 @@ async function runHeadlessBrowserTests() {
     });
     const toggledPillText = await page.evaluate(() => document.getElementById('altEventsPill-398112450').textContent.trim());
     assert.strictEqual(toggledPillText, '📅 Events: ON', 'Clicking header pill must mutate text to 📅 Events: ON in DOM');
-    console.log('  ✅ Account Hub compact header pill & event filter verified.');
+
+    // Open top-right gear menu & assert consolidated actions + outside click dismissal
+    await page.evaluate(() => document.getElementById('altSettingsBtn-345120987').click());
+    const menuCheck = await page.evaluate(() => {
+      const menu = document.getElementById('altSettingsMenu-345120987');
+      const card = menu ? menu.closest('.alt-account-card') : null;
+      return {
+        isOpen: Boolean(menu && menu.style.display === 'block'),
+        cardZ: card ? card.style.zIndex : '',
+        menuText: menu ? menu.innerText : ''
+      };
+    });
+    assert.strictEqual(menuCheck.isOpen, true, 'Clicking gear button must open alt settings menu');
+    assert.strictEqual(menuCheck.cardZ, '60', 'Open menu must lift parent card z-index above neighbors');
+    assert(menuCheck.menuText.includes('Make Primary') && menuCheck.menuText.includes('Edit Profile') && menuCheck.menuText.includes('Unlink Alt'), 'Gear menu must include Make Primary, Edit Profile, and Unlink Alt');
+    await page.evaluate(() => document.body.click());
+    const menuClosed = await page.evaluate(() => document.getElementById('altSettingsMenu-345120987').style.display);
+    assert.strictEqual(menuClosed, 'none', 'Clicking outside must close alt settings menu');
+    console.log('  ✅ Account Hub compact header pill, gear menu & event filter verified.');
 
     // Responsive overflow audit across Mobile (375), Tablet (768), Desktop (1280)
     for (const vp of [{ width: 375, height: 812 }, { width: 768, height: 1024 }, { width: 1280, height: 860 }]) {

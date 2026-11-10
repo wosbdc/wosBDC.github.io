@@ -385,6 +385,47 @@ window.toggleAltEventVisibility = async (altGid, targetUid, altName, explicitSta
     }
 };
 
+window.closeAllAltSettingsMenus = () => {
+    document.querySelectorAll('.alt-settings-dropdown').forEach(m => { m.style.display = 'none'; });
+    document.querySelectorAll('[id^="altSettingsBtn-"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+    document.querySelectorAll('.alt-account-card').forEach(c => {
+        c.style.zIndex = '';
+    });
+};
+
+window.toggleAltSettingsMenu = (menuId, e) => {
+    if (e) {
+        e.stopPropagation();
+        if (e.preventDefault) e.preventDefault();
+    }
+    const menu = document.getElementById(menuId);
+    if (!menu) return;
+    const isCurrentlyOpen = menu.style.display === 'block';
+    window.closeAllAltSettingsMenus();
+    if (!isCurrentlyOpen) {
+        menu.style.display = 'block';
+        const card = menu.closest('.alt-account-card');
+        if (card) {
+            card.style.position = 'relative';
+            card.style.zIndex = '60';
+        }
+        const btn = menu.parentElement?.querySelector('[id^="altSettingsBtn-"]');
+        if (btn) btn.setAttribute('aria-expanded', 'true');
+    }
+};
+
+if (!window._altSettingsClickListenerAdded && typeof document !== 'undefined') {
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest || !e.target.closest('.alt-settings-container')) {
+            window.closeAllAltSettingsMenus();
+        }
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') window.closeAllAltSettingsMenus();
+    });
+    window._altSettingsClickListenerAdded = true;
+}
+
 /**
  * 👥 Single Unified Chief List Resolver
  * Aggregates and deduplicates all chiefs across Registered Users, Linked Alts,
@@ -42294,9 +42335,41 @@ window.resetBearTrapEvent = async () => {
                               </div>
                           </div>
                       </div>
-                      <!-- Perks & Events Status -->
-                      <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
-                          <span style="border:1px solid rgba(16,185,129,0.4); color:#10b981; background:rgba(16,185,129,0.12); border-radius:8px; padding:3px 8px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:3px;" title="Automatic Gift Code redemption is active for this claimed alt.">🎁 Auto Redeem</span>
+                      <!-- Perks, Events & Settings Cluster -->
+                      <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:flex-end; gap:5px; position:relative;">
+                          <div style="display:flex; align-items:center; gap:6px;">
+                              <span style="border:1px solid rgba(16,185,129,0.4); color:#10b981; background:rgba(16,185,129,0.12); border-radius:8px; padding:3px 8px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:3px; white-space:nowrap;" title="Automatic Gift Code redemption is active for this claimed alt.">🎁 Auto Redeem</span>
+                              <div class="alt-settings-container" style="position:relative; display:inline-block;">
+                                  <button type="button"
+                                          id="altSettingsBtn-${cleanGid}"
+                                          onclick="window.toggleAltSettingsMenu('altSettingsMenu-${cleanGid}', event)"
+                                          aria-haspopup="menu"
+                                          aria-expanded="false"
+                                          aria-controls="altSettingsMenu-${cleanGid}"
+                                          style="width:28px; height:26px; border-radius:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.14); color:#cbd5e1; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:0.2s;"
+                                          onmouseover="this.style.background='rgba(6,182,212,0.16)'; this.style.borderColor='rgba(6,182,212,0.45)'; this.style.color='#22d3ee';"
+                                          onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='rgba(255,255,255,0.14)'; this.style.color='#cbd5e1';"
+                                          title="Alt Account Actions (Sync, Make Primary, Edit, Unlink)">
+                                      ⚙️
+                                  </button>
+                                  <div id="altSettingsMenu-${cleanGid}" class="alt-settings-dropdown" role="menu" style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:#111827; border:1px solid rgba(6,182,212,0.35); border-radius:12px; box-shadow:0 16px 36px rgba(0,0,0,0.85), 0 0 18px rgba(6,182,212,0.12); min-width:195px; padding:6px; z-index:9999; backdrop-filter:blur(14px);">
+                                      ${ altMemStatus === 'left'
+                                          ? `<button type="button" role="menuitem" onclick="window.closeAllAltSettingsMenus(); window.selfActivateMembershipStatus('${cleanGid}', '${window.escapeHTML(altName)}', true)" style="width:100%; background:transparent; border:none; border-radius:7px; padding:8px 10px; font-size:12px; font-weight:700; color:#10b981; cursor:pointer; display:flex; align-items:center; gap:8px; text-align:left;" onmouseover="this.style.background='rgba(16,185,129,0.15)'" onmouseout="this.style.background='transparent'"><span>👋</span><span>Set to Active</span></button>`
+                                          : (altMemStatus === 'sleeping'
+                                              ? `<button type="button" role="menuitem" onclick="window.closeAllAltSettingsMenus(); window.selfActivateMembershipStatus('${cleanGid}', '${window.escapeHTML(altName)}', true)" style="width:100%; background:transparent; border:none; border-radius:7px; padding:8px 10px; font-size:12px; font-weight:700; color:#10b981; cursor:pointer; display:flex; align-items:center; gap:8px; text-align:left;" onmouseover="this.style.background='rgba(16,185,129,0.15)'" onmouseout="this.style.background='transparent'"><span>⏰</span><span>Wake Up</span></button>`
+                                              : '')
+                                      }
+                                      ${ isAltTokenActive
+                                          ? `<button type="button" role="menuitem" onclick="window.closeAllAltSettingsMenus(); window.handleSyncAltProfile('${cleanGid}', null)" style="width:100%; background:transparent; border:none; border-radius:7px; padding:8px 10px; font-size:12px; font-weight:600; color:#22d3ee; cursor:pointer; display:flex; align-items:center; gap:8px; text-align:left;" onmouseover="this.style.background='rgba(6,182,212,0.14)'" onmouseout="this.style.background='transparent'"><span>🔄</span><span>Sync Data</span></button>`
+                                          : `<button type="button" role="menuitem" onclick="window.closeAllAltSettingsMenus(); window.openAltVerifyModal('${cleanGid}')" style="width:100%; background:transparent; border:none; border-radius:7px; padding:8px 10px; font-size:12px; font-weight:600; color:#38bdf8; cursor:pointer; display:flex; align-items:center; gap:8px; text-align:left;" onmouseover="this.style.background='rgba(14,165,233,0.14)'" onmouseout="this.style.background='transparent'"><span>⚡</span><span>Setup 30-Day Token</span></button>`
+                                      }
+                                      <button type="button" role="menuitem" onclick="window.closeAllAltSettingsMenus(); window.promptSwapPrimaryAccount('${cleanGid}', '${window.escapeHTML(altName)}')" style="width:100%; background:transparent; border:none; border-radius:7px; padding:8px 10px; font-size:12px; font-weight:600; color:#eab308; cursor:pointer; display:flex; align-items:center; gap:8px; text-align:left;" onmouseover="this.style.background='rgba(234,179,8,0.14)'" onmouseout="this.style.background='transparent'"><span>⭐️</span><span>Make Primary</span></button>
+                                      <button type="button" role="menuitem" onclick="window.closeAllAltSettingsMenus(); window.openEditAltProfileModal('${cleanGid}', '${window.escapeHTML(altName)}')" style="width:100%; background:transparent; border:none; border-radius:7px; padding:8px 10px; font-size:12px; font-weight:600; color:#e2e8f0; cursor:pointer; display:flex; align-items:center; gap:8px; text-align:left;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'"><span>✏️</span><span>Edit Profile</span></button>
+                                      <div style="height:1px; background:rgba(255,255,255,0.08); margin:4px 0;"></div>
+                                      <button type="button" role="menuitem" onclick="window.closeAllAltSettingsMenus(); window.unlinkAltAccountPrompt('${cleanGid}')" style="width:100%; background:transparent; border:none; border-radius:7px; padding:8px 10px; font-size:12px; font-weight:600; color:#ef4444; cursor:pointer; display:flex; align-items:center; gap:8px; text-align:left;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='transparent'"><span>🗑️</span><span>Unlink Alt</span></button>
+                                  </div>
+                              </div>
+                          </div>
                           <button type="button"
                                   id="altEventsPill-${cleanGid}"
                                   data-alt-events-pill="${cleanGid}"
@@ -42339,29 +42412,6 @@ window.resetBearTrapEvent = async () => {
                               ${timeActiveVal}
                           </div>
                       </div>
-                  </div>
-
-                  <!-- Bottom Row: Unified Action Buttons -->
-                  <div style="display:flex; gap:6px; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px; flex-wrap:wrap;">
-                      ${ altMemStatus === 'left'
-                          ? `<button onclick="window.selfActivateMembershipStatus('${cleanGid}', '${window.escapeHTML(altName)}', true)" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(16,185,129,0.3); transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'" title="Rejoined the alliance? Restore this alt to Active Member status">👋 Set to Active</button>`
-                          : (altMemStatus === 'sleeping'
-                              ? `<button onclick="window.selfActivateMembershipStatus('${cleanGid}', '${window.escapeHTML(altName)}', true)" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(16,185,129,0.3); transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'" title="Back from break? Wake up this alt">⏰ Wake Up</button>`
-                              : '')
-                      }
-                      ${ isAltTokenActive
-                          ? `<button onclick="window.handleSyncAltProfile('${cleanGid}', this)" style="flex:1; min-width:110px; background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Token active (${altTokenDaysRemaining}d remaining). Click to sync.">🔄 Sync Data</button>`
-                          : `<button onclick="window.openAltVerifyModal('${cleanGid}')" style="flex:1; min-width:110px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 2px 8px rgba(14,165,233,0.3);" title="Verify via in-game mail to bind 30-day auto-sync token">⚡ Setup 30-Day Token</button>`
-                      }
-                      <button onclick="window.promptSwapPrimaryAccount('${cleanGid}', '${window.escapeHTML(altName)}')" style="background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.4); color:#eab308; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(234,179,8,0.25)'" onmouseout="this.style.background='rgba(234,179,8,0.15)'" title="Make this alt character your primary chief">
-                          ⭐️ Make Primary
-                      </button>
-                      <button onclick="window.openEditAltProfileModal('${cleanGid}', '${window.escapeHTML(altName)}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:var(--text-main); border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'" title="Edit Alt Profile (Furnace & Start Date)">
-                          ✏️
-                      </button>
-                      <button onclick="window.unlinkAltAccountPrompt('${cleanGid}')" style="border:1px solid rgba(239,68,68,0.4); color:#ef4444; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; background:rgba(239,68,68,0.06); transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(239,68,68,0.06)'" title="Unlink Alt Character">
-                          🗑️
-                      </button>
                   </div>
               </div>`;
         });

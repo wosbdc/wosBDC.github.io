@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.155] - 2026-11-10
+- ⚙️ **Gear Menu**: Moved Sync, Primary, Edit, Unlink into top-right menu.
+- 📐 **Slimmer Cards**: Removed bottom button row for cleaner 2-row cards.
+
 ## [3.3.154] - 2026-11-10
 - ✨ **Blended Pill**: Moved alt events toggle under Auto Redeem pill.
 - 📐 **Compact Cards**: Removed extra toggle row for zero height bloat.
