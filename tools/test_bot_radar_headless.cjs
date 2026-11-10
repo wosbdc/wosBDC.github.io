@@ -728,7 +728,7 @@ server.listen(PORT, async () => {
     if (mutationResult.clockC !== '00:09:50') {
       throw new Error(`Assertion Failed: Cooldown clock failed! Result: ${JSON.stringify(mutationResult)}`);
     }
-    if (mutationResult.cdAccountF !== 'All Bot Accounts' || !mutationResult.cdSubF.includes('Castle Battle') || mutationResult.cdBadgeF !== '● ON' || mutationResult.badgeF !== '' || !mutationResult.serverValF.includes('Offline')) {
+    if (mutationResult.cdAccountF !== 'All Bot Accounts' || !mutationResult.cdSubF.includes('Castle Battle') || mutationResult.cdBadgeF !== '● ON' || mutationResult.badgeF !== '' || !mutationResult.serverValF.includes('Safe-Parked')) {
       throw new Error(`Assertion Failed: Event Blackout Cooldown details failed! Result: ${JSON.stringify({ cdAccountF: mutationResult.cdAccountF, cdSubF: mutationResult.cdSubF, cdBadgeF: mutationResult.cdBadgeF, badgeF: mutationResult.badgeF, serverValF: mutationResult.serverValF })}`);
     }
     if (mutationResult.cdBadgeA !== '⚪ IDLE') {
@@ -821,7 +821,7 @@ server.listen(PORT, async () => {
       const badgeText = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
       const dualTagText = document.getElementById('bot-radar-dual-tag')?.textContent?.trim();
       const offlineAlertEl = document.getElementById('bot-radar-offline-alert');
-      const offlineAlertVisible = offlineAlertEl && window.getComputedStyle(offlineAlertEl).display !== 'none';
+      const offlineAlertVisible = offlineAlertEl !== null && window.getComputedStyle(offlineAlertEl).display !== 'none';
       const offlineAlertText = offlineAlertEl?.textContent?.trim();
       const runnerComp = document.getElementById('bot-radar-runner-compartment');
       const runnerHasOfflineClass = runnerComp?.classList?.contains('is-offline');
@@ -906,10 +906,10 @@ server.listen(PORT, async () => {
     if (!serverOfflineResult.hasHubBox || !serverOfflineResult.hasServerBox) {
       throw new Error('Assertion Failed: Dedicated status boxes for WOS Bot Hub and Bot Server not found in DOM!');
     }
-    if (!serverOfflineResult.offlineAlertVisible || !serverOfflineResult.offlineAlertText.includes('AUTOMATION HALTED')) {
-      throw new Error(`Assertion Failed: Offline warning bar not visible or missing AUTOMATION HALTED! Got: "${serverOfflineResult.offlineAlertText}"`);
+    if (serverOfflineResult.offlineAlertVisible) {
+      throw new Error('Assertion Failed: Redundant extra offline warning bar must NOT be rendered!');
     }
-    console.log(`  ✅ 4A Verified: Server offline displays "${serverOfflineResult.dualTagText}" (Zero Redundancy), runner="None", cooldown="None", no progress bar, and no header badge.`);
+    console.log(`  ✅ 4A Verified: Server offline displays "${serverOfflineResult.dualTagText}" (Zero Redundancy), runner="None", cooldown="None", no extra alert bar.`);
 
     // Subphase 4B: BotHub Offline explicitly (bothubOnline: false)
     const hubOfflineResult = await page.evaluate(async () => {
@@ -930,10 +930,9 @@ server.listen(PORT, async () => {
       const badgeText = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
       const dualTagText = document.getElementById('bot-radar-dual-tag')?.textContent?.trim();
       const offlineAlertEl = document.getElementById('bot-radar-offline-alert');
-      const offlineAlertVisible = offlineAlertEl && window.getComputedStyle(offlineAlertEl).display !== 'none';
-      const offlineAlertText = offlineAlertEl?.textContent?.trim();
+      const offlineAlertVisible = offlineAlertEl !== null && window.getComputedStyle(offlineAlertEl).display !== 'none';
 
-      return { badgeText, dualTagText, offlineAlertVisible, offlineAlertText };
+      return { badgeText, dualTagText, offlineAlertVisible };
     });
 
     if (hubOfflineResult.badgeText !== '') {
@@ -945,10 +944,10 @@ server.listen(PORT, async () => {
     if (hubOfflineResult.dualTagText.includes('Hub:') || hubOfflineResult.dualTagText.includes('Server:')) {
       throw new Error(`Assertion Failed: Dual tag contains redundant "Hub:" or "Server:" prefix! Got: "${hubOfflineResult.dualTagText}"`);
     }
-    if (!hubOfflineResult.offlineAlertVisible || !hubOfflineResult.offlineAlertText.includes('Bot Hub and Bot Server are closed')) {
-      throw new Error(`Assertion Failed: Offline warning bar missing BotHub closed notice! Got: "${hubOfflineResult.offlineAlertText}"`);
+    if (hubOfflineResult.offlineAlertVisible) {
+      throw new Error('Assertion Failed: Redundant extra offline warning bar must NOT be rendered when Hub is offline!');
     }
-    console.log(`  ✅ 4B Verified: Hub offline displays "${hubOfflineResult.dualTagText}" (Zero Redundancy), no header badge, and closed notice.`);
+    console.log(`  ✅ 4B Verified: Hub offline displays "${hubOfflineResult.dualTagText}" (Zero Redundancy), no header badge, and zero redundant warning bar.`);
 
     // Subphase 4C: 60-Second Heartbeat Staleness Timeout (>60s old timestamp)
     const staleResult = await page.evaluate(async () => {
@@ -968,11 +967,11 @@ server.listen(PORT, async () => {
 
       const badgeText = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
       const dualTagText = document.getElementById('bot-radar-dual-tag')?.textContent?.trim();
+      const hubBoxTitle = document.getElementById('bot-radar-hub-box')?.getAttribute('title') || '';
       const offlineAlertEl = document.getElementById('bot-radar-offline-alert');
-      const offlineAlertVisible = offlineAlertEl && window.getComputedStyle(offlineAlertEl).display !== 'none';
-      const offlineAlertText = offlineAlertEl?.textContent?.trim();
+      const offlineAlertVisible = offlineAlertEl !== null && window.getComputedStyle(offlineAlertEl).display !== 'none';
 
-      return { badgeText, dualTagText, offlineAlertVisible, offlineAlertText };
+      return { badgeText, dualTagText, hubBoxTitle, offlineAlertVisible };
     });
 
     if (staleResult.badgeText !== '') {
@@ -984,10 +983,98 @@ server.listen(PORT, async () => {
     if (staleResult.dualTagText.includes('Hub:') || staleResult.dualTagText.includes('Server:')) {
       throw new Error(`Assertion Failed: Dual tag contains redundant "Hub:" or "Server:" prefix! Got: "${staleResult.dualTagText}"`);
     }
-    if (!staleResult.offlineAlertVisible || !staleResult.offlineAlertText.includes('stopped reporting (>60s)')) {
-      throw new Error(`Assertion Failed: Stale telemetry warning bar missing 60-second notice! Got: "${staleResult.offlineAlertText}"`);
+    if (!staleResult.hubBoxTitle.includes('stopped reporting') || staleResult.offlineAlertVisible) {
+      throw new Error(`Assertion Failed: Stale telemetry should show tooltip on top Hub box without redundant warning bar! Got title="${staleResult.hubBoxTitle}"`);
     }
-    console.log(`  ✅ 4C Verified: 60s staleness timeout triggers "${staleResult.dualTagText}" (Zero Redundancy), no header badge, and timeout warning.`);
+    console.log(`  ✅ 4C Verified: 60s staleness timeout triggers "${staleResult.dualTagText}" (Zero Redundancy), tooltip notice, and zero extra red box.`);
+
+    // Subphase 4D: Managed Cooldown Rest (Hub Online, GnBots Intentionally Parked / Closed)
+    const cooldownRestResult = await page.evaluate(async () => {
+      window.latestBotStatus = {
+        status: 'COOLDOWN',
+        account: 'All Bot Accounts',
+        activeAccount: '',
+        cooldownAccount: 'All Bot Accounts',
+        cooldownSecondsLeft: 3600,
+        secondsLeft: 3600,
+        isCooldownRunning: true,
+        isExecutingTasks: false,
+        serverOnline: false,
+        bothubOnline: true,
+        timestamp: Date.now(),
+        stage: 'Routine Rotation Rest (GnBots Parked)',
+        cooldownReason: 'Routine Rotation Rest (GnBots Parked)',
+        totalBots: 0,
+        shortTime: 'Just now',
+        receivedAt: Date.now()
+      };
+      window.updateBotOperationsRadarDom();
+
+      const health = window.getBotAutomationHealth(window.latestBotStatus);
+      const radarCard = document.getElementById('bot-operations-radar');
+      const offlineAlertEl = document.getElementById('bot-radar-offline-alert');
+      const offlineAlertVisible = offlineAlertEl !== null && window.getComputedStyle(offlineAlertEl).display !== 'none';
+      const cdComp = document.getElementById('bot-radar-cooldown-compartment');
+      const cdVisible = cdComp && window.getComputedStyle(cdComp).display !== 'none';
+      const cdClock = document.getElementById('bot-radar-clock')?.textContent?.trim();
+      const cdAccount = document.getElementById('bot-radar-cooldown-val')?.textContent?.trim();
+      const serverVal = document.getElementById('bot-radar-server-val')?.textContent?.trim();
+      const hubVal = document.getElementById('bot-radar-hub-val')?.textContent?.trim();
+      const serverBoxHasBlackout = document.getElementById('bot-radar-server-box')?.classList?.contains('is-blackout');
+      const busyPillText = document.getElementById('bot-fleet-busy-count')?.textContent?.trim();
+      const safePillText = document.getElementById('bot-fleet-safe-count')?.textContent?.trim();
+
+      return {
+        isOffline: health.isOffline,
+        isCooldownRest: health.isCooldownRest,
+        hasCooldownBorder: radarCard?.classList?.contains('border-cooldown'),
+        offlineAlertVisible,
+        cdVisible,
+        cdClock,
+        cdAccount,
+        serverVal,
+        hubVal,
+        serverBoxHasBlackout,
+        busyPillText,
+        safePillText
+      };
+    });
+
+    if (cooldownRestResult.isOffline || !cooldownRestResult.isCooldownRest) {
+      throw new Error(`Assertion Failed: Managed Cooldown Rest must NOT be marked offline! Result: ${JSON.stringify(cooldownRestResult)}`);
+    }
+    if (!cooldownRestResult.hasCooldownBorder || !cooldownRestResult.cdVisible) {
+      throw new Error(`Assertion Failed: Cooldown compartment must be visible with .border-cooldown when GnBots is parked in cooldown! Result: ${JSON.stringify(cooldownRestResult)}`);
+    }
+    if (cooldownRestResult.offlineAlertVisible) {
+      throw new Error('Assertion Failed: Offline warning bar must stay hidden during Managed Cooldown Rest!');
+    }
+    if (cooldownRestResult.cdClock !== '01:00:00' || cooldownRestResult.cdAccount !== 'All Bot Accounts') {
+      throw new Error(`Assertion Failed: Expected countdown "01:00:00" and "All Bot Accounts", got clock="${cooldownRestResult.cdClock}", acc="${cooldownRestResult.cdAccount}"`);
+    }
+    if (!cooldownRestResult.hubVal.includes('Online') || !cooldownRestResult.serverVal.includes('Parked') || !cooldownRestResult.serverBoxHasBlackout) {
+      throw new Error(`Assertion Failed: Expected Hub Online & Server Parked (amber), got hub="${cooldownRestResult.hubVal}", server="${cooldownRestResult.serverVal}"`);
+    }
+    if (!cooldownRestResult.busyPillText.includes('COOLDOWN REST') || !cooldownRestResult.safePillText.includes('ALL SAFE TO LOGIN')) {
+      throw new Error(`Assertion Failed: Expected COOLDOWN REST & ALL SAFE TO LOGIN summary pills, got "${cooldownRestResult.busyPillText}" / "${cooldownRestResult.safePillText}"`);
+    }
+    console.log(`  ✅ 4D Verified: Managed Cooldown Rest displays Hub Online + Server "${cooldownRestResult.serverVal}", clock="${cooldownRestResult.cdClock}", summary="${cooldownRestResult.busyPillText}".`);
+
+    // Restore offline state prior to Phase 5 offline alert verification
+    await page.evaluate(() => {
+      window.latestBotStatus = {
+        status: 'OFFLINE',
+        account: 'Bot Server Closed',
+        serverOnline: false,
+        bothubOnline: true,
+        timestamp: Date.now(),
+        stage: 'Bot Server Terminated',
+        secondsLeft: 0,
+        totalBots: 0,
+        receivedAt: Date.now()
+      };
+      window.updateBotOperationsRadarDom();
+    });
 
     console.log('\n--- PHASE 5: R4/R5 BELL ALERT INTEGRATION & PRIVACY AUDIT ---');
     // Step A: Regular member opens Bell modal -> MUST NOT see bot alert!
@@ -1030,6 +1117,17 @@ server.listen(PORT, async () => {
       window.currentUser = { uid: '318843189', email: 'admin@bdc.com', displayName: 'R5 Leader' };
       window.isAdminUser = () => true;
       window.getAdminLevel = () => 'R5';
+      window.latestBotStatus = {
+        status: 'OFFLINE',
+        account: 'Bot Server Closed',
+        serverOnline: false,
+        bothubOnline: true,
+        timestamp: Date.now(),
+        stage: 'Bot Server Terminated',
+        secondsLeft: 0,
+        totalBots: 0,
+        receivedAt: Date.now()
+      };
 
       await window.openAllianceAlertsModal();
       for (let i = 0; i < 20; i++) {

@@ -1,15 +1,17 @@
 {
-  "version": "3.3.150",
-  "releaseDate": "2026-11-04",
-  "title": "What's New in v3.3.150",
+  "version": "3.3.151",
+  "releaseDate": "2026-11-09",
+  "title": "What's New in v3.3.151",
   "notes": [
-    "Restricted Showdown Discord Post Hub strictly to Admin Menu.",
-    "Removed Discord post buttons from public member showdown view.",
-    "Added admin authentication gate to Discord Post Hub launcher."
+    "Restored live Bot Radar cooldown display when GnBots rests.",
+    "Shows amber Parked status instead of false offline alerts.",
+    "Removed redundant extra offline banner below Bot Radar header.",
+    "Preserves safe-to-login fleet indicators throughout managed cooldown timers."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.150",
+    "version": "3.3.151",
     "latestChanges": [
+      "v3.3.151: Restored Bot Radar cooldown countdown during managed fleet rest",
       "v3.3.150: Restricted Showdown Discord Post Hub strictly to Admin Menu",
       "v3.3.149: Enemy alliance separated onto dedicated line in Discord post",
       "v3.3.148: Showdown Daily Discord Post Hub and reset missed report fix",

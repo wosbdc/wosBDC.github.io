@@ -7001,10 +7001,12 @@ window.getBotAutomationHealth = (data = window.latestBotStatus || {}) => {
   
   const isHubOnline = Boolean(data.bothubOnline !== false && !isStale && ts > 0);
   const isBlackout = Boolean(status === 'EVENT_BLACKOUT' || (data.stage && /event\s*blackout/i.test(data.stage)));
+  const cdSecs = Number(data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft !== null ? data.cooldownSecondsLeft : (data.secondsLeft || 0));
+  const isCooldownRest = Boolean(isHubOnline && !isBlackout && (status === 'COOLDOWN' || Boolean(data.isCooldownRunning && cdSecs > 0)));
   const isServerOnline = Boolean(isHubOnline && data.serverOnline === true && status !== 'OFFLINE');
-  // When an alliance event blackout is active, BotHub intentionally parks bots to prevent interference.
-  // The system is fully operational and executing blackout protection.
-  const isOffline = !isHubOnline || (!isServerOnline && !isBlackout);
+  // When an alliance event blackout OR managed master cooldown is active, BotHub intentionally parks bots.
+  // The system is fully operational and executing scheduled rest/blackout protection.
+  const isOffline = !isHubOnline || (!isServerOnline && !isBlackout && !isCooldownRest);
   
   return {
     status,
@@ -7014,8 +7016,82 @@ window.getBotAutomationHealth = (data = window.latestBotStatus || {}) => {
     isServerOnline,
     isOffline,
     isBlackout,
+    isCooldownRest,
     lastSeenSecs: ts > 0 ? Math.floor((now - ts) / 1000) : null
   };
+};
+
+window.getBotDualTagHtml = (health) => {
+  const hubOnline = health.isHubOnline;
+  const serverOnline = health.isServerOnline;
+  let serverBoxClass = serverOnline ? 'is-online' : 'is-offline';
+  let serverValClass = serverOnline ? 'is-online' : 'is-offline';
+  let serverValText = serverOnline ? '🟢 Online' : '🔴 Offline';
+  if (!serverOnline && hubOnline) {
+    if (health.isBlackout) {
+      serverBoxClass = 'is-blackout';
+      serverValClass = 'is-blackout';
+      serverValText = '⏸️ Safe-Parked';
+    } else if (health.isCooldownRest) {
+      serverBoxClass = 'is-blackout';
+      serverValClass = 'is-blackout';
+      serverValText = '⏸️ Parked (Rest)';
+    }
+  }
+  return `
+    <div id="bot-radar-hub-box" class="bot-radar-mini-box ${hubOnline ? 'is-online' : 'is-offline'}" title="${health.isStale ? 'Host stopped reporting telemetry (>60s)' : ''}">
+      <div class="bot-radar-mini-header">
+        <span class="bot-radar-mini-icon">🖥️</span>
+        <span class="bot-radar-mini-label">WOS Bot Hub</span>
+      </div>
+      <div id="bot-radar-hub-val" class="bot-radar-mini-val ${hubOnline ? 'is-online' : 'is-offline'}">
+        ${hubOnline ? '🟢 Online' : '🔴 Offline'}
+      </div>
+    </div>
+    <div id="bot-radar-server-box" class="bot-radar-mini-box ${serverBoxClass}">
+      <div class="bot-radar-mini-header">
+        <span class="bot-radar-mini-icon">⚡</span>
+        <span class="bot-radar-mini-label">Bot Server</span>
+      </div>
+      <div id="bot-radar-server-val" class="bot-radar-mini-val ${serverValClass}">
+        ${serverValText}
+      </div>
+    </div>
+  `;
+};
+
+window.getBotFleetSummaryHtml = (health, occupiedCount = 0, safeCount = 0, showCountWhenSafe = true) => {
+  const isOffline = Boolean(health.isOffline);
+  const isRestMode = !isOffline && (Boolean(health.isCooldownRest) || Boolean(health.isBlackout)) && !health.isServerOnline;
+  let leftBadgeHtml = '';
+  if (isOffline) {
+    leftBadgeHtml = `
+      <div id="bot-fleet-busy-count" class="bot-fleet-summary-pill offline" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4);">
+        <span>🔴 AUTOMATION OFFLINE</span>
+      </div>
+    `;
+  } else if (isRestMode) {
+    leftBadgeHtml = `
+      <div id="bot-fleet-busy-count" class="bot-fleet-summary-pill cooldown" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);">
+        <span>⏳ ${health.isBlackout ? 'EVENT BLACKOUT' : 'COOLDOWN REST'}</span>
+      </div>
+    `;
+  } else {
+    leftBadgeHtml = `
+      <div id="bot-fleet-busy-count" class="bot-fleet-summary-pill busy">
+        <span>🔴 ${occupiedCount} OCCUPIED</span>
+      </div>
+    `;
+  }
+  const rightText = (isOffline || isRestMode || !showCountWhenSafe) ? 'ALL SAFE TO LOGIN' : `${safeCount} SAFE TO LOGIN`;
+  return `
+    <div class="bot-fleet-summary">
+      ${leftBadgeHtml}
+      <div id="bot-fleet-safe-count" class="bot-fleet-summary-pill safe">
+        <span>🟢 ${rightText}</span>
+      </div>
+    </div>
+  `;
 };
 
 window.cleanBotRadarName = (name) => {
@@ -7407,14 +7483,7 @@ window.getBotFleetSafetyHtml = () => {
             <span>🤖</span>
             <span>Alliance Bot Fleet & Account Login Safety</span>
           </div>
-          <div class="bot-fleet-summary">
-            <div id="bot-fleet-busy-count" class="bot-fleet-summary-pill ${isOffline ? 'offline' : 'busy'}" ${isOffline ? 'style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4);"' : ''}>
-              <span>🔴 ${isOffline ? 'AUTOMATION OFFLINE' : '0 OCCUPIED'}</span>
-            </div>
-            <div id="bot-fleet-safe-count" class="bot-fleet-summary-pill safe">
-              <span>🟢 ${isOffline ? 'ALL SAFE TO LOGIN' : 'ALL SAFE TO LOGIN'}</span>
-            </div>
-          </div>
+          ${window.getBotFleetSummaryHtml(health, 0, 0, false)}
         </div>
         <div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;">
           📡 Syncing with live bot fleet telemetry...
@@ -7455,6 +7524,7 @@ window.getBotFleetSafetyHtml = () => {
       
     const isBotCooldown = !isOffline && !isBotActive && (
       (fleetItem && fleetItem.status === 'COOLDOWN') ||
+      (health.isCooldownRest && !health.isServerOnline) ||
       (status === 'COOLDOWN' && (matchesAccount(cooldownAccount, bot) || matchesAccount(data.account, bot))) || 
       (matchesAccount(cooldownAccount, bot) && secondsLeft > 0)
     );
@@ -7544,14 +7614,7 @@ window.getBotFleetSafetyHtml = () => {
           <span>🤖</span>
           <span>Alliance Bot Fleet & Account Login Safety</span>
         </div>
-        <div class="bot-fleet-summary">
-          <div id="bot-fleet-busy-count" class="bot-fleet-summary-pill ${isOffline ? 'offline' : 'busy'}" ${isOffline ? 'style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4);"' : ''}>
-            <span>🔴 ${isOffline ? 'AUTOMATION OFFLINE' : `${occupiedCount} OCCUPIED`}</span>
-          </div>
-          <div id="bot-fleet-safe-count" class="bot-fleet-summary-pill safe">
-            <span>🟢 ${isOffline ? 'ALL SAFE TO LOGIN' : `${safeCount} SAFE TO LOGIN`}</span>
-          </div>
-        </div>
+        ${window.getBotFleetSummaryHtml(health, occupiedCount, safeCount, true)}
       </div>
       <div class="bot-fleet-grid">
         ${cardsHtml}
@@ -7614,51 +7677,11 @@ window.getBotOperationsRadarHtml = () => {
   
   const cardBorderClass = isOffline ? 'bot-radar-card border-offline' : (isActive ? 'bot-radar-card border-active' : (isCooldown ? 'bot-radar-card border-cooldown' : 'bot-radar-card border-standby'));
 
-  const hubOnline = health.isHubOnline;
-  const serverOnline = health.isServerOnline;
-  const serverBoxClass = serverOnline ? 'is-online' : 'is-offline';
-  const serverValClass = serverOnline ? 'is-online' : 'is-offline';
-  const serverValText = serverOnline ? '🟢 Online' : '🔴 Offline';
-
   const dualTagHtml = `
     <div id="bot-radar-dual-tag" class="bot-radar-server-tag bot-radar-status-grid">
-      <div id="bot-radar-hub-box" class="bot-radar-mini-box ${hubOnline ? 'is-online' : 'is-offline'}">
-        <div class="bot-radar-mini-header">
-          <span class="bot-radar-mini-icon">🖥️</span>
-          <span class="bot-radar-mini-label">WOS Bot Hub</span>
-        </div>
-        <div id="bot-radar-hub-val" class="bot-radar-mini-val ${hubOnline ? 'is-online' : 'is-offline'}">
-          ${hubOnline ? '🟢 Online' : '🔴 Offline'}
-        </div>
-      </div>
-      <div id="bot-radar-server-box" class="bot-radar-mini-box ${serverBoxClass}">
-        <div class="bot-radar-mini-header">
-          <span class="bot-radar-mini-icon">⚡</span>
-          <span class="bot-radar-mini-label">Bot Server</span>
-        </div>
-        <div id="bot-radar-server-val" class="bot-radar-mini-val ${serverValClass}">
-          ${serverValText}
-        </div>
-      </div>
+      ${window.getBotDualTagHtml(health)}
     </div>
   `;
-
-  let warningMsg = 'Bot Server is currently offline on host machine';
-  let warningAction = 'AUTOMATION HALTED';
-  if (health.isStale) {
-    warningMsg = 'Host machine is offline or stopped reporting (>60s)';
-    warningAction = 'DISCONNECTED';
-  } else if (!health.isHubOnline && !health.isServerOnline) {
-    warningMsg = 'Both WOS Bot Hub and Bot Server are closed on host';
-    warningAction = 'OFFLINE';
-  }
-
-  const offlineWarningHtml = isOffline ? `
-    <div id="bot-radar-offline-alert" class="bot-radar-offline-warning-bar">
-      <span>⚠️ ${warningMsg}</span>
-      <span style="font-weight:bold; color:#ef4444;">${warningAction}</span>
-    </div>
-  ` : `<div id="bot-radar-offline-alert" style="display:none;"></div>`;
 
   let timerText = '';
   let cdSubText = '';
@@ -7699,8 +7722,6 @@ window.getBotOperationsRadarHtml = () => {
       </div>
 
       ${dualTagHtml}
-
-      ${offlineWarningHtml}
 
       <!-- DUAL COMPARTMENTS: Active Runner vs Cooldown Hold Queue -->
       <div class="bot-radar-dual-grid">
@@ -7816,53 +7837,8 @@ window.updateBotOperationsRadarDom = () => {
   
   const dualTagEl = document.getElementById('bot-radar-dual-tag');
   if (dualTagEl) {
-    const hubOnline = health.isHubOnline;
-    const serverOnline = health.isServerOnline;
-    const serverBoxClass = serverOnline ? 'is-online' : 'is-offline';
-    const serverValClass = serverOnline ? 'is-online' : 'is-offline';
-    const serverValText = serverOnline ? '🟢 Online' : '🔴 Offline';
     dualTagEl.className = 'bot-radar-server-tag bot-radar-status-grid';
-    dualTagEl.innerHTML = `
-      <div id="bot-radar-hub-box" class="bot-radar-mini-box ${hubOnline ? 'is-online' : 'is-offline'}">
-        <div class="bot-radar-mini-header">
-          <span class="bot-radar-mini-icon">🖥️</span>
-          <span class="bot-radar-mini-label">WOS Bot Hub</span>
-        </div>
-        <div id="bot-radar-hub-val" class="bot-radar-mini-val ${hubOnline ? 'is-online' : 'is-offline'}">
-          ${hubOnline ? '🟢 Online' : '🔴 Offline'}
-        </div>
-      </div>
-      <div id="bot-radar-server-box" class="bot-radar-mini-box ${serverBoxClass}">
-        <div class="bot-radar-mini-header">
-          <span class="bot-radar-mini-icon">⚡</span>
-          <span class="bot-radar-mini-label">Bot Server</span>
-        </div>
-        <div id="bot-radar-server-val" class="bot-radar-mini-val ${serverValClass}">
-          ${serverValText}
-        </div>
-      </div>
-    `;
-  }
-
-  const alertEl = document.getElementById('bot-radar-offline-alert');
-  if (alertEl) {
-    if (isOffline) {
-      let warningMsg = 'Bot Server is currently offline on host machine';
-      let warningAction = 'AUTOMATION HALTED';
-      if (health.isStale) {
-        warningMsg = 'Host machine is offline or stopped reporting (>60s)';
-        warningAction = 'DISCONNECTED';
-      } else if (!health.isHubOnline && !health.isServerOnline) {
-        warningMsg = 'Both WOS Bot Hub and Bot Server are closed on host';
-        warningAction = 'OFFLINE';
-      }
-      alertEl.className = 'bot-radar-offline-warning-bar';
-      alertEl.style.display = 'flex';
-      alertEl.innerHTML = `<span>⚠️ ${warningMsg}</span><span style="font-weight:bold; color:#ef4444;">${warningAction}</span>`;
-    } else {
-      alertEl.style.display = 'none';
-      alertEl.innerHTML = '';
-    }
+    dualTagEl.innerHTML = window.getBotDualTagHtml(health);
   }
 
   const accValEl = document.getElementById('bot-radar-account-val');

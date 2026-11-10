@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.151] - 2026-11-09
+- ⏳ **Live Cooldown Radar**: Restored live Bot Radar cooldown display when GnBots rests.
+- ⏸️ **Parked Rest Status**: Shows amber Parked status instead of false offline alerts.
+- 🧹 **Clean Header**: Removed redundant extra offline banner below Bot Radar header.
+- ✅ **Fleet Safety Sync**: Preserves safe-to-login fleet indicators throughout managed cooldown timers.
+
 ## [3.3.150] - 2026-11-04
 - 🔒 **Admin Only Hub**: Restricted Showdown Discord Post Hub strictly to Admin Menu.
 - 🚫 **Public View Cleaned**: Removed Discord post buttons from public member showdown view.
