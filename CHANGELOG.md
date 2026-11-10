@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.153] - 2026-11-10
+- 📅 **Alt Toggle**: Added switch to include alts across events.
+- 👥 **Admin Control**: One-click alt event toggle inside Admin Users.
+- 🙈 **Clean Default**: Inactive alts stay hidden until toggled ON.
+- 🔄 **All Events**: Synced Showdown, Championship, Mercenary, Polar, and Bear Trap.
+
 ## [3.3.152] - 2026-11-10
 - 🟢 **Green Safe Cards**: Bot fleet boxes remain green Safe to Login during cooldown.
 - ✅ **Clear Summary**: Fleet summary cleanly displays 0 Occupied and All Safe.

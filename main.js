@@ -113,6 +113,26 @@ window.getRegisteredAltSets = async () => {
     const altGidsSet = new Set();
     const primaryNamesSet = new Set();
     const primaryGidsSet = new Set();
+    const optedInAltNamesSet = new Set();
+    const optedInAltGidsSet = new Set();
+    const altShowInEventsMap = {};
+    const altRecordNamesByGid = {};
+
+    const recordAltName = (cleanAid, nameVal) => {
+        if (!nameVal) return;
+        const rawLower = String(nameVal).trim().toLowerCase();
+        const cleanLower = window.cleanChiefName ? window.cleanChiefName(nameVal).toLowerCase().trim() : rawLower;
+        if (!primaryNamesSet.has(rawLower) && !primaryNamesSet.has(cleanLower)) {
+            altNamesSet.add(rawLower);
+            altNamesSet.add(cleanLower);
+            if (cleanAid) {
+                if (!altRecordNamesByGid[cleanAid]) altRecordNamesByGid[cleanAid] = new Set();
+                altRecordNamesByGid[cleanAid].add(rawLower);
+                altRecordNamesByGid[cleanAid].add(cleanLower);
+            }
+        }
+    };
+
     try {
         const [usersSnap, altsSnap] = await Promise.all([
             get(ref(db, 'users')).catch(() => null),
@@ -132,29 +152,27 @@ window.getRegisteredAltSets = async () => {
                 }
             });
 
-            // 2. Scan linked alts
+            // 2. Scan linked alts (linkedAltsData & altTokens & linkedGameIds)
             Object.values(users).forEach(u => {
                 if (!u || typeof u !== 'object') return;
-                const checkAlt = (aid, aData) => {
+                const checkAlt = (aid, aData, isAuthoritativeMeta = false) => {
                     const cleanAid = aid ? String(aid).trim() : '';
                     if (cleanAid && !primaryGidsSet.has(cleanAid)) altGidsSet.add(cleanAid);
                     if (aData && typeof aData === 'object') {
                         const an = aData.nickname || aData.name || aData.chiefName;
-                        if (an) {
-                            const rawLower = String(an).trim().toLowerCase();
-                            const cleanLower = window.cleanChiefName ? window.cleanChiefName(an).toLowerCase().trim() : rawLower;
-                            if (!primaryNamesSet.has(rawLower) && !primaryNamesSet.has(cleanLower)) {
-                                altNamesSet.add(rawLower);
-                                altNamesSet.add(cleanLower);
+                        recordAltName(cleanAid, an);
+                        if (cleanAid && !primaryGidsSet.has(cleanAid) && typeof aData.showInEvents === 'boolean') {
+                            if (isAuthoritativeMeta || altShowInEventsMap[cleanAid] === undefined) {
+                                altShowInEventsMap[cleanAid] = aData.showInEvents;
                             }
                         }
                     }
                 };
-                if (u.altTokens && typeof u.altTokens === 'object') {
-                    Object.entries(u.altTokens).forEach(([aid, at]) => checkAlt(aid, at));
-                }
                 if (u.linkedAltsData && typeof u.linkedAltsData === 'object') {
-                    Object.entries(u.linkedAltsData).forEach(([aid, at]) => checkAlt(aid, at));
+                    Object.entries(u.linkedAltsData).forEach(([aid, at]) => checkAlt(aid, at, true));
+                }
+                if (u.altTokens && typeof u.altTokens === 'object') {
+                    Object.entries(u.altTokens).forEach(([aid, at]) => checkAlt(aid, at, false));
                 }
                 if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
                     u.linkedGameIds.forEach(aid => {
@@ -170,24 +188,224 @@ window.getRegisteredAltSets = async () => {
                 const cleanAid = aid ? String(aid).trim() : '';
                 if (cleanAid && !primaryGidsSet.has(cleanAid)) altGidsSet.add(cleanAid);
                 if (a && typeof a === 'object') {
-                    const an = a.name || a.chiefName || a.nickname;
-                    if (an) {
-                        const rawLower = String(an).trim().toLowerCase();
-                        const cleanLower = window.cleanChiefName ? window.cleanChiefName(an).toLowerCase().trim() : rawLower;
-                        if (!primaryNamesSet.has(rawLower) && !primaryNamesSet.has(cleanLower)) {
-                            altNamesSet.add(rawLower);
-                            altNamesSet.add(cleanLower);
+                    recordAltName(cleanAid, a.name || a.chiefName || a.nickname);
+                    if (cleanAid && !primaryGidsSet.has(cleanAid) && typeof a.showInEvents === 'boolean') {
+                        if (altShowInEventsMap[cleanAid] === undefined) {
+                            altShowInEventsMap[cleanAid] = a.showInEvents;
                         }
                     }
                 }
             });
         }
 
+        // Populate opted-in alt sets (showInEvents === true)
+        Object.entries(altShowInEventsMap).forEach(([aid, isEnabled]) => {
+            if (isEnabled === true && !primaryGidsSet.has(aid)) {
+                optedInAltGidsSet.add(aid);
+                if (altRecordNamesByGid[aid]) {
+                    altRecordNamesByGid[aid].forEach(n => {
+                        if (!primaryNamesSet.has(n)) optedInAltNamesSet.add(n);
+                    });
+                }
+                if (window.idToNameMap && window.idToNameMap[aid]) {
+                    const mappedN = window.cleanChiefName ? window.cleanChiefName(window.idToNameMap[aid]).toLowerCase().trim() : String(window.idToNameMap[aid]).toLowerCase().trim();
+                    if (mappedN && !primaryNamesSet.has(mappedN)) optedInAltNamesSet.add(mappedN);
+                }
+            }
+        });
+
         // Guaranteed safety check: explicitly remove any primary main accounts from alt sets
         primaryGidsSet.forEach(gid => altGidsSet.delete(gid));
+        primaryGidsSet.forEach(gid => optedInAltGidsSet.delete(gid));
         primaryNamesSet.forEach(name => altNamesSet.delete(name));
+        primaryNamesSet.forEach(name => optedInAltNamesSet.delete(name));
     } catch(e) {}
-    return { altNamesSet, altGidsSet, primaryNamesSet, primaryGidsSet };
+    return { altNamesSet, altGidsSet, primaryNamesSet, primaryGidsSet, optedInAltNamesSet, optedInAltGidsSet, altShowInEventsMap };
+};
+
+window.isAltMember = (playerOrName, altSets = null) => {
+    if (!playerOrName || !altSets) return Boolean(typeof playerOrName === 'object' && playerOrName.isAlt);
+    const nameStr = typeof playerOrName === 'string' ? playerOrName : (playerOrName.name || playerOrName.chiefName || '');
+    const rawLower = String(nameStr).trim().toLowerCase();
+    const cleanLower = (typeof window.cleanChiefName === 'function' ? window.cleanChiefName(nameStr) : String(nameStr)).trim().toLowerCase();
+    const gid = typeof playerOrName === 'object' ? String(playerOrName.gameId || playerOrName.id || '').trim() : (rawLower && window.nameToIdMap?.[rawLower] ? String(window.nameToIdMap[rawLower]).trim() : '');
+
+    const isPrimary = Boolean(
+        (gid && altSets.primaryGidsSet && altSets.primaryGidsSet.has(gid)) ||
+        (altSets.primaryNamesSet && ((rawLower && altSets.primaryNamesSet.has(rawLower)) || (cleanLower && altSets.primaryNamesSet.has(cleanLower))))
+    );
+    if (isPrimary) return false;
+
+    return Boolean(
+        (typeof playerOrName === 'object' && playerOrName.isAlt) ||
+        (gid && altSets.altGidsSet && altSets.altGidsSet.has(gid)) ||
+        (altSets.altNamesSet && ((rawLower && altSets.altNamesSet.has(rawLower)) || (cleanLower && altSets.altNamesSet.has(cleanLower))))
+    );
+};
+
+window.isAltOptedInForEvents = (playerOrName, altSets = null) => {
+    if (!playerOrName) return false;
+    if (typeof playerOrName === 'object' && playerOrName.showInEvents === true) return true;
+    if (!altSets) return false;
+    const nameStr = typeof playerOrName === 'string' ? playerOrName : (playerOrName.name || playerOrName.chiefName || '');
+    const rawLower = String(nameStr).trim().toLowerCase();
+    const cleanLower = (typeof window.cleanChiefName === 'function' ? window.cleanChiefName(nameStr) : String(nameStr)).trim().toLowerCase();
+    const gid = typeof playerOrName === 'object' ? String(playerOrName.gameId || playerOrName.id || '').trim() : (rawLower && window.nameToIdMap?.[rawLower] ? String(window.nameToIdMap[rawLower]).trim() : '');
+
+    if (gid && altSets.optedInAltGidsSet && altSets.optedInAltGidsSet.has(gid)) return true;
+    if (altSets.optedInAltNamesSet && ((cleanLower && altSets.optedInAltNamesSet.has(cleanLower)) || (rawLower && altSets.optedInAltNamesSet.has(rawLower)))) return true;
+    if (gid && altSets.altShowInEventsMap && altSets.altShowInEventsMap[gid] === true) return true;
+    return false;
+};
+
+window.shouldIncludeMemberInEvents = (playerOrName, altSets = null, hasEventActivity = false) => {
+    if (!playerOrName) return false;
+    const nameStr = typeof playerOrName === 'string' ? playerOrName : (playerOrName.name || playerOrName.chiefName || '');
+    const gid = typeof playerOrName === 'object' ? String(playerOrName.gameId || playerOrName.id || '').trim() : '';
+    if (typeof window.isBotAccount === 'function' && window.isBotAccount(nameStr, gid)) return false;
+    if (typeof window.isPlayerActiveMember === 'function' && !window.isPlayerActiveMember(playerOrName)) return false;
+    if (!altSets || !window.isAltMember(playerOrName, altSets)) return true;
+    return Boolean(hasEventActivity || window.isAltOptedInForEvents(playerOrName, altSets));
+};
+
+window.toggleAltEventVisibility = async (altGid, targetUid, altName, explicitState = null, triggerEl = null) => {
+    const cleanGid = String(altGid || '').trim();
+    if (!cleanGid) return false;
+
+    const uid = String(targetUid || (currentUser && currentUser.uid) || '').trim();
+    const isAdmin = typeof window.isAdminUser === 'function' ? window.isAdminUser(currentUser) : false;
+    const isOwner = Boolean(currentUser && uid && currentUser.uid === uid);
+    if (!currentUser || (!isOwner && !isAdmin)) {
+        if (window.showToast) window.showToast("Unauthorized to update alt event visibility.", "error");
+        return false;
+    }
+
+    let nextState = explicitState;
+    if (typeof nextState !== 'boolean') {
+        const curAttr = triggerEl && triggerEl.getAttribute ? triggerEl.getAttribute('data-show-in-events') : null;
+        nextState = curAttr === 'true' ? false : true;
+    }
+    const showVal = Boolean(nextState);
+    const displayAltName = altName || (window.idToNameMap && window.idToNameMap[cleanGid]) || `Alt ${cleanGid}`;
+    const nowIso = new Date().toISOString();
+
+    try {
+        const writes = [];
+        if (uid) {
+            writes.push(update(ref(db, `users/${uid}/linkedAltsData/${cleanGid}`), {
+                gameId: cleanGid,
+                name: displayAltName,
+                showInEvents: showVal,
+                updatedAt: nowIso
+            }));
+            const hasTokenEntry = Boolean(
+                (currentUser && currentUser.uid === uid && currentUser.altTokens && currentUser.altTokens[cleanGid]) ||
+                (window.registeredUsersData && window.registeredUsersData[uid] && window.registeredUsersData[uid].altTokens && window.registeredUsersData[uid].altTokens[cleanGid])
+            );
+            if (hasTokenEntry) {
+                writes.push(update(ref(db, `users/${uid}/altTokens/${cleanGid}`), {
+                    showInEvents: showVal
+                }).catch(() => null));
+            }
+        }
+        writes.push(update(ref(db, `users_alts/${cleanGid}`), {
+            gameId: cleanGid,
+            name: displayAltName,
+            showInEvents: showVal,
+            updatedAt: nowIso
+        }).catch(() => null));
+
+        await Promise.all(writes);
+
+        // Sync local caches immediately
+        if (currentUser && currentUser.uid === uid) {
+            currentUser.linkedAltsData = currentUser.linkedAltsData || {};
+            currentUser.linkedAltsData[cleanGid] = { ...(currentUser.linkedAltsData[cleanGid] || {}), gameId: cleanGid, name: displayAltName, showInEvents: showVal, updatedAt: nowIso };
+            if (currentUser.altTokens && currentUser.altTokens[cleanGid]) {
+                currentUser.altTokens[cleanGid].showInEvents = showVal;
+            }
+            window.currentUser = currentUser;
+            try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
+        }
+        if (window.registeredUsersData && uid && window.registeredUsersData[uid]) {
+            window.registeredUsersData[uid].linkedAltsData = window.registeredUsersData[uid].linkedAltsData || {};
+            window.registeredUsersData[uid].linkedAltsData[cleanGid] = { ...(window.registeredUsersData[uid].linkedAltsData[cleanGid] || {}), gameId: cleanGid, name: displayAltName, showInEvents: showVal };
+            if (window.registeredUsersData[uid].altTokens && window.registeredUsersData[uid].altTokens[cleanGid]) {
+                window.registeredUsersData[uid].altTokens[cleanGid].showInEvents = showVal;
+            }
+        }
+        try {
+            const cachedAlts = JSON.parse(localStorage.getItem('cached_users_alts') || '{}');
+            cachedAlts[cleanGid] = { ...(cachedAlts[cleanGid] || {}), gameId: cleanGid, name: displayAltName, showInEvents: showVal, updatedAt: nowIso };
+            localStorage.setItem('cached_users_alts', JSON.stringify(cachedAlts));
+        } catch(e) {}
+
+        // Update Account Hub DOM controls cleanly
+        const hubSwitch = document.getElementById(`altEventsSwitch-${cleanGid}`);
+        if (hubSwitch) {
+            hubSwitch.checked = showVal;
+            hubSwitch.setAttribute('aria-checked', showVal ? 'true' : 'false');
+        }
+        const hubTrack = document.getElementById(`altEventsTrack-${cleanGid}`);
+        if (hubTrack) hubTrack.style.background = showVal ? '#10b981' : '#334155';
+        const hubThumb = document.getElementById(`altEventsThumb-${cleanGid}`);
+        if (hubThumb) hubThumb.style.left = showVal ? '23px' : '3px';
+        const hubBadge = document.getElementById(`altEventsBadge-${cleanGid}`);
+        if (hubBadge) {
+            hubBadge.textContent = showVal ? 'INCLUDED' : 'HIDDEN';
+            hubBadge.style.background = showVal ? 'rgba(16,185,129,0.2)' : 'rgba(148,163,184,0.12)';
+            hubBadge.style.color = showVal ? '#10b981' : '#94a3b8';
+            hubBadge.style.border = showVal ? '1px solid rgba(16,185,129,0.45)' : '1px solid rgba(148,163,184,0.3)';
+        }
+        const hubSub = document.getElementById(`altEventsSub-${cleanGid}`);
+        if (hubSub) {
+            hubSub.textContent = showVal ? 'Showdown • Championship • Mercenary • Polar • Bear Trap' : 'Hidden unless active in event';
+            hubSub.style.color = showVal ? '#6ee7b7' : '#94a3b8';
+        }
+        const hubBar = document.getElementById(`altEventsBar-${cleanGid}`);
+        if (hubBar) {
+            hubBar.style.background = showVal ? 'rgba(16,185,129,0.09)' : 'rgba(255,255,255,0.025)';
+            hubBar.style.borderColor = showVal ? 'rgba(16,185,129,0.35)' : 'rgba(255,255,255,0.08)';
+        }
+        document.querySelectorAll(`.alt-account-card[data-gid="${cleanGid}"]`).forEach(card => {
+            card.setAttribute('data-show-in-events', showVal ? 'true' : 'false');
+        });
+        if (typeof window.filterAltAccountsList === 'function' && document.getElementById('linkedAltsGrid')) {
+            window.filterAltAccountsList();
+        }
+
+        // Update Admin Users DOM controls cleanly
+        document.querySelectorAll(`[data-alt-events-pill="${cleanGid}"]`).forEach(pill => {
+            pill.setAttribute('data-show-in-events', showVal ? 'true' : 'false');
+            pill.innerHTML = showVal ? '📅 Events: ON' : '📅 Events: OFF';
+            pill.style.background = showVal ? 'rgba(16,185,129,0.15)' : 'rgba(100,116,139,0.18)';
+            pill.style.color = showVal ? '#10b981' : '#94a3b8';
+            pill.style.borderColor = showVal ? 'rgba(16,185,129,0.4)' : 'rgba(148,163,184,0.3)';
+            pill.title = showVal ? 'Click to hide this alt from event lists (unless active)' : 'Click to include this alt in all alliance events';
+        });
+        const adminDropdownItem = document.getElementById(`altEventsDropdown-${cleanGid}`);
+        if (adminDropdownItem) {
+            adminDropdownItem.setAttribute('data-show-in-events', showVal ? 'true' : 'false');
+            adminDropdownItem.innerHTML = showVal
+                ? '<span style="font-size:14px;">🚫</span> Hide Alt from Events'
+                : '<span style="font-size:14px;">📅</span> Include Alt in All Events';
+            adminDropdownItem.style.color = showVal ? '#f59e0b' : '#10b981';
+        }
+
+        if (window.showToast) {
+            window.showToast(
+                showVal ? `📅 ${displayAltName} will now appear in all event lists` : `📅 ${displayAltName} hidden from events unless active`,
+                showVal ? "success" : "info"
+            );
+        }
+        return true;
+    } catch (err) {
+        console.error("Failed to toggle alt event visibility:", err);
+        const hubSwitch = document.getElementById(`altEventsSwitch-${cleanGid}`);
+        if (hubSwitch) hubSwitch.checked = !showVal;
+        if (window.showToast) window.showToast("Failed to save event toggle setting.", "error");
+        return false;
+    }
 };
 
 /**
@@ -4918,9 +5136,10 @@ window.computeAndSyncMercenaryBossProgress = async () => {
         });
     } else {
         // 2. Fallback: inspect in-memory data / Firebase
-        const [mercData, rosterData] = await Promise.all([
+        const [mercData, rosterData, altSets] = await Promise.all([
             window.fetchMercenaryData().catch(() => ({})),
-            window.fetchRoster().catch(() => ({}))
+            window.fetchRoster().catch(() => ({})),
+            window.getRegisteredAltSets ? window.getRegisteredAltSets().catch(() => null) : Promise.resolve(null)
         ]);
 
         const rosterList = [];
@@ -4933,7 +5152,9 @@ window.computeAndSyncMercenaryBossProgress = async () => {
                 const resolvedName = window.resolveChiefName(p.name, gid, '', p.chiefName);
                 p.name = resolvedName;
                 p.chiefName = resolvedName;
-                if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
+                const rec = window.getEventRecord ? window.getEventRecord(mercData, p) : mercData[p.gameId];
+                const hasPart = Boolean(rec && ((parseInt(rec.scoutLevel) || 0) > 0 || rec.signedUp || rec.phase || rec.difficulty));
+                if (p.name && p.gameId && window.shouldIncludeMemberInEvents(p, altSets, hasPart)) {
                     seenGids.add(gid);
                     rosterList.push(p);
                 }
@@ -5078,6 +5299,7 @@ window.openMercenaryRallyReportModal = async () => {
     }
 
     // Assemble roster
+    const altSets = window.getRegisteredAltSets ? await window.getRegisteredAltSets().catch(() => null) : null;
     const rosterList = [];
     const seenGids = new Set();
     if (rosterData) {
@@ -5088,7 +5310,9 @@ window.openMercenaryRallyReportModal = async () => {
             const resolvedName = window.resolveChiefName(p.name, gid, '', p.chiefName);
             p.name = resolvedName;
             p.chiefName = resolvedName;
-            if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
+            const rec = window.getEventRecord ? window.getEventRecord(mercData, p) : mercData[p.gameId];
+            const hasPart = Boolean(rec && ((parseInt(rec.scoutLevel) || 0) > 0 || rec.signedUp || rec.phase || rec.difficulty));
+            if (p.name && p.gameId && window.shouldIncludeMemberInEvents(p, altSets, hasPart)) {
                 seenGids.add(gid);
                 rosterList.push(p);
             }
@@ -5643,10 +5867,11 @@ window.showResetAndArchiveMercenaryModal = async () => {
             const timestamp = Date.now();
             const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
 
-            const [mercData, rosterData, statsObj] = await Promise.all([
+            const [mercData, rosterData, statsObj, altSets] = await Promise.all([
                 window.fetchMercenaryData(),
                 window.fetchRoster().catch(() => ({})),
-                window.fetchPlayerEventStats()
+                window.fetchPlayerEventStats(),
+                window.getRegisteredAltSets ? window.getRegisteredAltSets().catch(() => null) : Promise.resolve(null)
             ]);
 
             let rosterList = [];
@@ -5659,7 +5884,10 @@ window.showResetAndArchiveMercenaryModal = async () => {
                     const normName = (cleanName || p.name || '').toLowerCase().trim();
                     const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
                     if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
-                    if (cleanName && window.isPlayerActiveMember(p)) {
+                    const candidate = { ...p, name: cleanName || p.name, gameId: gid || p.gameId };
+                    const rec = window.getEventRecord ? window.getEventRecord(mercData, candidate) : null;
+                    const hasPart = Boolean(rec && ((parseInt(rec.scoutLevel) || 0) > 0 || rec.signedUp || rec.phase || rec.difficulty));
+                    if (cleanName && window.shouldIncludeMemberInEvents(candidate, altSets, hasPart)) {
                         if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
                         if (gid) seenGids.add(gid);
                         if (normName) seenNames.add(normName);
@@ -5669,8 +5897,11 @@ window.showResetAndArchiveMercenaryModal = async () => {
             }
             if (rosterList.length === 0 && window.idToNameMap) {
                 Object.entries(window.idToNameMap).forEach(([gid, name]) => {
-                    if (window.isPlayerActiveMember({ gameId: gid, name: name })) {
-                        rosterList.push({ gameId: gid, name: name });
+                    const candidate = { gameId: gid, name: name };
+                    const rec = window.getEventRecord ? window.getEventRecord(mercData, candidate) : null;
+                    const hasPart = Boolean(rec && ((parseInt(rec.scoutLevel) || 0) > 0 || rec.signedUp || rec.phase || rec.difficulty));
+                    if (window.shouldIncludeMemberInEvents(candidate, altSets, hasPart)) {
+                        rosterList.push(candidate);
                     }
                 });
             }
@@ -5850,10 +6081,11 @@ window.archiveAndResetPolarTerrorsCycle = async () => {
         const dateStr = new Date(timestamp).toISOString().split('T')[0];
         const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
 
-        const [polarData, rosterData, statsObj] = await Promise.all([
+        const [polarData, rosterData, statsObj, altSets] = await Promise.all([
             window.fetchPolarTerrorsData(),
             window.fetchRoster().catch(() => ({})),
-            window.fetchPlayerEventStats()
+            window.fetchPlayerEventStats(),
+            window.getRegisteredAltSets ? window.getRegisteredAltSets().catch(() => null) : Promise.resolve(null)
         ]);
 
         let rosterList = [];
@@ -5868,7 +6100,10 @@ window.archiveAndResetPolarTerrorsCycle = async () => {
                 p.chiefName = cleanName;
                 const normName = cleanName.toLowerCase().trim();
                 if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
-                if (cleanName && window.isPlayerActiveMember(p)) {
+                const candidate = { ...p, name: cleanName, gameId: gid || p.gameId };
+                const rec = window.getEventRecord ? window.getEventRecord(polarData, candidate) : null;
+                const hasAct = Boolean(rec && rec.signedUp);
+                if (cleanName && window.shouldIncludeMemberInEvents(candidate, altSets, hasAct)) {
                     if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
                     if (gid) seenGids.add(gid);
                     if (normName) seenNames.add(normName);
@@ -5879,9 +6114,12 @@ window.archiveAndResetPolarTerrorsCycle = async () => {
         if (rosterList.length === 0 && window.idToNameMap) {
             Object.entries(window.idToNameMap).forEach(([gid, name]) => {
                 const gidStr = gid ? gid.toString().trim() : '';
-                if (gidStr && !seenGids.has(gidStr) && window.isPlayerActiveMember({ gameId: gid, name: name })) {
+                const candidate = { gameId: gid, name: name };
+                const rec = window.getEventRecord ? window.getEventRecord(polarData, candidate) : null;
+                const hasAct = Boolean(rec && rec.signedUp);
+                if (gidStr && !seenGids.has(gidStr) && window.shouldIncludeMemberInEvents(candidate, altSets, hasAct)) {
                     seenGids.add(gidStr);
-                    rosterList.push({ gameId: gid, name: name });
+                    rosterList.push(candidate);
                 }
             });
         }
@@ -5997,10 +6235,11 @@ window.archiveAndResetBearTrapCycle = async () => {
         const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
         const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
-        const [btData, rosterData, statsObj] = await Promise.all([
+        const [btData, rosterData, statsObj, altSets] = await Promise.all([
             window.fetchBearTrapData(),
             window.fetchRoster().catch(() => ({})),
-            window.fetchPlayerEventStats()
+            window.fetchPlayerEventStats(),
+            window.getRegisteredAltSets ? window.getRegisteredAltSets().catch(() => null) : Promise.resolve(null)
         ]);
 
         let rosterList = [];
@@ -6015,7 +6254,10 @@ window.archiveAndResetBearTrapCycle = async () => {
                 p.chiefName = cleanName;
                 const normName = cleanName.toLowerCase().trim();
                 if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
-                if (cleanName && window.isPlayerActiveMember(p)) {
+                const candidate = { ...p, name: cleanName, gameId: gid || p.gameId };
+                const rec = window.getEventRecord ? window.getEventRecord(btData, candidate) : null;
+                const hasAct = Boolean(rec && (isT(rec.donated) || isT(rec.signedUp)));
+                if (cleanName && window.shouldIncludeMemberInEvents(candidate, altSets, hasAct)) {
                     if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
                     if (gid) seenGids.add(gid);
                     if (normName) seenNames.add(normName);
@@ -6026,9 +6268,12 @@ window.archiveAndResetBearTrapCycle = async () => {
         if (rosterList.length === 0 && window.idToNameMap) {
             Object.entries(window.idToNameMap).forEach(([gid, name]) => {
                 const gidStr = gid ? gid.toString().trim() : '';
-                if (gidStr && !seenGids.has(gidStr) && window.isPlayerActiveMember({ gameId: gid, name: name })) {
+                const candidate = { gameId: gid, name: name };
+                const rec = window.getEventRecord ? window.getEventRecord(btData, candidate) : null;
+                const hasAct = Boolean(rec && (isT(rec.donated) || isT(rec.signedUp)));
+                if (gidStr && !seenGids.has(gidStr) && window.shouldIncludeMemberInEvents(candidate, altSets, hasAct)) {
                     seenGids.add(gidStr);
-                    rosterList.push({ gameId: gid, name: name });
+                    rosterList.push(candidate);
                 }
             });
         }
@@ -8206,6 +8451,7 @@ window.swapPrimaryWithAltAccount = async (targetAltGid) => {
             stove_lv: oldPrimaryStove,
             furnaceLevel: oldPrimaryStove,
             section: oldPrimarySection,
+            showInEvents: false,
             updatedAt: new Date().toISOString()
         };
     }
@@ -8547,6 +8793,7 @@ window.adminExecuteSwapPrimary = async (uid, altGid, altName) => {
                 stove_lv: oldPrimaryStove,
                 furnaceLevel: oldPrimaryStove,
                 section: oldPrimarySection,
+                showInEvents: false,
                 updatedAt: new Date().toISOString()
             };
         }
@@ -16873,6 +17120,8 @@ window.showResetAndArchiveChampionshipModal = async (initialScope = 'full') => {
             await sleep(200);
 
             // Stage 3: Process Roster and Archive Signups
+            const altSets = window.getRegisteredAltSets ? await window.getRegisteredAltSets().catch(() => null) : null;
+            const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
             let rosterList = [];
             const seenGids = new Set();
             const seenNames = new Set();
@@ -16883,7 +17132,10 @@ window.showResetAndArchiveChampionshipModal = async (initialScope = 'full') => {
                     const normName = (cleanName || p.name || '').toLowerCase().trim();
                     const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
                     if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
-                    if (cleanName && window.isPlayerActiveMember(p)) {
+                    const candidate = { ...p, name: cleanName || p.name, gameId: gid || p.gameId };
+                    const rec = window.getEventRecord ? window.getEventRecord(champData, candidate) : null;
+                    const hasAct = Boolean(rec && isT(rec.signedUp));
+                    if (cleanName && window.shouldIncludeMemberInEvents(candidate, altSets, hasAct)) {
                         if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
                         if (gid) seenGids.add(gid);
                         if (normName) seenNames.add(normName);
@@ -16894,16 +17146,18 @@ window.showResetAndArchiveChampionshipModal = async (initialScope = 'full') => {
             if (rosterList.length === 0 && window.idToNameMap) {
                 Object.entries(window.idToNameMap).forEach(([gid, name]) => {
                     const gidStr = gid ? gid.toString().trim() : '';
-                    if (gidStr && !seenGids.has(gidStr) && window.isPlayerActiveMember({ gameId: gid, name: name })) {
+                    const candidate = { gameId: gid, name: name };
+                    const rec = window.getEventRecord ? window.getEventRecord(champData, candidate) : null;
+                    const hasAct = Boolean(rec && isT(rec.signedUp));
+                    if (gidStr && !seenGids.has(gidStr) && window.shouldIncludeMemberInEvents(candidate, altSets, hasAct)) {
                         seenGids.add(gidStr);
-                        rosterList.push({ gameId: gid, name: name });
+                        rosterList.push(candidate);
                     }
                 });
             }
 
             let yesCount = 0, noCount = 0;
             let playerSnapshots = [];
-            const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
             if (scope === 'full' || scope === 'signups') {
                 updateStep(3, 'running', '📜 Archiving...', 55);
@@ -20535,18 +20789,16 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
     try {
         let sdRes = {};
         let rosterRawData = {};
-        let altsData = {};
+        let altSets = { altNamesSet: new Set(), altGidsSet: new Set(), primaryNamesSet: new Set(), primaryGidsSet: new Set(), optedInAltNamesSet: new Set(), optedInAltGidsSet: new Set() };
         try {
-            const [sdFetched, rosterFetched, altsSnap] = await Promise.all([
+            const [sdFetched, rosterFetched, fetchedAltSets] = await Promise.all([
                 window.fetchMergedShowdown(),
                 window.fetchRoster(true).catch(() => ({})),
-                get(ref(db, 'users_alts')).catch(() => null)
+                window.getRegisteredAltSets ? window.getRegisteredAltSets().catch(() => null) : Promise.resolve(null)
             ]);
             sdRes = sdFetched || {};
             rosterRawData = rosterFetched || {};
-            if (altsSnap && altsSnap.exists && altsSnap.exists()) {
-                altsData = altsSnap.val() || {};
-            }
+            if (fetchedAltSets) altSets = fetchedAltSets;
         } catch(e) {
             console.error("Error fetching showdown data for missed report:", e);
         }
@@ -20568,16 +20820,8 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
         };
         window.isBotAccount = isBotAccount;
 
-        // Extract registered alts
-        const altNamesSet = new Set();
-        const altGidsSet = new Set();
-        Object.entries(altsData).forEach(([altGid, a]) => {
-            if (altGid) altGidsSet.add(String(altGid).trim());
-            if (a && typeof a === 'object') {
-                if (a.name) altNamesSet.add((window.cleanChiefName ? window.cleanChiefName(a.name) : a.name).toLowerCase().trim());
-                if (a.nickname) altNamesSet.add((window.cleanChiefName ? window.cleanChiefName(a.nickname) : a.nickname).toLowerCase().trim());
-            }
-        });
+        const altNamesSet = altSets.altNamesSet || new Set();
+        const altGidsSet = altSets.altGidsSet || new Set();
 
         // 1. Build comprehensive case-insensitive & clean lookup for sdLiveData
         const sdLiveDataLowerMap = {};
@@ -20641,17 +20885,20 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
                 }
             }
 
-            // Exclude non-participating secondary alts (alts with 0 showdown scores)
-            const isAlt = Boolean(
-                (typeof playerOrName === 'object' && playerOrName.isAlt) ||
-                altNamesSet.has(clean) ||
-                altNamesSet.has(raw) ||
-                (gid && altGidsSet.has(gid))
-            );
+            // Exclude non-participating secondary alts unless toggled ON via Show in Events
+            const isAlt = typeof window.isAltMember === 'function'
+                ? window.isAltMember(playerOrName, altSets)
+                : Boolean(
+                    (typeof playerOrName === 'object' && playerOrName.isAlt) ||
+                    altNamesSet.has(clean) ||
+                    altNamesSet.has(raw) ||
+                    (gid && altGidsSet.has(gid))
+                );
             if (isAlt) {
+                const isOptedIn = typeof window.isAltOptedInForEvents === 'function' && window.isAltOptedInForEvents(playerOrName, altSets);
                 const sc = getScoresForPlayer(playerOrName);
                 const hasParticipation = sc && [1,2,3,4,5,6].some(d => Number(sc['d'+d] || 0) > 0);
-                if (!hasParticipation) {
+                if (!isOptedIn && !hasParticipation) {
                     return true;
                 }
             }
@@ -21062,17 +21309,20 @@ window.openShowdownDiscordPostModal = async (initialDay = null) => {
     let sdRes = {};
     let rosterRawData = {};
     let metaData = {};
+    let altSets = null;
     try {
-        const [sdFetched, rosterFetched, metaSnap] = await Promise.all([
+        const [sdFetched, rosterFetched, metaSnap, fetchedAltSets] = await Promise.all([
             window.fetchMergedShowdown ? window.fetchMergedShowdown().catch(() => ({})) : Promise.resolve({}),
             window.fetchRoster ? window.fetchRoster(true).catch(() => ({})) : Promise.resolve({}),
-            get(ref(db, 'showdown_meta')).catch(() => null)
+            get(ref(db, 'showdown_meta')).catch(() => null),
+            window.getRegisteredAltSets ? window.getRegisteredAltSets().catch(() => null) : Promise.resolve(null)
         ]);
         sdRes = sdFetched || {};
         rosterRawData = rosterFetched || {};
         if (metaSnap && metaSnap.exists && metaSnap.exists()) {
             metaData = metaSnap.val() || {};
         }
+        altSets = fetchedAltSets;
     } catch(e) {
         console.warn("Error fetching data for showdown discord hub:", e);
     }
@@ -21162,14 +21412,18 @@ window.openShowdownDiscordPostModal = async (initialDay = null) => {
     playerList.sort((a, b) => (b.horns !== a.horns) ? b.horns - a.horns : b.total - a.total);
     const top4 = playerList.slice(0, 4);
 
-    // Active members for 0-score calculation (excluding bots and departed)
+    // Active members for 0-score calculation (excluding bots, departed, and hidden secondary alts)
     const eligibleChiefs = new Set();
+    const activeSdNamesLower = new Set(playerList.filter(p => Number(p.total || 0) > 0).map(p => (p.name || '').toLowerCase()));
     if (rosterRawData && typeof rosterRawData === 'object') {
         Object.values(rosterRawData).forEach(p => {
-            if (p && p.name && !window.isBotAccount?.(p.name, p.gameId) && (typeof window.isPlayerActiveMember !== 'function' || window.isPlayerActiveMember(p))) {
-                const cName = window.cleanChiefName(p.name);
-                if (cName) eligibleChiefs.add(cName);
-            }
+            if (!p || !p.name) return;
+            const cName = window.cleanChiefName(p.name);
+            const hasSdScore = Boolean(cName && activeSdNamesLower.has(cName.toLowerCase()));
+            const isIncluded = typeof window.shouldIncludeMemberInEvents === 'function'
+                ? window.shouldIncludeMemberInEvents({ ...p, name: cName || p.name }, altSets, hasSdScore)
+                : (!window.isBotAccount?.(p.name, p.gameId) && (typeof window.isPlayerActiveMember !== 'function' || window.isPlayerActiveMember(p)));
+            if (isIncluded && cName) eligibleChiefs.add(cName);
         });
     }
     // Also add all current showdown players
@@ -24826,6 +25080,8 @@ window.resetAltFilters = function() {
   if (tSelect) tSelect.value = 'all';
   const pSelect = document.getElementById('altPerksFilter');
   if (pSelect) pSelect.value = 'all';
+  const eSelect = document.getElementById('altEventsFilter');
+  if (eSelect) eSelect.value = 'all';
   const sortSelect = document.getElementById('altSortFilter');
   if (sortSelect) sortSelect.value = 'default';
 
@@ -24838,6 +25094,7 @@ window.filterAltAccountsList = function() {
   const activeTab = window.currentAltPopulationTab || 'all';
   const tokenFilter = document.getElementById('altTokenFilter')?.value || 'all';
   const perksFilter = document.getElementById('altPerksFilter')?.value || 'all';
+  const eventsFilter = document.getElementById('altEventsFilter')?.value || 'all';
   const sortFilter = document.getElementById('altSortFilter')?.value || 'default';
 
   const grid = document.getElementById('linkedAltsGrid');
@@ -24850,6 +25107,8 @@ window.filterAltAccountsList = function() {
   let countNeedsSync = 0;
   let countEnrolled = 0;
   let countNotEnrolled = 0;
+  let countEventsIncluded = 0;
+  let countEventsHidden = 0;
 
   let countActiveToken = 0;
   let countExpiringToken = 0;
@@ -24862,6 +25121,7 @@ window.filterAltAccountsList = function() {
     const rawTokenStatus = card.getAttribute('data-token-status') || 'unverified';
     const tokenStatus = (rawTokenStatus === 'expiring_soon') ? 'expiring' : rawTokenStatus;
     const isEnrolled = card.getAttribute('data-enrolled') === 'true';
+    const showInEvents = card.getAttribute('data-show-in-events') === 'true';
 
     // 1. Search Query
     let matchSearch = true;
@@ -24891,12 +25151,19 @@ window.filterAltAccountsList = function() {
     if (perksFilter === 'enrolled') matchPerks = isEnrolled;
     else if (perksFilter === 'not_enrolled') matchPerks = !isEnrolled;
 
+    // 5. Event Visibility Dropdown Filter
+    let matchEvents = true;
+    if (eventsFilter === 'included') matchEvents = showInEvents;
+    else if (eventsFilter === 'hidden') matchEvents = !showInEvents;
+
     if (matchSearch) {
       countAll++;
       if (tokenStatus === 'active' || tokenStatus === 'expiring') countActive++;
       if (tokenStatus === 'unverified' || tokenStatus === 'expired' || tokenStatus === 'expiring') countNeedsSync++;
       if (isEnrolled) countEnrolled++;
       else countNotEnrolled++;
+      if (showInEvents) countEventsIncluded++;
+      else countEventsHidden++;
 
       if (tokenStatus === 'active') countActiveToken++;
       else if (tokenStatus === 'expiring') countExpiringToken++;
@@ -24904,7 +25171,7 @@ window.filterAltAccountsList = function() {
       else countUnverifiedToken++;
     }
 
-    const isVisible = matchSearch && matchTab && matchToken && matchPerks;
+    const isVisible = matchSearch && matchTab && matchToken && matchPerks && matchEvents;
     card.style.display = isVisible ? 'flex' : 'none';
     if (isVisible) visibleCount++;
   });
@@ -24955,6 +25222,11 @@ window.filterAltAccountsList = function() {
   updateSelectOptionText('altPerksFilter', 'all', `🎁 Perks: All (${countAll})`);
   updateSelectOptionText('altPerksFilter', 'enrolled', `✅ Enrolled (${countEnrolled})`);
   updateSelectOptionText('altPerksFilter', 'not_enrolled', `⏳ Needs Enrollment (${countNotEnrolled})`);
+
+  // Dynamically update Event Visibility Dropdown Options
+  updateSelectOptionText('altEventsFilter', 'all', `📅 Events: All (${countAll})`);
+  updateSelectOptionText('altEventsFilter', 'included', `✅ Included (${countEventsIncluded})`);
+  updateSelectOptionText('altEventsFilter', 'hidden', `🙈 Hidden (${countEventsHidden})`);
 
   const counterEl = document.getElementById('altFilterCounter');
   if (counterEl) {
@@ -30331,6 +30603,7 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
 
                currentUser.linkedAltsData = currentUser.linkedAltsData || {};
                currentUser.linkedAltsData[cleanGid] = {
+                  ...(currentUser.linkedAltsData[cleanGid] || {}),
                   gameId: cleanGid,
                   name: chiefName,
                   stove_lv: newFurnace,
@@ -30341,8 +30614,8 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
                try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
             }
 
-            // 2. Save to users_alts/${cleanGid} in Firebase
-            await set(ref(db, `users_alts/${cleanGid}`), {
+            // 2. Save to users_alts/${cleanGid} in Firebase (use update to preserve fields like showInEvents)
+            await update(ref(db, `users_alts/${cleanGid}`), {
                gameId: cleanGid,
                name: chiefName,
                stove_lv: newFurnace,
@@ -36572,6 +36845,18 @@ const views = {
 
             const altFurnaceScore = window.getFurnaceNumericValue(altFurnace);
             const altAvatarSrc = window.getAvatarUrl(altGidStr, altName);
+            const altShowInEvents = (typeof aData.showInEvents === 'boolean')
+              ? aData.showInEvents
+              : (typeof aTok.showInEvents === 'boolean' ? aTok.showInEvents : false);
+            const altEventsPillHtml = `
+              <button type="button"
+                      data-alt-events-pill="${altGidStr}"
+                      data-show-in-events="${altShowInEvents ? 'true' : 'false'}"
+                      onclick="event.stopPropagation(); window.toggleAltEventVisibility('${altGidStr}', '${escapeHTML(uid)}', '${escapeHTML(altName.replace(/'/g, "\\'"))}', null, this)"
+                      style="background:${altShowInEvents ? 'rgba(16,185,129,0.15)' : 'rgba(100,116,139,0.18)'}; color:${altShowInEvents ? '#10b981' : '#94a3b8'}; border:1px solid ${altShowInEvents ? 'rgba(16,185,129,0.4)' : 'rgba(148,163,184,0.3)'}; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;"
+                      title="${altShowInEvents ? 'Click to hide this alt from event lists (unless active)' : 'Click to include this alt in all alliance events'}">
+                ${altShowInEvents ? '📅 Events: ON' : '📅 Events: OFF'}
+              </button>`;
 
             const isOwnerCollapsed = Boolean(window._collapsedAltOwnerUids && window._collapsedAltOwnerUids.has(uid));
 
@@ -36621,6 +36906,7 @@ const views = {
                 <td style="padding:10px 10px;">
                   <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
                     ${altTokenPill}
+                    ${altEventsPillHtml}
                     ${altFurnace ? `<span onclick="window.openAdminEditFurnaceModal('${escapeHTML(altName)}', '${altGidStr}', '${altFurnace}')" style="cursor:pointer; display:inline-flex; align-items:center;" title="Click to Edit Furnace Level">${window.getFurnaceIconHtml(altFurnace, 28)}</span>` : ''}
                   </div>
                 </td>
@@ -36655,6 +36941,9 @@ const views = {
 
                       <div style="height:1px; background:rgba(255,255,255,0.08); margin:4px 0;"></div>
                       <div style="padding:4px 8px 2px 8px; font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">Status & Tools</div>
+                      <div id="altEventsDropdown-${altGidStr}" data-show-in-events="${altShowInEvents ? 'true' : 'false'}" onclick="window.closeAllUserActionMenus(); window.toggleAltEventVisibility('${altGidStr}', '${escapeHTML(uid)}', '${escapeHTML(altName.replace(/'/g, "\\'"))}', null, this);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:${altShowInEvents ? '#f59e0b' : '#10b981'}; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(16,185,129,0.15)';" onmouseout="this.style.background='transparent';">
+                        ${altShowInEvents ? '<span style="font-size:14px;">🚫</span> Hide Alt from Events' : '<span style="font-size:14px;">📅</span> Include Alt in All Events'}
+                      </div>
                       ${altMemStatus === 'sleeping' ? `
                       <div onclick="window.closeAllUserActionMenus(); window.updateMemberStatus('${escapeHTML(altName.replace(/'/g, "\\'"))}', '${altGidStr}', '${uid}', 'active', 'Woken up by admin', true);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#10b981; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(16,185,129,0.15)';" onmouseout="this.style.background='transparent';">
                         <span style="font-size:14px;">⏰</span> Wake Up (Set to Active)
@@ -37868,10 +38157,11 @@ const views = {
     }
     
     try {
-       const [sdRes, metaSnap, unifiedChiefList] = await Promise.all([
+       const [sdRes, metaSnap, unifiedChiefList, altSets] = await Promise.all([
           window.fetchMergedShowdown(),
           get(ref(db, 'showdown_meta')),
-          window.getUnifiedMasterChiefList()
+          window.getUnifiedMasterChiefList(),
+          window.getRegisteredAltSets ? window.getRegisteredAltSets().catch(() => null) : Promise.resolve(null)
        ]);
        
        let meta = (metaSnap && metaSnap.exists() && metaSnap.val()) ? metaSnap.val() : {};
@@ -37898,13 +38188,17 @@ const views = {
        let allPlayers = [];
        if (Array.isArray(unifiedChiefList) && unifiedChiefList.length > 0) {
           unifiedChiefList.forEach(c => {
-             if (c && c.name && window.isPlayerActiveMember(c)) {
+             if (!c || !c.name) return;
+             const sc = sdLiveData[c.name] || {};
+             const hasSdScore = [1,2,3,4,5,6].some(i => Number(sc['d' + i] || 0) > 0);
+             const isActuallyAlt = altSets && typeof window.isAltMember === 'function' ? window.isAltMember(c, altSets) : Boolean(c.isAlt);
+             if (window.shouldIncludeMemberInEvents({ ...c, isAlt: isActuallyAlt }, altSets, hasSdScore)) {
                 allPlayers.push({
                    name: c.name,
                    gameId: c.gameId,
-                   isAlt: c.isAlt,
+                   isAlt: isActuallyAlt,
                    parentChiefName: c.parentChiefName,
-                   label: c.isAlt ? `${c.name} (Alt of ${c.parentChiefName || 'Member'})` : c.name
+                   label: isActuallyAlt ? `${c.name} (Alt of ${c.parentChiefName || 'Member'})` : c.name
                 });
              }
           });
@@ -38312,10 +38606,11 @@ const views = {
 
     try {
         window.championshipCache = null;
-        const [championshipData, rosterData, champMatchupData] = await Promise.all([
+        const [championshipData, rosterData, champMatchupData, altSets] = await Promise.all([
             window.fetchChampionshipData().catch(() => ({})),
             window.fetchRoster().catch(() => ({})),
-            window.fetchChampionshipMatchups().catch(() => window.DEFAULT_CHAMPIONSHIP_MATCHUPS)
+            window.fetchChampionshipMatchups().catch(() => window.DEFAULT_CHAMPIONSHIP_MATCHUPS),
+            window.getRegisteredAltSets ? window.getRegisteredAltSets().catch(() => null) : Promise.resolve(null)
         ]);
 
         const isScheduleDone = window.isChampScheduleDoneCorrectly(champMatchupData);
@@ -38334,6 +38629,7 @@ const views = {
         let rosterList = [];
         const seenGids = new Set();
         const seenNames = new Set();
+        const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
         if (rosterData) {
             Object.entries(rosterData).forEach(([k, p]) => {
                 if (!p || typeof p !== 'object') return;
@@ -38343,7 +38639,10 @@ const views = {
                 p.chiefName = cleanName;
                 const normName = cleanName.toLowerCase().trim();
                 if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
-                if (cleanName && window.isPlayerActiveMember(p)) {
+                const candidate = { ...p, name: cleanName, gameId: gid || p.gameId };
+                const rec = window.getEventRecord ? window.getEventRecord(championshipData, candidate) : null;
+                const hasChampActivity = Boolean(rec && (isT(rec.signedUp) || Number(rec.power || 0) > 0));
+                if (cleanName && window.shouldIncludeMemberInEvents(candidate, altSets, hasChampActivity)) {
                     if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
                     if (gid) seenGids.add(gid);
                     if (normName) seenNames.add(normName);
@@ -38352,8 +38651,6 @@ const views = {
             });
         }
         rosterList.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
-
-        const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
         let totalCount = rosterList.length;
         let yesCount = 0;
@@ -39691,9 +39988,10 @@ const views = {
 
     try {
         window.polarTerrorsCache = null;
-        const [polarData, rosterData] = await Promise.all([
+        const [polarData, rosterData, altSets] = await Promise.all([
             window.fetchPolarTerrorsData(),
-            window.fetchRoster().catch(() => ({}))
+            window.fetchRoster().catch(() => ({})),
+            window.getRegisteredAltSets ? window.getRegisteredAltSets().catch(() => null) : Promise.resolve(null)
         ]);
 
         let rosterList = [];
@@ -39708,7 +40006,10 @@ const views = {
                 p.chiefName = cleanName;
                 const normName = cleanName.toLowerCase().trim();
                 if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
-                if (cleanName && window.isPlayerActiveMember(p)) {
+                const candidate = { ...p, name: cleanName, gameId: gid || p.gameId };
+                const rec = window.getEventRecord ? window.getEventRecord(polarData, candidate) : null;
+                const hasPtActivity = Boolean(rec && rec.signedUp);
+                if (cleanName && window.shouldIncludeMemberInEvents(candidate, altSets, hasPtActivity)) {
                     if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
                     if (gid) seenGids.add(gid);
                     if (normName) seenNames.add(normName);
@@ -39944,9 +40245,10 @@ const views = {
     }
 
     try {
-        const [btData, rosterData] = await Promise.all([
+        const [btData, rosterData, altSets] = await Promise.all([
             window.fetchBearTrapData(),
-            window.fetchRoster().catch(() => ({}))
+            window.fetchRoster().catch(() => ({})),
+            window.getRegisteredAltSets ? window.getRegisteredAltSets().catch(() => null) : Promise.resolve(null)
         ]);
 
         let rosterList = [];
@@ -39961,7 +40263,10 @@ const views = {
                 p.chiefName = cleanName;
                 const normName = cleanName.toLowerCase().trim();
                 if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
-                if (cleanName && window.isPlayerActiveMember(p)) {
+                const candidate = { ...p, name: cleanName, gameId: gid || p.gameId };
+                const rec = window.getEventRecord ? window.getEventRecord(btData, candidate) : null;
+                const hasBtActivity = Boolean(rec && (rec.signedUp || rec.donated));
+                if (cleanName && window.shouldIncludeMemberInEvents(candidate, altSets, hasBtActivity)) {
                     if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
                     if (gid) seenGids.add(gid);
                     if (normName) seenNames.add(normName);
@@ -40340,6 +40645,7 @@ const views = {
                         (altSets.altNamesSet && (altSets.altNamesSet.has(normN) || altSets.altNamesSet.has(cleanN)))
                     );
                     p.isAlt = isAlt;
+                    p.showInEvents = typeof window.isAltOptedInForEvents === 'function' ? window.isAltOptedInForEvents({ ...p, gameId: gid }, altSets) : false;
 
                     let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
                     let record = (window.getEventRecord ? window.getEventRecord(mercenaryData, p) : null) || mercenaryData[gIdStr] || (p.name ? mercenaryData[p.name] : {}) || {};
@@ -40357,9 +40663,9 @@ const views = {
         // Sort roster by name
         rosterList.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
 
-        // Default roster mode: 'mains' (exclude non-participating secondary alts) vs 'all'
+        // Default roster mode: 'mains' (exclude hidden non-participating secondary alts) vs 'all'
         window.mercRosterMode = window.mercRosterMode || 'mains';
-        const initialRoster = (window.mercRosterMode === 'all') ? rosterList : rosterList.filter(p => !p.isAlt || p.hasParticipation);
+        const initialRoster = (window.mercRosterMode === 'all') ? rosterList : rosterList.filter(p => !p.isAlt || p.showInEvents || p.hasParticipation);
 
         // Calculate statistics based on active roster mode
         let totalCount = initialRoster.length;
@@ -40509,9 +40815,9 @@ const views = {
                       let scoutLvl = (record && record.scoutLevel !== undefined) ? parseInt(record.scoutLevel) || 0 : (isDone ? 25 : 0);
                       let currentPhase = (record && record.phase) ? record.phase : "";
                       let currentDiff = (record && record.difficulty) ? record.difficulty : "";
-                      const isRowHidden = (window.mercRosterMode === 'mains' && p.isAlt && !p.hasParticipation);
+                      const isRowHidden = (window.mercRosterMode === 'mains' && p.isAlt && !p.showInEvents && !p.hasParticipation);
                       return `
-                        <tr class="merc-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${(scoutLvl >= 25 || isDone) ? 'yes' : 'no'}" data-scout-level="${scoutLvl}" data-is-alt="${p.isAlt ? 'true' : 'false'}" data-has-participation="${p.hasParticipation ? 'true' : 'false'}" style="border-bottom:1px solid var(--border); ${isRowHidden ? 'display:none;' : ''}">
+                        <tr class="merc-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${(scoutLvl >= 25 || isDone) ? 'yes' : 'no'}" data-scout-level="${scoutLvl}" data-is-alt="${p.isAlt ? 'true' : 'false'}" data-show-in-events="${p.showInEvents ? 'true' : 'false'}" data-has-participation="${p.hasParticipation ? 'true' : 'false'}" style="border-bottom:1px solid var(--border); ${isRowHidden ? 'display:none;' : ''}">
                           <td class="merc-name-cell" style="padding:14px 20px; font-weight:bold; color:var(--text-main); font-size:15px;">
                             <span class="merc-chief-name">${escapeHTML(p.name)}</span>${p.isAlt ? `<span style="background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.3); font-size:10px; padding:2px 6px; border-radius:6px; margin-left:6px; font-weight:bold;" title="Linked Alt Account">ALT</span>` : ''}
                           </td>
@@ -40619,10 +40925,11 @@ const views = {
 
             document.querySelectorAll('.merc-row').forEach(row => {
                 const isAlt = row.getAttribute('data-is-alt') === 'true';
+                const showInEvents = row.getAttribute('data-show-in-events') === 'true';
                 const hasPart = row.getAttribute('data-has-participation') === 'true';
 
-                // Skip non-participating alts in mains mode
-                if (rosterMode === 'mains' && isAlt && !hasPart) return;
+                // Skip hidden non-participating alts in mains mode
+                if (rosterMode === 'mains' && isAlt && !showInEvents && !hasPart) return;
 
                 total++;
                 const isSigned = row.getAttribute('data-signed') === 'yes';
@@ -40731,10 +41038,11 @@ const views = {
                 const signed = row.getAttribute('data-signed');
                 const sLvl = parseInt(row.getAttribute('data-scout-level')) || 0;
                 const isAlt = row.getAttribute('data-is-alt') === 'true';
+                const showInEvents = row.getAttribute('data-show-in-events') === 'true';
                 const hasPart = row.getAttribute('data-has-participation') === 'true';
 
-                // Mode check: if Mains Only, hide non-participating alts
-                if (rosterMode === 'mains' && isAlt && !hasPart) {
+                // Mode check: if Mains Only, hide hidden non-participating alts
+                if (rosterMode === 'mains' && isAlt && !showInEvents && !hasPart) {
                     row.style.display = 'none';
                     return;
                 }
@@ -41595,6 +41903,8 @@ window.resetBearTrapEvent = async () => {
     let unverifiedCount = (tokenStatus.status === 'unverified') ? 1 : 0;
     let enrolledCount = isEnrolled ? 1 : 0;
     let notEnrolledCount = isEnrolled ? 0 : 1;
+    let eventsIncludedCount = 0;
+    let eventsHiddenCount = 0;
 
     const altCardsData = [];
     links.forEach(gid => {
@@ -41703,6 +42013,14 @@ window.resetBearTrapEvent = async () => {
         const altRawStatus = altTokenData?.membershipStatus || linkedAltData?.membershipStatus || altSaved?.membershipStatus || (window.rosterCache && (window.rosterCache[cleanGid]?.membershipStatus || window.rosterCache[cleanGid]?.status || window.rosterCache[altName]?.membershipStatus || window.rosterCache[altName]?.status)) || 'active';
         const altMemStatus = window.normalizeMembershipStatus(altRawStatus);
 
+        const showInEventsVal = (typeof linkedAltData?.showInEvents === 'boolean')
+            ? linkedAltData.showInEvents
+            : ((altTokenData && typeof altTokenData.showInEvents === 'boolean')
+                ? altTokenData.showInEvents
+                : (typeof altSaved?.showInEvents === 'boolean' ? altSaved.showInEvents : false));
+        if (showInEventsVal) eventsIncludedCount++;
+        else eventsHiddenCount++;
+
         altCardsData.push({
             cleanGid,
             altName,
@@ -41710,6 +42028,7 @@ window.resetBearTrapEvent = async () => {
             linkedAltData,
             altTokenData,
             altMemStatus,
+            showInEventsVal,
             flVal,
             flNumeric,
             joinedDateVal,
@@ -41914,6 +42233,13 @@ window.resetBearTrapEvent = async () => {
                     <option value="not_enrolled">⏳ Needs Enrollment (${notEnrolledCount})</option>
                 </select>
 
+                <!-- Event Visibility Selector -->
+                <select id="altEventsFilter" onchange="window.filterAltAccountsList()" style="flex:1 1 140px; min-width:130px; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
+                    <option value="all">📅 Events: All (${totalAltsCount})</option>
+                    <option value="included">✅ Included (${eventsIncludedCount})</option>
+                    <option value="hidden">🙈 Hidden (${eventsHiddenCount})</option>
+                </select>
+
                 <!-- Sort Selector -->
                 <select id="altSortFilter" onchange="window.filterAltAccountsList()" style="flex:1 1 150px; min-width:140px; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
                     <option value="default">↕️ Sort: Default</option>
@@ -41934,7 +42260,7 @@ window.resetBearTrapEvent = async () => {
         `;
 
         altCardsData.forEach(item => {
-              const { cleanGid, altName, altMemStatus, flVal, flNumeric, joinedDateVal, timeActiveVal, foundInRoster, altTokenDaysRemaining, isAltTokenActive, tokenState, isAltEnrolled } = item;
+              const { cleanGid, altName, altMemStatus, showInEventsVal, flVal, flNumeric, joinedDateVal, timeActiveVal, foundInRoster, altTokenDaysRemaining, isAltTokenActive, tokenState, isAltEnrolled } = item;
               let flSpanId = `alt-fl-${cleanGid}`;
               const joinedDateFormatted = joinedDateVal ? window.formatDateForDisplay(joinedDateVal) : (timeActiveVal !== 'Unknown' ? 'Active' : 'N/A');
 
@@ -41963,7 +42289,7 @@ window.resetBearTrapEvent = async () => {
               }
               
               linkedHtml += `
-              <div class="alt-account-card" data-gid="${cleanGid}" data-name="${window.escapeHTML(altName.toLowerCase())}" data-fl="${flNumeric}" data-token-status="${tokenState}" data-days="${altTokenDaysRemaining}" data-enrolled="${isAltEnrolled ? 'true' : 'false'}" data-mem-status="${altMemStatus}" style="background:rgba(15,23,42,0.7); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.09); border-radius:18px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.4); display:flex; flex-direction:column; justify-content:space-between; gap:14px; transition:transform 0.2s, box-shadow 0.2s;">
+              <div class="alt-account-card" data-gid="${cleanGid}" data-name="${window.escapeHTML(altName.toLowerCase())}" data-fl="${flNumeric}" data-token-status="${tokenState}" data-days="${altTokenDaysRemaining}" data-enrolled="${isAltEnrolled ? 'true' : 'false'}" data-mem-status="${altMemStatus}" data-show-in-events="${showInEventsVal ? 'true' : 'false'}" style="background:rgba(15,23,42,0.7); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.09); border-radius:18px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.4); display:flex; flex-direction:column; justify-content:space-between; gap:14px; transition:transform 0.2s, box-shadow 0.2s;">
                   
                   <!-- Top Row: Avatar + Name/ID/Token Badge + Perks Badge -->
                   <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
@@ -42026,6 +42352,27 @@ window.resetBearTrapEvent = async () => {
                               ${timeActiveVal}
                           </div>
                       </div>
+                  </div>
+
+                  <!-- Event Visibility Toggle Bar -->
+                  <div id="altEventsBar-${cleanGid}" style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:${showInEventsVal ? 'rgba(16,185,129,0.09)' : 'rgba(255,255,255,0.025)'}; border:1px solid ${showInEventsVal ? 'rgba(16,185,129,0.35)' : 'rgba(255,255,255,0.08)'}; border-radius:12px; padding:9px 12px; transition:0.2s;">
+                      <div style="display:flex; align-items:center; gap:9px; min-width:0;">
+                          <span style="font-size:15px; flex-shrink:0;">📅</span>
+                          <div style="min-width:0;">
+                              <div style="font-size:12px; font-weight:800; color:#f8fafc; line-height:1.25;">Include in All Events</div>
+                              <div id="altEventsSub-${cleanGid}" style="font-size:10.5px; color:${showInEventsVal ? '#6ee7b7' : '#94a3b8'}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                  ${showInEventsVal ? 'Showdown • Championship • Mercenary • Polar • Bear Trap' : 'Hidden unless active in event'}
+                              </div>
+                          </div>
+                      </div>
+                      <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; flex-shrink:0;" title="Toggle whether this alt is included in event rosters across all alliance events">
+                          <span id="altEventsBadge-${cleanGid}" style="font-size:10px; font-weight:800; letter-spacing:0.4px; padding:2px 8px; border-radius:999px; ${showInEventsVal ? 'background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.45);' : 'background:rgba(148,163,184,0.12); color:#94a3b8; border:1px solid rgba(148,163,184,0.3);'}">${showInEventsVal ? 'INCLUDED' : 'HIDDEN'}</span>
+                          <span style="position:relative; display:inline-block; width:44px; height:24px;">
+                              <input type="checkbox" role="switch" id="altEventsSwitch-${cleanGid}" aria-checked="${showInEventsVal ? 'true' : 'false'}" aria-label="Include ${window.escapeHTML(altName)} in All Events" ${showInEventsVal ? 'checked' : ''} onchange="window.toggleAltEventVisibility('${cleanGid}', '${window.escapeHTML(currentUser.uid)}', '${window.escapeHTML(altName.replace(/'/g, "\\'"))}', this.checked, this)" style="opacity:0; width:0; height:0; position:absolute;">
+                              <span id="altEventsTrack-${cleanGid}" style="position:absolute; inset:0; background:${showInEventsVal ? '#10b981' : '#334155'}; border-radius:999px; transition:0.25s;"></span>
+                              <span id="altEventsThumb-${cleanGid}" style="position:absolute; height:18px; width:18px; left:${showInEventsVal ? '23px' : '3px'}; bottom:3px; background:#ffffff; border-radius:50%; transition:0.25s; box-shadow:0 1px 3px rgba(0,0,0,0.4);"></span>
+                          </span>
+                      </label>
                   </div>
 
                   <!-- Bottom Row: Unified Action Buttons -->
@@ -45943,11 +46290,13 @@ window.resetBearTrapEvent = async () => {
                     let isDone = record && record.signedUp;
                     let scoutLvl = (record && record.scoutLevel !== undefined) ? parseInt(record.scoutLevel) || 0 : (isDone ? 25 : 0);
                     let hasPart = Boolean(scoutLvl > 0 || isDone || record.phase || record.difficulty);
+                    const showInEvents = typeof window.isAltOptedInForEvents === 'function' ? window.isAltOptedInForEvents({ ...p, name: cleanName, gameId: gid }, altSets) : false;
 
-                    // Showdown Alignment: Exclude non-participating secondary alts from required roster
-                    if (isAlt && !hasPart) return;
+                    // Event Alignment: Exclude hidden secondary alts unless toggled ON or already participating
+                    if (isAlt && !showInEvents && !hasPart) return;
 
                     p.isAlt = isAlt;
+                    p.showInEvents = showInEvents;
                     p.hasParticipation = hasPart;
 
                     if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
