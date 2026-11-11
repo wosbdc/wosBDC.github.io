@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [3.3.158] - 2026-11-10
+- 🧹 **Clean Signups**: Removed duplicate Step 2 Schedule button from Signups.
+
 ## [3.3.157] - 2026-11-10
 - 📅 **Schedule Sync**: Auto-Fill now pulls dates from website schedule database.
 - 🎯 **Active Window**: Automatically selects active season dates over expired entries.

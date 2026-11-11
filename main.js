@@ -38968,9 +38968,6 @@ const views = {
                         <button id="btnToggleChampTable" onclick="window.toggleChampRosterTable()" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:8px 14px; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer;">
                           👁️ View Full Roster List
                         </button>
-                        <button onclick="views.championshipAdmin('setup')" style="background:linear-gradient(135deg, #06b6d4, #0891b2); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(6,182,212,0.3);">
-                          📅 Step 2: Schedule ➔
-                        </button>
                       </div>
                     </div>
 

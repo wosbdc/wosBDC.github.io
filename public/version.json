@@ -1,14 +1,14 @@
 {
-  "version": "3.3.157",
+  "version": "3.3.158",
   "releaseDate": "2026-11-10",
-  "title": "What's New in v3.3.157",
+  "title": "What's New in v3.3.158",
   "notes": [
-    "Championship Auto-Fill now pulls dates from the website schedule database.",
-    "Automatically selects the active season window over expired entries."
+    "Removed duplicate Step 2: Schedule button from Championship Signups."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.157",
+    "version": "3.3.158",
     "latestChanges": [
+      "v3.3.158: Removed redundant bottom Step 2: Schedule button from Championship Signups tab",
       "v3.3.157: Updated Alliance Championship Auto-Fill to pull season dates directly from the website schedule database",
       "v3.3.156: Fixed Alliance Championship 3-step setup flow (Signups -> Schedule -> Matchups) and removed broken cooldown lockout",
       "v3.3.155: Consolidated alt card Sync, Make Primary, Edit, and Unlink actions into a top-right gear menu",
