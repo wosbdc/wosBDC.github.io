@@ -1,14 +1,16 @@
 {
-  "version": "3.3.155",
+  "version": "3.3.156",
   "releaseDate": "2026-11-10",
-  "title": "What's New in v3.3.155",
+  "title": "What's New in v3.3.156",
   "notes": [
-    "Moved alt card actions into a compact ⚙️ menu.",
-    "Removed bottom action row for slimmer 2-row cards."
+    "Streamlined Championship setup to Signups ➔ Schedule ➔ Matchups.",
+    "Removed broken cooldown lockout on Step 2: Schedule.",
+    "Saving Step 2 Schedule now preserves Step 1 Signups."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.155",
+    "version": "3.3.156",
     "latestChanges": [
+      "v3.3.156: Fixed Alliance Championship 3-step setup flow (Signups -> Schedule -> Matchups) and removed broken cooldown lockout",
       "v3.3.155: Consolidated alt card Sync, Make Primary, Edit, and Unlink actions into a top-right gear menu",
       "v3.3.154: Redesigned Account Hub alt event toggle into compact cyan-blended pill under Auto Redeem",
       "v3.3.153: Added per-alt Include in All Events toggle across Account Hub, Admin Users, and all event rosters",

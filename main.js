@@ -17271,7 +17271,7 @@ window.showResetAndArchiveChampionshipModal = async (initialScope = 'full') => {
                         ourSeasonFlags: 0,
                         enemySeasonFlags: 0,
                         ourState: "2089",
-                        seasonState: "cooldown",
+                        seasonState: "unconfigured",
                         rounds: {
                             "r1": { roundNum: 1, date: "Round 1", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } },
                             "r2": { roundNum: 2, date: "Round 2", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } },
@@ -17440,7 +17440,7 @@ window.showChampSeasonCompleteModal = (matchupData) => {
         </div>
 
         <p style="color:var(--text-main, #f8fafc); font-size:13.5px; line-height:1.5; margin:0 0 20px 0; text-align:left;">
-          Ready to archive this season? Archiving safely records member participation into the Archive Vault and Player Lifetime Stats, clears signups, and opens <strong>Step 1: Season Setup</strong> for the next tournament.
+          Ready to archive this season? Archiving safely records member participation into the Archive Vault and Player Lifetime Stats, clears signups, and opens <strong>Step 1: Signups</strong> & <strong>Step 2: Schedule</strong> for the next tournament.
         </p>
 
         <!-- Action Buttons -->
@@ -17673,36 +17673,14 @@ window.getChampionshipScheduleStatus = async (champMatchupData, forceFetch = fal
 
     if (!isScheduleDone) {
         if (activeCycleStartMs > nowMs) {
-            // Case A: The scheduled start date in the sheet is in the future
-            isOnCooldown = true;
             targetStartMs = activeCycleStartMs;
             targetEndMs = activeCycleEndMs;
             const prevStartMs = activeCycleStartMs - 7 * 86400000;
             const prevEndMs = activeCycleStartMs - 1000;
             previousCycleLabel = formatRangeShort(prevStartMs, prevEndMs);
         } else {
-            // Case B: activeCycleStartMs <= nowMs <= activeCycleEndMs
-            // Event is actively in progress this week (Monday through Sunday)
-            // Only gate into cooldown if leadership explicitly archived and reset this season into cooldown
-            const updatedAtMs = Number(champMatchupData?.updatedAt || 0);
-            const resetDuringCurrentCycle = Boolean(
-                updatedAtMs > activeCycleStartMs + 12 * 3600000 &&
-                champMatchupData?.seasonState === 'cooldown'
-            );
-
-            if (resetDuringCurrentCycle) {
-                isOnCooldown = true;
-                previousCycleLabel = formatRangeShort(activeCycleStartMs, activeCycleEndMs);
-                // Next scheduled tournament starts immediately after activeCycleEndMs (Monday 00:00 UTC)
-                const nextEndDay = new Date(activeCycleEndMs);
-                targetStartMs = Date.UTC(nextEndDay.getUTCFullYear(), nextEndDay.getUTCMonth(), nextEndDay.getUTCDate() + 1, startH, startM, 0, 0);
-                targetEndMs = targetStartMs + 5 * 86400000;
-            } else {
-                // Event is active during current tournament week: keep Step 2 Schedule open and accessible
-                isOnCooldown = false;
-                targetStartMs = activeCycleStartMs;
-                targetEndMs = activeCycleEndMs;
-            }
+            targetStartMs = activeCycleStartMs;
+            targetEndMs = activeCycleEndMs;
         }
     }
 
@@ -17888,7 +17866,7 @@ window.saveChampSeasonSetup = async () => {
     const saveBtn = document.getElementById('btnSaveChampSeasonSetup');
     if (saveBtn) {
         saveBtn.disabled = true;
-        saveBtn.innerHTML = '⏳ Saving Schedule & Resetting Signups...';
+        saveBtn.innerHTML = '⏳ Saving Schedule & Unlocking Matchups...';
     }
 
     try {
@@ -17940,7 +17918,7 @@ window.saveChampSeasonSetup = async () => {
             }
             if (saveBtn) {
                 saveBtn.disabled = false;
-                saveBtn.innerHTML = '💾 Save Schedule & Unlock Matchups ➔';
+                saveBtn.innerHTML = '💾 Save Schedule & Unlock Step 3: Matchups ➔';
             }
             return;
         }
@@ -17957,25 +17935,6 @@ window.saveChampSeasonSetup = async () => {
             updatedBy: (currentUser && currentUser.displayName) ? currentUser.displayName : (currentUser?.email || 'Admin')
         };
 
-        const timestamp = Date.now();
-        const adminName = (currentUser && currentUser.displayName) ? currentUser.displayName : (currentUser?.email || 'Admin');
-        
-        const roster = await window.fetchRoster().catch(() => ({}));
-        if (typeof db !== 'undefined' && db && typeof ref === 'function' && roster) {
-            for (const p of Object.values(roster)) {
-                if (!p || typeof p !== 'object') continue;
-                const rawGid = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
-                const gidStr = (rawGid && typeof rawGid === 'string') ? rawGid.trim() : '';
-                if (!gidStr || /[.#$\[\]/]/.test(gidStr)) continue;
-                try {
-                    await update(ref(db, `activity_live/${gidStr}`), { championship: false, updatedAt: timestamp });
-                } catch(e) {
-                    await set(ref(db, `activity_live/${gidStr}/championship`), false).catch(() => null);
-                }
-                await set(ref(db, `championship/${gidStr}`), { gameId: gidStr, name: p.name, signedUp: false, lastUpdated: timestamp, updatedBy: adminName }).catch(() => null);
-            }
-        }
-
         window.DEFAULT_CHAMPIONSHIP_MATCHUPS = newMatchupPayload;
         await window.saveChampionshipMatchups(newMatchupPayload, false);
         window.clearAllEventCaches();
@@ -17991,7 +17950,7 @@ window.saveChampSeasonSetup = async () => {
         if (window.showToast) window.showToast("Failed to save schedule: " + err.message, "error");
         if (saveBtn) {
             saveBtn.disabled = false;
-            saveBtn.innerHTML = '💾 Save Schedule & Unlock Matchups ➔';
+            saveBtn.innerHTML = '💾 Save Schedule & Unlock Step 3: Matchups ➔';
         }
     }
 };
@@ -38635,11 +38594,15 @@ const views = {
         const schedStatus = await window.getChampionshipScheduleStatus(champMatchupData);
         window._lastChampScheduleStatus = schedStatus;
         window._champBypassCooldown = false;
-        const isCooldownGated = !isScheduleDone && Boolean(schedStatus && schedStatus.isOnCooldown);
+        const isCooldownGated = false;
+
+        if (activeTab === 'cooldown') {
+            activeTab = 'setup';
+        }
 
         if (!isScheduleDone && activeTab === 'matchups') {
             window.showChampSetupLockedAlert('matchups');
-            activeTab = isCooldownGated ? 'cooldown' : 'setup';
+            activeTab = 'setup';
         }
 
         let effectiveTab = activeTab || 'signups';
@@ -46086,7 +46049,7 @@ window.resetBearTrapEvent = async () => {
 
         let isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
         let adminActionBtn = isManager ? `
-            <button onclick="if(views.championshipAdmin) views.championshipAdmin(${isScheduleDone ? "'matchups'" : "'cooldown'"});" style="background:rgba(255,215,0,0.15); border:1px solid rgba(255,215,0,0.4); color:#FFD700; padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.background='rgba(255,215,0,0.25)'" onmouseout="this.style.background='rgba(255,215,0,0.15)'" title="Open Alliance Championship Admin">${isScheduleDone ? '✏️ Edit Matchups' : '⚙️ Admin Suite'}</button>
+            <button onclick="if(views.championshipAdmin) views.championshipAdmin(${isScheduleDone ? "'matchups'" : "'signups'"});" style="background:rgba(255,215,0,0.15); border:1px solid rgba(255,215,0,0.4); color:#FFD700; padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.background='rgba(255,215,0,0.25)'" onmouseout="this.style.background='rgba(255,215,0,0.15)'" title="Open Alliance Championship Admin">${isScheduleDone ? '✏️ Edit Matchups' : '⚙️ Admin Suite'}</button>
         ` : '';
 
         let formatStateTag = (st, fallback = '2089') => {

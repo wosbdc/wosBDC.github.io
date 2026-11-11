@@ -213,22 +213,10 @@ async function runHeadlessVerification() {
       window.cleanChiefName = n => n;
     });
 
-    // 1. Verify Default Landing on Tab 1 Signups & Cooldown Gate on Tab 2
-    console.log('  🔍 Testing Default Landing on Tab 1 Signups and Cooldown Gate on Tab 2...');
+    // 1. Verify Default Landing on Tab 1 Signups & Direct Access to Tab 2 Schedule (No Cooldown Lockout)
+    console.log('  🔍 Testing Default Landing on Tab 1 Signups and Direct Access to Tab 2 Schedule...');
     await page.evaluate(async () => {
       window._champBypassCooldown = false;
-      const cdStatus = {
-        isOnCooldown: true,
-        isScheduleDone: false,
-        targetStartMs: Date.now() + 3 * 86400000 + 4 * 3600000,
-        targetEndMs: Date.now() + 8 * 86400000,
-        remainingMs: 3 * 86400000 + 4 * 3600000,
-        nextStartUtcLabel: 'Mon, Nov 2, 2026 • 00:00 UTC',
-        nextSeasonRangeLabel: 'Nov 02 – Nov 07, 2026',
-        previousCycleLabel: 'Oct 19 – Oct 24, 2026'
-      };
-      window.getChampionshipScheduleStatus = async () => cdStatus;
-      window._lastChampScheduleStatus = cdStatus;
       await views.championshipAdmin();
     });
 
@@ -236,62 +224,15 @@ async function runHeadlessVerification() {
     await page.waitForSelector('#champStatYes', { timeout: 5000 });
     const tab1BtnText = await page.$eval('#tabBtnSignups', el => el.textContent.trim());
     assert(tab1BtnText.includes('1. 📋 Signups'), 'Tab 1 button must be labeled 1. 📋 Signups');
-
-    // Switch to Tab 2: ⏳ Cooldown
-    await page.click('#tabBtnSetupOrCooldown');
-    await page.waitForSelector('#champCooldownGateCard', { timeout: 5000 });
     const tab2BtnText = await page.$eval('#tabBtnSetupOrCooldown', el => el.textContent.trim());
-    assert(tab2BtnText.includes('2. ⏳ Cooldown'), 'Tab 2 button must be labeled 2. ⏳ Cooldown');
+    assert(tab2BtnText.includes('2. 📅 Schedule'), `Tab 2 button must always be labeled 2. 📅 Schedule, got "${tab2BtnText}"`);
 
-    const setupInputWhileCooldown = await page.$('#champ_setup_season_name');
-    assert(!setupInputWhileCooldown, 'Setup page must NOT show while event is on cooldown');
-
-    const cdDays = await page.$eval('#champCdDays', el => el.textContent.trim());
-    const cdNextStart = await page.$eval('#champCdNextStartUtc', el => el.textContent.trim());
-    const cdTotalGame = await page.$eval('#champCdTotalGame', el => el.textContent.trim());
-    assert(/^\d{2,}$/.test(cdDays), 'Cooldown timer Days box must render numeric digits');
-    assert(/\d+hr\s+\d+min/.test(cdTotalGame), `Cooldown timer must render in-game cumulative hours format, got "${cdTotalGame}"`);
-    assert(cdNextStart.includes('UTC'), `Next scheduled start must display UTC timestamp from Schedule, got "${cdNextStart}"`);
-
-    // Check Cooldown Gate responsive layout on 375px mobile before unlocking
-    await page.setViewport({ width: 375, height: 812 });
-    await new Promise(r => setTimeout(r, 150));
-    const cdScrollW = await page.evaluate(() => document.documentElement.scrollWidth);
-    const cdClientW = await page.evaluate(() => document.documentElement.clientWidth);
-    assert(cdScrollW <= cdClientW, `Cooldown Gate horizontal overflow at 375px (${cdScrollW}px > ${cdClientW}px)`);
-    await page.setViewport({ width: 1280, height: 900 });
-    console.log(`  ✅ Cooldown Countdown Gate & 375px mobile layout verified (Next Start: ${cdNextStart})`);
-
-    // Verify Early Setup Override button is strictly removed from Cooldown Gate
-    const overrideBtn = await page.$('#btnUnlockChampSetupEarly');
-    assert(!overrideBtn, 'Early setup override button must NOT exist on cooldown gate (users must wait till event opens)');
-    console.log('  ✅ Verified early setup override button is strictly absent from DOM');
-
-    // Test that clicking locked Matchups tab while on cooldown displays locked alert modal without override option
-    await page.click('#tabBtnMatchups');
-    await page.waitForSelector('#champSetupLockedAlertModal', { timeout: 5000 });
-    const alertOverrideBtn = await page.$('#btnAlertUnlockEarly');
-    assert(!alertOverrideBtn, 'Early setup override button must NOT exist in locked alert modal');
-    await page.click('#btnAlertStayCooldown');
-    await page.waitForFunction(() => !document.getElementById('champSetupLockedAlertModal'), { timeout: 3000 });
-    console.log('  ✅ Strict lockdown verified: Attempted tab navigation blocked without override bypass');
-
-    // Simulate event officially opening (countdown reaching 0)
-    console.log('  🔍 Simulating tournament start/opening (unlocking Step 1 Setup)...');
-    await page.evaluate(async () => {
-      const openStatus = {
-        isOnCooldown: false,
-        isScheduleDone: false,
-        targetStartMs: Date.now() - 1000,
-        targetEndMs: Date.now() + 5 * 86400000,
-        remainingMs: 0,
-        nextStartUtcLabel: 'Event Active',
-        nextSeasonRangeLabel: 'Oct 26 – Oct 31, 2026'
-      };
-      window.getChampionshipScheduleStatus = async () => openStatus;
-      window._lastChampScheduleStatus = openStatus;
-      await views.championshipAdmin('setup');
-    });
+    // Switch directly to Tab 2: 📅 Schedule
+    await page.click('#tabBtnSetupOrCooldown');
+    await page.waitForSelector('#champ_setup_season_name', { timeout: 5000 });
+    const cooldownGateCard = await page.$('#champCooldownGateCard');
+    assert(!cooldownGateCard, 'Broken Cooldown Gate card must NOT block Step 2: Schedule');
+    console.log('  ✅ Step 1 (Signups) -> Step 2 (Schedule) opens directly without cooldown lockout');
 
     console.log('  🔍 Testing Blank Opponent Defaults and Locked Round Numbers in Step 1...');
     await page.waitForSelector('#champ_setup_season_name', { timeout: 5000 });

@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.156] - 2026-11-10
+- 🏆 **3-Step Setup**: Flows cleanly from Signups to Schedule to Matchups.
+- 🔓 **Schedule Open**: Removed broken cooldown lockout from Step 2 Schedule.
+- ✅ **Preserved Signups**: Saving Step 2 Schedule keeps Step 1 signups intact.
+
 ## [3.3.155] - 2026-11-10
 - ⚙️ **Gear Menu**: Moved Sync, Primary, Edit, Unlink into top-right menu.
 - 📐 **Slimmer Cards**: Removed bottom button row for cleaner 2-row cards.
