@@ -17566,19 +17566,41 @@ window.getChampionshipScheduleStatus = async (champMatchupData, forceFetch = fal
     };
 
     // Check live Rewards & Events Scheduler catalog first if updated in session/Firebase
-    const liveCatalog = window._cachedScheduleLive?.catalogItems;
+    let liveCatalog = window._cachedScheduleLive?.catalogItems;
+    if ((!Array.isArray(liveCatalog) || liveCatalog.length === 0) && typeof window.fetchScheduleLiveData === 'function') {
+        const fetchedLive = await window.fetchScheduleLiveData().catch(() => null);
+        if (fetchedLive && typeof fetchedLive === 'object') {
+            window._cachedScheduleLive = fetchedLive;
+            liveCatalog = fetchedLive.catalogItems;
+        }
+    }
     if (Array.isArray(liveCatalog)) {
-        const champCat = liveCatalog.find(it => /alliance\s*champ/i.test(it.title || '') && (it.startDate || it.endDate));
+        const todayIso = typeof window.getLocalTodayIsoStr === 'function' ? window.getLocalTodayIsoStr() : new Date().toISOString().split('T')[0];
+        const champItems = liveCatalog.filter(it => (/alliance\s*champ/i.test(it.title || '') || /championship/i.test(it.title || '')) && (it.startDate || it.endDate));
+        champItems.sort((a, b) => {
+            const aEnd = String(a.endDate || a.startDate || '');
+            const bEnd = String(b.endDate || b.startDate || '');
+            const aActive = aEnd >= todayIso ? 1 : 0;
+            const bActive = bEnd >= todayIso ? 1 : 0;
+            if (aActive !== bActive) return bActive - aActive;
+            return String(b.startDate || b.endDate || '').localeCompare(String(a.startDate || a.endDate || ''));
+        });
+        const champCat = champItems[0];
         if (champCat) {
-            const dStart = window.parseScheduleEventDate ? window.parseScheduleEventDate(champCat.startDate || champCat.endDate) : null;
-            const dEnd = window.parseScheduleEventDate ? window.parseScheduleEventDate(champCat.endDate || champCat.startDate) : null;
+            const parseIsoUtc = (iso) => {
+                const m = String(iso || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (m) return new Date(Date.UTC(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10)));
+                return window.parseScheduleEventDate ? window.parseScheduleEventDate(iso) : null;
+            };
+            const dStart = parseIsoUtc(champCat.startDate || champCat.endDate);
+            const dEnd = parseIsoUtc(champCat.endDate || champCat.startDate);
             if (dStart && !isNaN(dStart.getTime())) {
                 rawStartDate = dStart;
                 rawEndDate = (dEnd && !isNaN(dEnd.getTime())) ? dEnd : new Date(dStart.getTime() + 6 * 86400000);
                 const parsedT = parseTimeHoursMins(champCat.startUtc || '00:00');
                 startH = parsedT.h;
                 startM = parsedT.m;
-                scheduleSource = 'Event Schedule (Rewards & Events Scheduler)';
+                scheduleSource = 'Website Schedule Database';
             }
         }
     }
@@ -17961,11 +17983,11 @@ window.autoFillChampScheduleDates = async () => {
     const setBtnLoading = (loading) => {
         if (btn1) {
             btn1.disabled = loading;
-            btn1.innerHTML = loading ? '⏳ Fetching Sheet Dates...' : '📅 Auto-Fill Season Date from Google Sheet';
+            btn1.innerHTML = loading ? '⏳ Fetching Schedule Dates...' : '📅 Auto-Fill Season Date from Schedule';
         }
         if (btn2) {
             btn2.disabled = loading;
-            btn2.innerHTML = loading ? '⏳ Fetching Sheet Dates...' : '⚡ Auto-Fill from Google Sheet';
+            btn2.innerHTML = loading ? '⏳ Fetching Schedule Dates...' : '⚡ Auto-Fill from Schedule';
         }
     };
 
@@ -17976,65 +17998,93 @@ window.autoFillChampScheduleDates = async () => {
         let baseEndDate = null;
         let foundSource = '';
 
-        // 1. Live query to Google Sheets (Schedule data tab or data tab)
-        if (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) {
-            try {
-                // Try 'Schedule data' tab first (Google Calendar sync sheet)
-                let res = await fetch(`${API_BASE_URL}?api=getScheduleData&sheetName=Schedule%20data`, { signal: AbortSignal.timeout(6000) });
-                let json = await res.json();
-                let rows = (json && json.success && Array.isArray(json.data)) ? json.data : null;
-
-                // Fallback to default 'data' tab if needed
-                if (!rows || rows.length < 2) {
-                    res = await fetch(`${API_BASE_URL}?api=getScheduleData`, { signal: AbortSignal.timeout(6000) });
-                    json = await res.json();
-                    if (json && json.success && Array.isArray(json.data)) {
-                        rows = json.data;
-                    }
-                }
-
-                if (rows && Array.isArray(rows)) {
-                    for (let r = 0; r < rows.length; r++) {
-                        const row = rows[r];
-                        if (!Array.isArray(row)) continue;
-                        
-                        // Check if row corresponds to Alliance Championship
-                        const rowStr = row.map(c => String(c || '')).join(' ');
-                        if (/alliance\s*champ/i.test(rowStr) || /championship/i.test(rowStr)) {
-                            // Find ISO date strings or date objects in the row
-                            let datesInRow = [];
-                            for (let c = 0; c < row.length; c++) {
-                                const val = String(row[c] || '').trim();
-                                if (/^\d{4}-\d{2}-\d{2}/.test(val)) {
-                                    const parsed = new Date(val);
-                                    if (!isNaN(parsed.getTime()) && parsed.getUTCFullYear() >= 2024) {
-                                        datesInRow.push(parsed);
-                                    }
-                                }
-                            }
-
-                            if (datesInRow.length > 0) {
-                                datesInRow.sort((a, b) => a.getTime() - b.getTime());
-                                baseStartDate = datesInRow[0];
-                                if (datesInRow.length > 1) {
-                                    baseEndDate = datesInRow[datesInRow.length - 1];
-                                }
-                                foundSource = 'Google Sheets (' + (json.sheetName || 'Schedule data') + ')';
-                                break;
-                            }
-                        }
-                    }
-                }
-            } catch (sheetErr) {
-                console.warn('Google Sheet schedule fetch note:', sheetErr);
+        const parseIsoUtc = (isoVal) => {
+            const s = String(isoVal || '').trim();
+            const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (m) {
+                return new Date(Date.UTC(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10)));
             }
+            if (typeof window.parseScheduleEventDate === 'function') {
+                const parsed = window.parseScheduleEventDate(s);
+                if (parsed && !isNaN(parsed.getTime())) return parsed;
+            }
+            return null;
+        };
+
+        // 1. Primary Source: Website Schedule Database (Firebase schedule_live & rewards_editor_catalog)
+        try {
+            let liveDataObj = window._cachedScheduleLive;
+            if ((!liveDataObj || !Array.isArray(liveDataObj.catalogItems) || liveDataObj.catalogItems.length === 0) && typeof window.fetchScheduleLiveData === 'function') {
+                liveDataObj = await window.fetchScheduleLiveData().catch(() => null);
+                if (liveDataObj && typeof liveDataObj === 'object') {
+                    window._cachedScheduleLive = liveDataObj;
+                }
+            }
+
+            let catalogList = (liveDataObj && Array.isArray(liveDataObj.catalogItems)) ? liveDataObj.catalogItems : [];
+            if (catalogList.length === 0 && typeof window.fetchRewardsEditorCatalog === 'function') {
+                catalogList = await window.fetchRewardsEditorCatalog(false).catch(() => []);
+            }
+
+            const todayIso = typeof window.getLocalTodayIsoStr === 'function' ? window.getLocalTodayIsoStr() : new Date().toISOString().split('T')[0];
+
+            if (Array.isArray(catalogList) && catalogList.length > 0) {
+                const champCatalogMatches = catalogList.filter(it => {
+                    const t = String(it?.title || it?.eventName || '').trim();
+                    const s = String(it?.startDate || it?.isoDate || '').trim();
+                    const e = String(it?.endDate || it?.endIsoDate || '').trim();
+                    return (/alliance\s*champ/i.test(t) || /championship/i.test(t)) && (s || e);
+                });
+
+                if (champCatalogMatches.length > 0) {
+                    champCatalogMatches.sort((a, b) => {
+                        const aEnd = String(a.endDate || a.endIsoDate || a.startDate || a.isoDate || '');
+                        const bEnd = String(b.endDate || b.endIsoDate || b.startDate || b.isoDate || '');
+                        const aActive = aEnd >= todayIso ? 1 : 0;
+                        const bActive = bEnd >= todayIso ? 1 : 0;
+                        if (aActive !== bActive) return bActive - aActive;
+                        const aStart = String(a.startDate || a.isoDate || aEnd);
+                        const bStart = String(b.startDate || b.isoDate || bEnd);
+                        return bStart.localeCompare(aStart);
+                    });
+
+                    const bestMatch = champCatalogMatches[0];
+                    const dStart = parseIsoUtc(bestMatch.startDate || bestMatch.isoDate || bestMatch.endDate || bestMatch.endIsoDate);
+                    const dEnd = parseIsoUtc(bestMatch.endDate || bestMatch.endIsoDate || bestMatch.startDate || bestMatch.isoDate);
+                    if (dStart && !isNaN(dStart.getTime())) {
+                        baseStartDate = dStart;
+                        baseEndDate = (dEnd && !isNaN(dEnd.getTime())) ? dEnd : new Date(dStart.getTime() + 6 * 86400000);
+                        foundSource = 'Website Schedule Database';
+                    }
+                }
+            }
+
+            if (!baseStartDate && liveDataObj && Array.isArray(liveDataObj.events)) {
+                const champEvMatches = liveDataObj.events.filter(ev => {
+                    const t = String(ev?.eventName || ev?.title || '').trim();
+                    return (/alliance\s*champ/i.test(t) || /championship/i.test(t)) && (ev.isoDate || ev.dateStr);
+                });
+                if (champEvMatches.length > 0) {
+                    champEvMatches.sort((a, b) => String(b.isoDate || '').localeCompare(String(a.isoDate || '')));
+                    const ev = champEvMatches[0];
+                    const dStart = parseIsoUtc(ev.isoDate || ev.dateStr);
+                    const dEnd = parseIsoUtc(ev.endIsoDate || ev.endDate || ev.isoDate || ev.dateStr);
+                    if (dStart && !isNaN(dStart.getTime())) {
+                        baseStartDate = dStart;
+                        baseEndDate = (dEnd && !isNaN(dEnd.getTime())) ? dEnd : new Date(dStart.getTime() + 6 * 86400000);
+                        foundSource = 'Website Schedule Database';
+                    }
+                }
+            }
+        } catch (dbErr) {
+            console.warn('Website schedule database fetch note:', dbErr);
         }
 
-        // 2. Secondary check: Schedule Cooldown Engine / Schedule data in Firebase / Unified schedule events
+        // 2. Secondary check: Schedule Status / Unified schedule events
         if (!baseStartDate && window._lastChampScheduleStatus && window._lastChampScheduleStatus.targetStartMs) {
             baseStartDate = new Date(window._lastChampScheduleStatus.targetStartMs);
             baseEndDate = new Date(window._lastChampScheduleStatus.targetEndMs || (window._lastChampScheduleStatus.targetStartMs + 5 * 86400000));
-            foundSource = window._lastChampScheduleStatus.scheduleSource || 'Event Schedule';
+            foundSource = window._lastChampScheduleStatus.scheduleSource || 'Website Schedule';
         }
         if (!baseStartDate) {
             const unifiedEvents = (typeof window.getUnifiedScheduleEvents === 'function') ? window.getUnifiedScheduleEvents() : [];
@@ -18042,7 +18092,7 @@ window.autoFillChampScheduleDates = async () => {
             if (champEvents.length > 0 && champEvents[0].start) {
                 baseStartDate = new Date(champEvents[0].start);
                 if (champEvents[0].end) baseEndDate = new Date(champEvents[0].end);
-                foundSource = 'Unified Schedule';
+                foundSource = 'Website Schedule';
             }
         }
 
@@ -18050,7 +18100,7 @@ window.autoFillChampScheduleDates = async () => {
         if (!baseStartDate || isNaN(baseStartDate.getTime())) {
             const now = new Date();
             const dayOfWeek = now.getUTCDay(); // 0: Sun, 1: Mon, ..., 6: Sat
-            const diffToMonday = (dayOfWeek === 0 ? 1 : (dayOfWeek === 6 ? 2 : (1 - dayOfWeek)));
+            const diffToMonday = (dayOfWeek === 0 ? -6 : (1 - dayOfWeek));
             baseStartDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diffToMonday));
             foundSource = 'Tournament Schedule Default';
         }
@@ -38824,7 +38874,7 @@ const views = {
                         <input type="text" id="champ_setup_season_name" value="${escapeHTML(seasonDateVal)}" placeholder="e.g. Oct 19 – Oct 25, 2026" style="width:100%; box-sizing:border-box; padding:11px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:14px; font-weight:bold; margin-bottom:10px;">
                         <div style="display:grid; grid-template-columns: 1fr auto; gap:8px;">
                             <button type="button" id="btnAutoFillChampDatesInline" onclick="window.autoFillChampScheduleDates()" style="background:var(--accent); color:white; border:none; padding:10px 14px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 8px rgba(6,182,212,0.35); min-height:42px;">
-                                ⚡ Auto-Fill from Google Sheet
+                                ⚡ Auto-Fill from Schedule
                             </button>
                             <a href="https://calendar.google.com/calendar/u/0/r?cid=1fd926f7d75aab23357b1b15579316a4ea4c02760849f94df8604eef9b7b1258@group.calendar.google.com" target="_blank" rel="noopener noreferrer" style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:10px 14px; border-radius:8px; font-weight:600; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:42px; box-sizing:border-box;">
                                 🗓️ Cal ↗

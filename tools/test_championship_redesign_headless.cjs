@@ -295,8 +295,10 @@ async function runHeadlessVerification() {
     await page.click('#tabBtnSetupOrCooldown');
     await page.waitForSelector('#btnAutoFillChampDatesInline', { timeout: 3000 });
 
-    // 4. Test Step 1: Schedule Dates Auto-Fill from Google Sheet / Schedule
-    console.log('  🔍 Testing Step 1: Schedule Dates Auto-Fill from Google Sheet...');
+    // 4. Test Step 2: Schedule Dates Auto-Fill from Website Schedule Database
+    console.log('  🔍 Testing Step 2: Schedule Dates Auto-Fill from Website Schedule Database...');
+    const inlineAutoFillBtnText = await page.$eval('#btnAutoFillChampDatesInline', el => el.textContent.trim());
+    assert(inlineAutoFillBtnText.includes('Auto-Fill from Schedule'), `Expected button text to include "Auto-Fill from Schedule", got "${inlineAutoFillBtnText}"`);
     await page.click('#btnAutoFillChampDatesInline');
     
     // Wait for auto-fill to resolve and populate fields
@@ -309,8 +311,8 @@ async function runHeadlessVerification() {
     const perRoundDateInput = await page.$('#champ_setup_r1_date');
     assert(!perRoundDateInput, 'Per-round date inputs must be removed from Step 1 (centralized on Season Date)');
     assert(autoSeasonDate && autoSeasonDate.includes('–'), `Season Date must be auto-filled with date range, got "${autoSeasonDate}"`);
-    assert((autoSeasonDate.includes('Oct 19') && autoSeasonDate.includes('Oct 25')) || (autoSeasonDate.includes('Oct 26') && (autoSeasonDate.includes('Oct 31') || autoSeasonDate.includes('Nov 1'))) || (autoSeasonDate.includes('Nov') && autoSeasonDate.includes('2026')), `Season Date must reflect live Google Sheet dates, got "${autoSeasonDate}"`);
-    console.log(`  ✅ Tournament date centralized on live Google Sheet Season Date: "${autoSeasonDate}" (per-round date inputs cleanly removed)`);
+    assert((autoSeasonDate.includes('Nov 9') && autoSeasonDate.includes('Nov 15')) || (autoSeasonDate.includes('Nov') && autoSeasonDate.includes('2026')), `Season Date must reflect live Website Schedule Database dates, got "${autoSeasonDate}"`);
+    console.log(`  ✅ Tournament date auto-filled from Website Schedule Database: "${autoSeasonDate}"`);
 
     // 5. Fill valid 5-day opponents and save Step 1 schedule to unlock Matchups
     console.log('  🔍 Filling 5-day opponent alliances and saving schedule...');

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.157] - 2026-11-10
+- 📅 **Schedule Sync**: Auto-Fill now pulls dates from website schedule database.
+- 🎯 **Active Window**: Automatically selects active season dates over expired entries.
+
 ## [3.3.156] - 2026-11-10
 - 🏆 **3-Step Setup**: Flows cleanly from Signups to Schedule to Matchups.
 - 🔓 **Schedule Open**: Removed broken cooldown lockout from Step 2 Schedule.
