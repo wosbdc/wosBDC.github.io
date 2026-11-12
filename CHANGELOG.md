@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.159] - 2026-11-12
+- 🔁 **Recurring Events**: Added 2d, 7d, 14d, 28d, and custom repeat.
+- 🐻 **Bear Trap Cycle**: Set once to auto-reschedule every 48 hours.
+- 📅 **8-Day Expansion**: Recurring events automatically populate upcoming schedule days.
+
 ## [3.3.158] - 2026-11-10
 - 🧹 **Clean Signups**: Removed duplicate Step 2 Schedule button from Signups.
 

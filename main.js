@@ -31035,8 +31035,34 @@ window.getUnifiedScheduleEvents = () => {
     liveSched = window.parseSheetToScheduleLiveData(window.liveData['WhiteOut Survival']);
   }
 
+  let hasConfiguredBearTrap = false;
   if (liveSched && Array.isArray(liveSched.events)) {
+    const todayIsoLocal = (typeof window.getLocalTodayIsoStr === 'function') ? window.getLocalTodayIsoStr() : '';
+    const expandedLiveEvents = [];
     liveSched.events.forEach(ev => {
+      if (!ev || !ev.eventName) return;
+      const evNameLower = String(ev.eventName).toLowerCase();
+      if (evNameLower.includes('bear trap') || ev.eventName.includes('🪤') || evNameLower.includes('bt')) {
+        hasConfiguredBearTrap = true;
+      }
+      const rDays = Math.max(0, parseInt(ev.repeatDays, 10) || 0);
+      if (rDays > 0 && !ev.row && ev.isoDate && typeof window.expandRecurringCatalogOccurrences === 'function') {
+        const occs = window.expandRecurringCatalogOccurrences(ev.isoDate, ev.endIsoDate || ev.isoDate, rDays, todayIsoLocal, 7);
+        occs.forEach(occ => {
+          const [, mStr, dStr] = occ.startDate.split('-');
+          expandedLiveEvents.push({
+            ...ev,
+            isoDate: occ.startDate,
+            endIsoDate: occ.endDate,
+            dateStr: `${parseInt(mStr, 10)}/${parseInt(dStr, 10)}`
+          });
+        });
+      } else {
+        expandedLiveEvents.push(ev);
+      }
+    });
+
+    expandedLiveEvents.forEach(ev => {
       if (!ev || !ev.eventName) return;
       const eventDate = window.parseScheduleEventDate(ev.dateStr || ev.isoDate);
       if (!eventDate) return;
@@ -31073,15 +31099,17 @@ window.getUnifiedScheduleEvents = () => {
     });
   }
 
-  // 4. Smart Bear Trap 48h Cycle Guarantee
+  // 4. Smart Bear Trap 48h Cycle Guarantee (fallback only when no Bear Trap is configured in Scheduler)
   // Anchor date: 8/20/2026 16:00 UTC. Bear Trap runs every 2 days.
-  const anchorTime = Date.UTC(2026, 7, 20, 16, 0, 0);
-  const todayUtcEventTime = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 16, 0, 0);
-  const diffDays = Math.round((todayUtcEventTime - anchorTime) / 86400000);
-  if (diffDays >= 0 && diffDays % 2 === 0) {
-    const todayBtStart = new Date(todayUtcEventTime);
-    const todayBtEnd = new Date(todayBtStart.getTime() + 30 * 60000);
-    addEvent('🐻‍❄️ Bear Trap  🪤', todayBtStart, todayBtEnd, 30 * 60000, '16:00 UTC', '9:00 AM', '🪤', `${now.getUTCMonth() + 1}/${now.getUTCDate()}`, 'Today');
+  if (!hasConfiguredBearTrap) {
+    const anchorTime = Date.UTC(2026, 7, 20, 16, 0, 0);
+    const todayUtcEventTime = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 16, 0, 0);
+    const diffDays = Math.round((todayUtcEventTime - anchorTime) / 86400000);
+    if (diffDays >= 0 && diffDays % 2 === 0) {
+      const todayBtStart = new Date(todayUtcEventTime);
+      const todayBtEnd = new Date(todayBtStart.getTime() + 30 * 60000);
+      addEvent('🐻‍❄️ Bear Trap  🪤', todayBtStart, todayBtEnd, 30 * 60000, '16:00 UTC', '9:00 AM', '🪤', `${now.getUTCMonth() + 1}/${now.getUTCDate()}`, 'Today');
+    }
   }
 
   // Sort chronologically
@@ -48012,6 +48040,87 @@ window.getLocalTodayIsoStr = () => {
   return `${pdtDate.getUTCFullYear()}-${String(pdtDate.getUTCMonth() + 1).padStart(2, '0')}-${String(pdtDate.getUTCDate()).padStart(2, '0')}`;
 };
 
+window.advanceRecurringDates = (startDate, endDate, repeatDays, todayIso = '') => {
+  const rDays = Math.max(0, parseInt(repeatDays, 10) || 0);
+  const sRaw = String(startDate || '').trim();
+  const eRaw = String(endDate || '').trim();
+  if (!rDays || (!sRaw && !eRaw)) {
+    return { startDate: sRaw, endDate: eRaw, repeatDays: rDays };
+  }
+  const baseStart = sRaw || eRaw;
+  const baseEnd = eRaw || sRaw;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(baseStart) || !/^\d{4}-\d{2}-\d{2}$/.test(baseEnd)) {
+    return { startDate: sRaw, endDate: eRaw, repeatDays: rDays };
+  }
+  const refToday = (todayIso && /^\d{4}-\d{2}-\d{2}$/.test(todayIso)) ? todayIso : window.getLocalTodayIsoStr();
+  const parseUtcMs = (iso) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  const fmtUtcIso = (ms) => {
+    const dt = new Date(ms);
+    return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+  };
+  const sMs = parseUtcMs(baseStart);
+  const eMs = parseUtcMs(baseEnd);
+  const tMs = parseUtcMs(refToday);
+  const durMs = Math.max(0, eMs - sMs);
+  if (eMs < tMs) {
+    const eDay = Math.round(eMs / 86400000);
+    const tDay = Math.round(tMs / 86400000);
+    const cycles = Math.ceil((tDay - eDay) / rDays);
+    const nextStartMs = sMs + cycles * rDays * 86400000;
+    const nextEndMs = nextStartMs + durMs;
+    return {
+      startDate: fmtUtcIso(nextStartMs),
+      endDate: eRaw ? fmtUtcIso(nextEndMs) : fmtUtcIso(nextStartMs),
+      repeatDays: rDays
+    };
+  }
+  return { startDate: sRaw || baseStart, endDate: eRaw, repeatDays: rDays };
+};
+
+window.expandRecurringCatalogOccurrences = (startDate, endDate, repeatDays, todayIso = '', horizonDays = 7) => {
+  const refToday = (todayIso && /^\d{4}-\d{2}-\d{2}$/.test(todayIso)) ? todayIso : window.getLocalTodayIsoStr();
+  const advanced = window.advanceRecurringDates(startDate, endDate, repeatDays, refToday);
+  const sIso = advanced.startDate || advanced.endDate;
+  const eIso = advanced.endDate || advanced.startDate;
+  if (!sIso || !eIso || !/^\d{4}-\d{2}-\d{2}$/.test(sIso) || !/^\d{4}-\d{2}-\d{2}$/.test(eIso)) {
+    return [];
+  }
+  if (eIso < refToday) return [];
+  const rDays = advanced.repeatDays;
+  if (!rDays) {
+    return [{ startDate: sIso, endDate: eIso }];
+  }
+  const parseUtcMs = (iso) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  const fmtUtcIso = (ms) => {
+    const dt = new Date(ms);
+    return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+  };
+  const tMs = parseUtcMs(refToday);
+  const horizonEndMs = tMs + Math.max(0, horizonDays) * 86400000;
+  const sMs = parseUtcMs(sIso);
+  const eMs = parseUtcMs(eIso);
+  const durMs = Math.max(0, eMs - sMs);
+  const stepMs = rDays * 86400000;
+
+  const out = [];
+  for (let i = 0; i < 32; i++) {
+    const occStartMs = sMs + i * stepMs;
+    if (occStartMs > horizonEndMs) break;
+    const occEndMs = occStartMs + durMs;
+    out.push({
+      startDate: fmtUtcIso(occStartMs),
+      endDate: fmtUtcIso(occEndMs)
+    });
+  }
+  return out;
+};
+
 window.formatDataSheetDateISO = (rawVal) => {
   if (!rawVal && rawVal !== 0) return '';
   const s = String(rawVal).trim();
@@ -48563,11 +48672,15 @@ window.parseDataSheetToRewardsCatalog = (rows) => {
 window.fetchRewardsEditorCatalog = async (forceRefreshSheet = false) => {
   const todayIso = window.getLocalTodayIsoStr();
   const mapWithStatus = (arr) => (arr || []).map(it => {
-    const s = it.startDate || it.start || '';
-    const e = it.endDate || it.end || '';
+    const rDays = Math.max(0, parseInt(it.repeatDays, 10) || 0);
+    const rawS = it.startDate || it.start || '';
+    const rawE = it.endDate || it.end || '';
+    const adv = rDays > 0 ? window.advanceRecurringDates(rawS, rawE, rDays, todayIso) : { startDate: rawS, endDate: rawE };
+    const s = adv.startDate;
+    const e = adv.endDate;
     let status = 'nodates';
     if (s || e) status = ((e || s) < todayIso) ? 'expired' : 'active';
-    return { ...it, startDate: s, endDate: e, status };
+    return { ...it, startDate: s, endDate: e, repeatDays: rDays, status };
   });
 
   if (!forceRefreshSheet) {
@@ -48644,17 +48757,27 @@ window.computeScheduleLiveFromRewardsCatalog = (catalogItems, existingLive = {})
   const [tY, tM, tD] = todayIso.split('-').map(Number);
   const baseUtcMs = Date.UTC(tY, tM - 1, tD);
 
-  // 1. Timed Events (section === 'timed' with endDate >= todayIso)
-  const events = [];
-  const timedItems = (catalogItems || []).filter(it => it.section === 'timed' && (it.startDate || it.endDate));
-  timedItems.forEach(it => {
-    const sIso = it.startDate || it.endDate;
-    const eIso = it.endDate || it.startDate;
-    if (eIso < todayIso) return;
-    if (String(it.title || '').trim().toLowerCase() === 'testing') return;
+  // Normalize & auto-advance recurring items so catalogItems stay current
+  const effectiveCatalog = (catalogItems || []).map(it => {
+    const rDays = Math.max(0, parseInt(it.repeatDays, 10) || 0);
+    const rawS = it.startDate || '';
+    const rawE = it.endDate || '';
+    const adv = rDays > 0 ? window.advanceRecurringDates(rawS, rawE, rDays, todayIso) : { startDate: rawS, endDate: rawE };
+    const s = adv.startDate;
+    const e = adv.endDate;
+    let status = 'nodates';
+    if (s || e) status = ((e || s) < todayIso) ? 'expired' : 'active';
+    return { ...it, startDate: s, endDate: e, repeatDays: rDays, status };
+  });
 
-    const [, mStr, dStr] = sIso.split('-');
-    const dateStr = `${parseInt(mStr, 10)}/${parseInt(dStr, 10)}`;
+  // 1. Timed Events (section === 'timed' with endDate >= todayIso, expanded across 8-day window if recurring)
+  const events = [];
+  const timedItems = effectiveCatalog.filter(it => it.section === 'timed' && (it.startDate || it.endDate));
+  timedItems.forEach(it => {
+    if (String(it.title || '').trim().toLowerCase() === 'testing') return;
+    const occs = window.expandRecurringCatalogOccurrences(it.startDate, it.endDate, it.repeatDays, todayIso, 7);
+    if (!occs.length) return;
+
     const utcStr = it.startUtc || '16:00';
     const endUtcStr = it.endUtc || '';
     const pdtVal = it.startPdt || window.utcTimeToPdtStr(utcStr);
@@ -48667,17 +48790,24 @@ window.computeScheduleLiveFromRewardsCatalog = (catalogItems, existingLive = {})
     const isShield = name.toLowerCase().includes('shield') || name.toLowerCase().includes('sheild');
     const emoji = isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : (isShield ? '🛡️' : '✨'))));
 
-    events.push({
-      id: `ev_row_${it.row}_${sIso}`,
-      row: it.row,
-      eventName: name,
-      dateStr,
-      isoDate: sIso,
-      endIsoDate: eIso,
-      utcStr,
-      endUtcStr,
-      pdtVal,
-      emoji
+    occs.forEach(occ => {
+      const sIso = occ.startDate;
+      const eIso = occ.endDate;
+      const [, mStr, dStr] = sIso.split('-');
+      const dateStr = `${parseInt(mStr, 10)}/${parseInt(dStr, 10)}`;
+      events.push({
+        id: `ev_row_${it.row}_${sIso}`,
+        row: it.row,
+        eventName: name,
+        dateStr,
+        isoDate: sIso,
+        endIsoDate: eIso,
+        utcStr,
+        endUtcStr,
+        pdtVal,
+        emoji,
+        repeatDays: it.repeatDays || 0
+      });
     });
   });
 
@@ -48692,7 +48822,11 @@ window.computeScheduleLiveFromRewardsCatalog = (catalogItems, existingLive = {})
   const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const rewardsByDay = {};
   let todayRewards = [];
-  const rewardItems = (catalogItems || []).filter(it => it.section === 'rewards' && (it.startDate || it.endDate));
+  const rewardItems = effectiveCatalog.filter(it => it.section === 'rewards' && (it.startDate || it.endDate));
+  const expandedRewardRanges = rewardItems.map(it => ({
+    title: String(it.title || '').trim(),
+    occs: window.expandRecurringCatalogOccurrences(it.startDate, it.endDate, it.repeatDays, todayIso, 7)
+  }));
 
   for (let offset = 0; offset < 8; offset++) {
     const dObj = new Date(baseUtcMs + offset * 86400000);
@@ -48703,14 +48837,11 @@ window.computeScheduleLiveFromRewardsCatalog = (catalogItems, existingLive = {})
     const colLabel = `${dayPrefix} ${mNum}-${dNum}`;
 
     const dayList = [];
-    rewardItems.forEach(it => {
-      const sIso = it.startDate || it.endDate;
-      const eIso = it.endDate || it.startDate;
-      if (sIso <= dIso && eIso >= dIso) {
-        const cleanTitle = String(it.title || '').trim();
-        if (cleanTitle && !window.isScheduleJunkItem(cleanTitle) && !dayList.includes(cleanTitle)) {
-          dayList.push(cleanTitle);
-        }
+    expandedRewardRanges.forEach(item => {
+      if (!item.title || window.isScheduleJunkItem(item.title)) return;
+      const matchesDay = item.occs.some(occ => occ.startDate <= dIso && occ.endDate >= dIso);
+      if (matchesDay && !dayList.includes(item.title)) {
+        dayList.push(item.title);
       }
     });
     dayList.sort((a, b) => a.localeCompare(b));
@@ -48720,7 +48851,7 @@ window.computeScheduleLiveFromRewardsCatalog = (catalogItems, existingLive = {})
 
   // 3. Signups (section === 'signups')
   const signups = [];
-  (catalogItems || []).filter(it => it.section === 'signups' && (it.startDate || it.endDate)).forEach(it => {
+  effectiveCatalog.filter(it => it.section === 'signups' && (it.startDate || it.endDate)).forEach(it => {
     const sIso = it.startDate || it.endDate;
     const eIso = it.endDate || it.startDate;
     if (sIso <= todayIso && eIso >= todayIso) {
@@ -48733,7 +48864,7 @@ window.computeScheduleLiveFromRewardsCatalog = (catalogItems, existingLive = {})
 
   // 4. Holidays & New Year (section === 'holidays' || section === 'newyear')
   const holidays = [];
-  (catalogItems || []).filter(it => (it.section === 'holidays' || it.section === 'newyear') && (it.startDate || it.endDate)).forEach(it => {
+  effectiveCatalog.filter(it => (it.section === 'holidays' || it.section === 'newyear') && (it.startDate || it.endDate)).forEach(it => {
     const sIso = it.startDate || it.endDate;
     const eIso = it.endDate || it.startDate;
     if (sIso <= todayIso && eIso >= todayIso) {
@@ -48756,7 +48887,7 @@ window.computeScheduleLiveFromRewardsCatalog = (catalogItems, existingLive = {})
     signups,
     allWeek,
     holidays,
-    catalogItems: catalogItems || [],
+    catalogItems: effectiveCatalog,
     fromRewardsEditor: true,
     lastUpdated: Date.now()
   };
@@ -48765,8 +48896,10 @@ window.computeScheduleLiveFromRewardsCatalog = (catalogItems, existingLive = {})
 window.syncRewardsCatalogChangeEverywhere = async (catalogItems, queueOp = null, existingLive = {}) => {
   const todayIso = window.getLocalTodayIsoStr();
   const normalizedCatalog = (catalogItems || []).map(it => {
-    const s = it.startDate || '';
-    const e = it.endDate || '';
+    const rDays = Math.max(0, parseInt(it.repeatDays, 10) || 0);
+    const adv = rDays > 0 ? window.advanceRecurringDates(it.startDate || '', it.endDate || '', rDays, todayIso) : { startDate: it.startDate || '', endDate: it.endDate || '' };
+    const s = adv.startDate;
+    const e = adv.endDate;
     let status = 'nodates';
     if (s || e) status = ((e || s) < todayIso) ? 'expired' : 'active';
     const isRewLike = String(it.section || 'rewards') !== 'timed';
@@ -48785,6 +48918,7 @@ window.syncRewardsCatalogChangeEverywhere = async (catalogItems, queueOp = null,
       endUtc: eUtc,
       startPdt: it.startPdt || window.utcTimeToPdtStr(sUtc),
       endPdt: it.endPdt || window.utcTimeToPdtStr(eUtc),
+      repeatDays: rDays,
       status
     };
   });
@@ -48988,6 +49122,21 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
     );
     const curStartPdt = window.utcTimeToPdtStr(curStartUtc);
     const curEndPdt = window.utcTimeToPdtStr(curEndUtc);
+    const curRepeatDays = isAddRewardMode ? 0 : Math.max(0, parseInt(selectedItem?.repeatDays, 10) || 0);
+    const repeatPresets = [
+      { days: 0, label: 'Off (One-Time)' },
+      { days: 2, label: '🔁 Every 2 Days (48h BT)' },
+      { days: 7, label: 'Every 7 Days (Weekly)' },
+      { days: 14, label: 'Every 14 Days (Bi-Weekly)' },
+      { days: 28, label: 'Every 28 Days (4-Week)' }
+    ];
+    const isCustomRepeatVal = curRepeatDays > 0 && !repeatPresets.some(p => p.days === curRepeatDays);
+    const getRepeatStatusHtml = (days) => {
+      if (!days || days <= 0) {
+        return `<span style="color:var(--text-muted);">One-time event — expires automatically after its End Date.</span>`;
+      }
+      return `<span style="color:#34d399;">✨ <strong>Auto-Reschedule Active:</strong> Automatically rolls forward every <strong>${days} day${days === 1 ? '' : 's'}</strong> once the End Date passes &amp; populates upcoming dates across the 8-day schedule.</span>`;
+    };
 
     const sectionBadgeMeta = (sec) => {
       if (sec === 'timed') return { icon: '⏱️', label: 'Timed Event', color: '#38bdf8', bg: 'rgba(56,189,248,0.12)' };
@@ -49084,11 +49233,15 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
                   }
                 }
                 const secMeta = sectionBadgeMeta(item.section);
+                const itemRepeat = Math.max(0, parseInt(item.repeatDays, 10) || 0);
                 return `
                   <div class="sch-search-item" data-row="${item.row}" style="padding:10px 12px; border-radius:8px; background:${isSel ? 'rgba(14,165,233,0.16)' : 'var(--card-bg)'}; border:1px solid ${isSel ? 'var(--accent)' : 'var(--border)'}; border-left:4px solid ${statusColor}; cursor:pointer; display:flex; flex-direction:column; gap:4px; transition:0.15s;">
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
                       <span style="font-weight:bold; font-size:13px; color:var(--text-main);">${escapeHTML(item.title)}</span>
-                      <span style="font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; background:${secMeta.bg}; color:${secMeta.color}; white-space:nowrap;">${secMeta.icon} ${secMeta.label}</span>
+                      <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+                        ${itemRepeat > 0 ? `<span style="font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px; background:rgba(16,185,129,0.18); border:1px solid rgba(16,185,129,0.35); color:#34d399; white-space:nowrap;">🔁 Every ${itemRepeat}d</span>` : ''}
+                        <span style="font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; background:${secMeta.bg}; color:${secMeta.color}; white-space:nowrap;">${secMeta.icon} ${secMeta.label}</span>
+                      </div>
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px;">
                       <span style="color:${statusColor}; font-weight:bold;">${escapeHTML(statusLine)}</span>
@@ -49101,9 +49254,10 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
 
             <!-- Right: Selected Item / Add New Editor Card -->
             <div id="schSearchEditor" style="background:var(--bg-main); border:1px solid ${isAddRewardMode ? '#10b981' : 'var(--border)'}; border-radius:10px; padding:16px; display:flex; flex-direction:column; gap:12px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:8px;">
-                <div id="schSelectedItemTitle" style="font-weight:bold; font-size:14px; color:${isAddRewardMode ? '#10b981' : 'var(--accent)'};">
-                  ${isAddRewardMode ? '➕ Add New Event or Reward' : (selectedItem ? `✏️ Editing: ${escapeHTML(selectedItem.title)} (Row #${selectedItem.row})` : 'Select an event from the list')}
+              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:8px; gap:8px; flex-wrap:wrap;">
+                <div id="schSelectedItemTitle" style="font-weight:bold; font-size:14px; color:${isAddRewardMode ? '#10b981' : 'var(--accent)'}; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <span>${isAddRewardMode ? '➕ Add New Event or Reward' : (selectedItem ? `✏️ Editing: ${escapeHTML(selectedItem.title)} (Row #${selectedItem.row})` : 'Select an event from the list')}</span>
+                  <span id="schHeaderRepeatBadge" style="display:${curRepeatDays > 0 ? 'inline-flex' : 'none'}; align-items:center; gap:4px; font-size:11px; font-weight:800; padding:2px 8px; border-radius:999px; background:rgba(16,185,129,0.18); border:1px solid rgba(16,185,129,0.45); color:#34d399;">🔁 Every ${curRepeatDays}d</span>
                 </div>
                 ${isAddRewardMode ? `
                   <button id="schCancelAddModeBtn" type="button" style="background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:3px 8px; border-radius:6px; font-size:11px; cursor:pointer;">Cancel</button>
@@ -49155,6 +49309,27 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
                     <input type="text" id="schSearchEndDate" value="${escapeHTML(isAddRewardMode ? todayIso : (selectedItem?.endDate || ''))}" placeholder="YYYY-MM-DD" onclick="window.openSchPopupCalendar('schSearchEndDate')" style="width:100%; padding:8px 32px 8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box; cursor:pointer; font-family:monospace;">
                     <button type="button" id="btnCalEndDate" onclick="window.openSchPopupCalendar('schSearchEndDate')" style="position:absolute; right:4px; background:transparent; border:none; font-size:14px; cursor:pointer; padding:4px;" title="Open Calendar">📅</button>
                   </div>
+                </div>
+              </div>
+
+              <!-- Recurring / Auto-Reschedule Controls -->
+              <div id="schRepeatBox" style="background:${curRepeatDays > 0 ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.02)'}; border:1px solid ${curRepeatDays > 0 ? 'rgba(16,185,129,0.45)' : 'var(--border)'}; border-radius:10px; padding:11px 12px; display:flex; flex-direction:column; gap:8px; transition:0.15s;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <label style="font-size:11px; font-weight:800; color:${curRepeatDays > 0 ? '#34d399' : 'var(--text-muted)'}; text-transform:uppercase; letter-spacing:0.6px;">🔁 Recurring / Auto-Reschedule</label>
+                  <div style="display:flex; align-items:center; gap:5px;">
+                    <span style="font-size:10.5px; color:var(--text-muted); font-weight:bold;">Custom:</span>
+                    <input type="number" id="schCustomRepeatDays" min="0" max="365" value="${isCustomRepeatVal ? curRepeatDays : ''}" placeholder="Days" style="width:62px; padding:3px 6px; border-radius:5px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:11px; font-weight:bold; text-align:center; font-family:monospace;">
+                  </div>
+                </div>
+                <input type="hidden" id="schSearchRepeatDays" value="${curRepeatDays}">
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                  ${repeatPresets.map(p => {
+                    const isAct = curRepeatDays === p.days;
+                    return `<button type="button" class="sch-repeat-pill" data-repeat-days="${p.days}" style="padding:5px 10px; border-radius:999px; font-size:11px; font-weight:bold; cursor:pointer; border:1px solid ${isAct ? (p.days > 0 ? '#10b981' : 'var(--accent)') : 'var(--border)'}; background:${isAct ? (p.days > 0 ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(14,165,233,0.2)') : 'var(--card-bg)'}; color:${isAct ? '#fff' : 'var(--text-muted)'}; transition:0.15s;">${isAct && p.days > 0 ? '✓ ' : ''}${p.label}</button>`;
+                  }).join('')}
+                </div>
+                <div id="schRepeatStatusText" style="font-size:11px; line-height:1.45; background:rgba(0,0,0,0.18); border-radius:6px; padding:6px 9px;">
+                  ${getRepeatStatusHtml(curRepeatDays)}
                 </div>
               </div>
 
@@ -49319,6 +49494,16 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
                 <option value="🏆">🏆</option>
               </select>
             </div>
+            <div style="width:125px;">
+              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Repeat 🔁</label>
+              <select id="schNewRepeatDays" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:12px; box-sizing:border-box;">
+                <option value="0">One-Time</option>
+                <option value="2">Every 2d (BT)</option>
+                <option value="7">Every 7d (Weekly)</option>
+                <option value="14">Every 14d</option>
+                <option value="28">Every 28d</option>
+              </select>
+            </div>
             <div style="display:flex; gap:6px;">
               <button id="schAddEventBtn" style="padding:9px 14px; border-radius:6px; border:none; background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:bold; cursor:pointer; font-size:13px;">➕ Add Event</button>
               <button id="schSavePresetBtn" style="padding:9px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--accent); font-weight:bold; cursor:pointer; font-size:12px;" title="Save event template as preloaded preset">⭐ Save Preset</button>
@@ -49343,6 +49528,7 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
                   <tr style="border-bottom:1px solid var(--border);">
                     <td style="padding:10px 14px; font-weight:bold; color:var(--text-main);">
                       <span style="margin-right:6px;">${ev.emoji || '✨'}</span> ${escapeHTML(ev.eventName)}
+                      ${Number(ev.repeatDays) > 0 ? `<span style="margin-left:6px; font-size:10px; font-weight:800; padding:2px 6px; border-radius:999px; background:rgba(16,185,129,0.18); border:1px solid rgba(16,185,129,0.35); color:#34d399;">🔁 Every ${Number(ev.repeatDays)}d</span>` : ''}
                     </td>
                     <td style="padding:10px 10px; text-align:center; font-weight:bold; color:var(--accent);">${escapeHTML(ev.dateStr || '-')}</td>
                     <td style="padding:10px 10px; text-align:center; font-weight:bold; color:#10b981;">
@@ -49551,6 +49737,61 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
       if (eEl) eEl.value = '';
     });
 
+    // Recurring / Auto-Reschedule Pill & Custom Input Listeners
+    const applyRepeatDaysUI = (daysVal, fromCustomInput = false) => {
+      const days = Math.max(0, Math.min(365, parseInt(daysVal, 10) || 0));
+      const hiddenEl = modal.querySelector('#schSearchRepeatDays');
+      if (hiddenEl) hiddenEl.value = String(days);
+
+      const boxEl = modal.querySelector('#schRepeatBox');
+      if (boxEl) {
+        boxEl.style.background = days > 0 ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.02)';
+        boxEl.style.borderColor = days > 0 ? 'rgba(16,185,129,0.45)' : 'var(--border)';
+        const lbl = boxEl.querySelector('label');
+        if (lbl) lbl.style.color = days > 0 ? '#34d399' : 'var(--text-muted)';
+      }
+
+      const badgeEl = modal.querySelector('#schHeaderRepeatBadge');
+      if (badgeEl) {
+        badgeEl.style.display = days > 0 ? 'inline-flex' : 'none';
+        badgeEl.textContent = `🔁 Every ${days}d`;
+      }
+
+      const statusEl = modal.querySelector('#schRepeatStatusText');
+      if (statusEl) statusEl.innerHTML = getRepeatStatusHtml(days);
+
+      modal.querySelectorAll('.sch-repeat-pill').forEach(btn => {
+        const pDays = parseInt(btn.getAttribute('data-repeat-days'), 10) || 0;
+        const pMeta = repeatPresets.find(p => p.days === pDays);
+        const isAct = days === pDays;
+        btn.style.borderColor = isAct ? (pDays > 0 ? '#10b981' : 'var(--accent)') : 'var(--border)';
+        btn.style.background = isAct ? (pDays > 0 ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(14,165,233,0.2)') : 'var(--card-bg)';
+        btn.style.color = isAct ? '#fff' : 'var(--text-muted)';
+        if (pMeta) btn.textContent = `${isAct && pDays > 0 ? '✓ ' : ''}${pMeta.label}`;
+      });
+
+      if (!fromCustomInput) {
+        const customEl = modal.querySelector('#schCustomRepeatDays');
+        if (customEl) {
+          const isPreset = repeatPresets.some(p => p.days === days);
+          customEl.value = (days > 0 && !isPreset) ? String(days) : '';
+        }
+      }
+    };
+
+    modal.querySelectorAll('.sch-repeat-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const d = parseInt(btn.getAttribute('data-repeat-days'), 10) || 0;
+        applyRepeatDaysUI(d, false);
+      });
+    });
+
+    modal.querySelector('#schCustomRepeatDays')?.addEventListener('input', (e) => {
+      const raw = String(e.target.value || '').trim();
+      const d = raw === '' ? 0 : Math.max(0, Math.min(365, parseInt(raw, 10) || 0));
+      applyRepeatDaysUI(d, true);
+    });
+
     // Live 24-hour normalization & PDT preview on Start/End UTC inputs
     const bind24HrUtcInput = (inputSelector, badgeSelector) => {
       const inp = modal.querySelector(inputSelector);
@@ -49580,11 +49821,13 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
       const utcEl = modal.querySelector('#schSearchUtc');
       const endUtcEl = modal.querySelector('#schSearchEndUtc');
       const secEl = modal.querySelector('#schEditorSectionSelect');
+      const repeatEl = modal.querySelector('#schSearchRepeatDays');
       const saveBtn = modal.querySelector('#schSaveSearchItemBtn');
 
       const title = String(titleEl?.value || '').trim();
       const startDate = String(startEl?.value || '').trim();
       const endDate = String(endEl?.value || '').trim() || startDate;
+      const repeatDays = Math.max(0, parseInt(repeatEl?.value || '0', 10) || 0);
       const itemSec = isAddRewardMode ? String(secEl?.value || 'rewards').trim() : (selectedItem?.section || 'rewards');
       const isItemRewardLike = itemSec !== 'timed';
       const startUtc = window.normalize24HrTimeStr(utcEl?.value || (isItemRewardLike ? '00:00' : '16:00'), isItemRewardLike ? '00:00' : '16:00');
@@ -49623,12 +49866,13 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
             startUtc,
             endUtc,
             startPdt: window.utcTimeToPdtStr(startUtc),
-            endPdt: window.utcTimeToPdtStr(endUtc)
+            endPdt: window.utcTimeToPdtStr(endUtc),
+            repeatDays
           };
           catalogItems.push(newItem);
           const res = await window.syncRewardsCatalogChangeEverywhere(
             catalogItems,
-            { action: 'add', section, title, startDate, endDate, startUtc, endUtc },
+            { action: 'add', section, title, startDate, endDate, startUtc, endUtc, repeatDays },
             liveData
           );
           catalogItems = res.catalog;
@@ -49654,11 +49898,12 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
             startUtc,
             endUtc,
             startPdt: window.utcTimeToPdtStr(startUtc),
-            endPdt: window.utcTimeToPdtStr(endUtc)
+            endPdt: window.utcTimeToPdtStr(endUtc),
+            repeatDays
           };
           const res = await window.syncRewardsCatalogChangeEverywhere(
             catalogItems,
-            { action: 'save', row: selectedRewardRow, title, startDate, endDate, startUtc, endUtc },
+            { action: 'save', row: selectedRewardRow, title, startDate, endDate, startUtc, endUtc, repeatDays },
             liveData
           );
           catalogItems = res.catalog;
@@ -49774,13 +50019,16 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
       const utcEl = modal.querySelector('#schNewUtc');
       const endUtcEl = modal.querySelector('#schNewEndUtc');
       const emojiEl = modal.querySelector('#schNewEmoji');
+      const repeatEl = modal.querySelector('#schNewRepeatDays');
 
       const name = String(nameEl?.value || '').trim();
-      const dateStr = String(dateEl?.value || '').trim();
+      const dateStr = String(dateEl?.value || '').trim() || `${new Date().getMonth() + 1}/${new Date().getDate()}`;
+      const isoDate = window.formatDataSheetDateISO(dateStr) || window.getLocalTodayIsoStr();
       const utcStr = window.normalize24HrTimeStr(utcEl?.value || '16:00', '16:00');
       const rawEndUtc = String(endUtcEl?.value || '').trim();
       const endUtcStr = rawEndUtc ? window.normalize24HrTimeStr(rawEndUtc, '') : '';
       const emoji = emojiEl?.value || '✨';
+      const repeatDays = Math.max(0, parseInt(repeatEl?.value || '0', 10) || 0);
 
       if (!name) {
         if (window.showToast) window.showToast("Please enter an Event Name", "error");
@@ -49790,11 +50038,13 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
       currentEvents.push({
         id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
         eventName: name,
-        dateStr: dateStr || `${new Date().getMonth() + 1}/${new Date().getDate()}`,
+        dateStr: dateStr,
+        isoDate: isoDate,
         utcStr: utcStr,
         endUtcStr: endUtcStr,
         pdtVal: window.utcTimeToPdtStr(utcStr),
-        emoji: emoji
+        emoji: emoji,
+        repeatDays: repeatDays
       });
 
       renderModalContent();

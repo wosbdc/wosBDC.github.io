@@ -44,6 +44,8 @@ function runStaticAndUnitVerification() {
 
   assert(code.includes('window.parseDataSheetToRewardsCatalog ='), 'Must define parseDataSheetToRewardsCatalog');
   assert(code.includes('window.computeScheduleLiveFromRewardsCatalog ='), 'Must define computeScheduleLiveFromRewardsCatalog');
+  assert(code.includes('window.advanceRecurringDates ='), 'Must define advanceRecurringDates');
+  assert(code.includes('window.expandRecurringCatalogOccurrences ='), 'Must define expandRecurringCatalogOccurrences');
   assert(code.includes('window.fetchRewardsEditorCatalog ='), 'Must define fetchRewardsEditorCatalog');
   assert(code.includes('window.syncRewardsCatalogChangeEverywhere ='), 'Must define syncRewardsCatalogChangeEverywhere');
   assert(code.includes('window.sanitizeFirebaseObject ='), 'Must define sanitizeFirebaseObject for RTDB safety');
@@ -148,6 +150,28 @@ function runStaticAndUnitVerification() {
     assert(!/[/.#$\[\]]/.test(k), `rewardsByDay key "${k}" must not contain illegal Firebase characters`);
   }
   console.log('  ✅ computeScheduleLiveFromRewardsCatalog accurately computes Timed Events, 8-Day Rewards (Firebase-safe keys), and Signups');
+
+  // Test Recurring / Auto-Reschedule date roll-forward & 8-day expansion
+  const advOdd = sandbox.window.advanceRecurringDates('2026-11-06', '2026-11-06', 2, '2026-11-11');
+  assert.strictEqual(advOdd.startDate, '2026-11-12', '48h recurring event must roll forward past 2026-11-11 to 2026-11-12');
+  assert.strictEqual(advOdd.endDate, '2026-11-12');
+  const advSame = sandbox.window.advanceRecurringDates('2026-11-06', '2026-11-06', 2, '2026-11-12');
+  assert.strictEqual(advSame.startDate, '2026-11-12', '48h recurring event must land on 2026-11-12 when today is 2026-11-12');
+  const occs = sandbox.window.expandRecurringCatalogOccurrences('2026-11-06', '2026-11-06', 2, '2026-11-12', 7);
+  assert.strictEqual(occs.length, 4, `Expected 4 Bear Trap occurrences in 8-day window, got ${occs.length}`);
+  assert.strictEqual(
+    JSON.stringify(occs.map(o => o.startDate)),
+    JSON.stringify(['2026-11-12', '2026-11-14', '2026-11-16', '2026-11-18']),
+    '48h recurring occurrences must match expected 8-day dates'
+  );
+
+  const recurringCatalog = [
+    { id: 'rew_row_7', row: 7, section: 'timed', sectionLabel: 'Timed Events', title: '🐻 Bear Trap 🪤', startDate: '2026-10-01', endDate: '2026-10-01', startUtc: '16:00', endUtc: '16:30', repeatDays: 2 }
+  ];
+  const recComputed = sandbox.window.computeScheduleLiveFromRewardsCatalog(recurringCatalog, {});
+  assert.strictEqual(recComputed.events.length, 4, 'Recurring 48h Bear Trap must expand to 4 upcoming occurrences in 8-day window');
+  assert.strictEqual(recComputed.catalogItems[0].status, 'active', 'Recurring Bear Trap catalog item must auto-advance and stay active');
+  console.log('  ✅ Recurring / Auto-Reschedule roll-forward & 8-day expansion unit tests verified');
 }
 
 async function runHeadlessBrowserVerification() {
@@ -418,6 +442,28 @@ async function runHeadlessBrowserVerification() {
     const scheduleDomAfterDel = await page.$eval('#schedule-content', el => el.textContent);
     assert(!scheduleDomAfterDel.includes('Frostdragon Tyrant Test'), 'Deleted reward event must be removed from Today Schedule Daily Rewards!');
     console.log('  ✅ Delete Event / Reward verified: "Frostdragon Tyrant Test" removed from catalog and Today Schedule!');
+
+    // Test Recurring / Auto-Reschedule UI on Bear Trap (Row #7)
+    await page.click('.sch-search-item[data-row="7"]');
+    await page.waitForSelector('.sch-repeat-pill[data-repeat-days="2"]', { visible: true, timeout: 3000 });
+    await page.click('.sch-repeat-pill[data-repeat-days="2"]');
+    const badgeState = await page.$eval('#schHeaderRepeatBadge', el => ({
+      display: getComputedStyle(el).display,
+      text: el.textContent.trim()
+    }));
+    assert(badgeState.display !== 'none' && badgeState.text.includes('Every 2d'), `Header repeat badge must display Every 2d, got ${JSON.stringify(badgeState)}`);
+    await page.click('#schSaveSearchItemBtn');
+    const recurringCheck = await page.evaluate(() => {
+      const cat = window._testFirebaseSavedNodes['rewards_editor_catalog']?.items || [];
+      const bt = cat.find(i => i.row === 7);
+      const evs = (window._testFirebaseSavedNodes['schedule_live']?.events || []).filter(e => e.row === 7);
+      const listRowText = document.querySelector('.sch-search-item[data-row="7"]')?.textContent || '';
+      return { repeatDays: bt?.repeatDays, evCount: evs.length, listRowText };
+    });
+    assert.strictEqual(recurringCheck.repeatDays, 2, 'Saved Bear Trap catalog item must persist repeatDays: 2');
+    assert.strictEqual(recurringCheck.evCount, 4, `Saved 48h Bear Trap must generate 4 events in 8-day window, got ${recurringCheck.evCount}`);
+    assert(recurringCheck.listRowText.includes('Every 2d'), 'Left list row must render 🔁 Every 2d badge');
+    console.log('  ✅ Recurring / Auto-Reschedule UI verified (Bear Trap Every 2d -> 4 occurrences in 8-day schedule)');
 
     // Responsive Layout Audit across 375px, 768px, 1280px with modal open
     const viewports = [
