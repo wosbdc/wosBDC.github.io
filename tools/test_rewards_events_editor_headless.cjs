@@ -510,7 +510,24 @@ async function runHeadlessBrowserVerification() {
     assert(calText.includes('Day 5') && calText.includes('Trade Dominion'), 'Calendar View must display Day 5 + Trade Dominion for tomorrow');
     assert(calText.includes('Day 6') && calText.includes('Full-Scale Competition'), 'Calendar View must display Day 6 + Full-Scale Competition');
     assert(!calText.includes('00:00 - 00:00 UTC'), 'Calendar View must not display messy (00:00 - 00:00 UTC) text');
-    console.log('  ✅ Calendar View Showdown Day 4–6 clean 2-line layout verified in live DOM!');
+    assert(!/\b\d{2}:\d{2}\s*(?:–|-)\s*\d{2}:\d{2}\s*UTC\b/.test(calText), 'Calendar View cards must not display inline UTC time ranges');
+    assert(!calText.includes('All Day (UTC)'), 'Calendar View cards must not display inline All Day (UTC) text');
+
+    // Click Bear Trap event in Calendar View to open Event Details Popup
+    await page.evaluate(() => {
+      const lis = Array.from(document.querySelectorAll('#schedule-content ul li'));
+      const btLi = lis.find(li => li.textContent.includes('Bear Trap'));
+      if (btLi) btLi.click();
+    });
+    await page.waitForSelector('#calendarEventDetailsModal', { visible: true, timeout: 3000 });
+    const modalText = await page.$eval('#calendarEventDetailsModal', el => el.textContent);
+    assert(modalText.includes('Bear Trap'), 'Event Details Popup must show Bear Trap title');
+    assert(modalText.includes('Date') && modalText.includes('Game Time (UTC)') && modalText.includes('Your Local Time'), 'Event Details Popup must show Date, Game Time (UTC), and Your Local Time');
+    assert(modalText.includes('Every 2 Days (48h Cycle)'), 'Event Details Popup must show recurring cycle for Bear Trap');
+    await page.click('#calDetailsCloseBtn');
+    const modalClosed = await page.evaluate(() => !document.getElementById('calendarEventDetailsModal'));
+    assert(modalClosed, 'Event Details Popup must close when Close button is clicked');
+    console.log('  ✅ Calendar View clean cards (zero inline times) + click-to-open Event Details Popup verified in live DOM!');
 
     // Responsive Layout Audit across 375px, 768px, 1280px with modal open
     const viewports = [

@@ -1,12 +1,12 @@
 {
-  "version": "3.3.162",
+  "version": "3.3.163",
   "releaseDate": "2026-11-12",
-  "title": "What's New in v3.3.162",
+  "title": "What's New in v3.3.163",
   "notes": [
-    "Cleaned up Calendar View event cards into structured 2-line rows with Day pills."
+    "Removed inline times from Calendar View cards and added a click-to-view Event Details Popup."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.162",
+    "version": "3.3.163",
     "latestChanges": [
       "v3.3.158: Removed redundant bottom Step 2: Schedule button from Championship Signups tab",
       "v3.3.157: Updated Alliance Championship Auto-Fill to pull season dates directly from the website schedule database",

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.163] - 2026-11-12
+- 🧹 **Zero Card Clutter**: Removed inline times from Calendar View cards.
+- 🔍 **Event Details Popup**: Click any calendar event for times and reminders.
+
 ## [3.3.162] - 2026-11-12
 - ✨ **Clean Calendar Cards**: Formatted Calendar View events into crisp 2-line rows.
 

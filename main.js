@@ -47303,7 +47303,10 @@ window.resetBearTrapEvent = async () => {
                     rawTitle: ev.eventName,
                     displayTitle,
                     timeRange,
-                    startUtcForRem: startT ? `${String(startT.h).padStart(2, '0')}:${String(startT.m).padStart(2, '0')}` : ''
+                    dayIso,
+                    repeatDays: Number(ev.repeatDays) || 0,
+                    startUtcForRem: startT ? `${String(startT.h).padStart(2, '0')}:${String(startT.m).padStart(2, '0')}` : '',
+                    endUtcForRem: endT ? `${String(endT.h).padStart(2, '0')}:${String(endT.m).padStart(2, '0')}` : ''
                   };
                 });
               }
@@ -47342,6 +47345,7 @@ window.resetBearTrapEvent = async () => {
           }
       
       // Render the timeline as Daily Cards
+      window._calendarEventDetailsCache = [];
       let html = '';
       html += `<div style="display:flex; flex-wrap:wrap; gap:20px;">`;
       
@@ -47432,12 +47436,18 @@ window.resetBearTrapEvent = async () => {
               }
 
               let rowBodyHtml = '';
+              let mainTitleForModal = evCleanName || evStr;
+              let dayBadgeForModal = '';
+              let subThemeForModal = '';
               if (isStruct) {
                 const phaseMatch = evStr.match(/^(.*?)\s+—\s+(Day\s+\d+|Results[^:]*):\s*(.*)$/i);
                 const mainTitle = phaseMatch ? phaseMatch[1].trim() : evStr;
                 const dayBadge = phaseMatch ? phaseMatch[2].trim() : '';
                 const subTheme = phaseMatch ? phaseMatch[3].trim() : '';
-                const subMeta = [subTheme, ev.timeRange].filter(Boolean).join(' • ');
+                mainTitleForModal = mainTitle;
+                dayBadgeForModal = dayBadge;
+                subThemeForModal = subTheme;
+                const subMeta = subTheme;
                 rowBodyHtml = `
                   <div style="display:flex; align-items:flex-start; gap:8px; min-width:0; flex:1;">
                     <span style="font-size:14px; line-height:1.3; flex-shrink:0;">${bullet}</span>
@@ -47446,7 +47456,7 @@ window.resetBearTrapEvent = async () => {
                         <span style="font-weight:700; font-size:13px; color:var(--text-main); line-height:1.3;">${escapeHTML(mainTitle)}</span>
                         ${dayBadge ? `<span style="font-size:10px; font-weight:800; padding:1px 6px; border-radius:999px; background:rgba(56,189,248,0.16); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; white-space:nowrap;">${escapeHTML(dayBadge)}</span>` : ''}
                       </div>
-                      ${subMeta ? `<div style="font-size:11.5px; color:${subTheme ? '#a5b4fc' : 'var(--text-muted)'}; font-weight:600; margin-top:2px; line-height:1.3;">${escapeHTML(subMeta)}</div>` : ''}
+                      ${subMeta ? `<div style="font-size:11.5px; color:#a5b4fc; font-weight:600; margin-top:2px; line-height:1.3;">${escapeHTML(subMeta)}</div>` : ''}
                     </div>
                   </div>
                 `;
@@ -47459,7 +47469,46 @@ window.resetBearTrapEvent = async () => {
                 `;
               }
 
-              html += `<li onclick="if(window.showToast) window.showToast('📅 &quot;${escapeHTML(evCleanName)}&quot; is listed for ${escapeHTML(day.dateStr)}.', 'info');" style="padding:7px 0; font-size:13px; color:var(--text-main); display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;" title="Click for details">
+              let evStartMs = 0;
+              let localTimeStr = '';
+              if (timeMatch && day.dateObj) {
+                const parts = timeMatch[1].split(':');
+                const evStart = new Date(day.dateObj);
+                evStart.setUTCHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
+                evStartMs = evStart.getTime();
+                const startLocal = evStart.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                const tzShort = evStart.toLocaleTimeString([], { timeZoneName: 'short' }).split(' ').pop() || '';
+                if (isStruct && ev.endUtcForRem) {
+                  const eParts = ev.endUtcForRem.split(':');
+                  const evEnd = new Date(day.dateObj);
+                  evEnd.setUTCHours(parseInt(eParts[0], 10), parseInt(eParts[1], 10), 0, 0);
+                  if (evEnd.getTime() <= evStart.getTime()) {
+                    evEnd.setUTCDate(evEnd.getUTCDate() + 1);
+                  }
+                  const endLocal = evEnd.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                  localTimeStr = `${startLocal} – ${endLocal}${tzShort ? ' ' + tzShort : ''}`;
+                } else {
+                  localTimeStr = `${startLocal}${tzShort ? ' ' + tzShort : ''}`;
+                }
+              }
+
+              const detailIdx = window._calendarEventDetailsCache.length;
+              window._calendarEventDetailsCache.push({
+                emoji: isStruct ? ev.emoji : (isBt ? '🪤' : (isSignupCat ? '📋' : '✨')),
+                title: mainTitleForModal,
+                cleanName: evCleanName || mainTitleForModal,
+                dayBadge: dayBadgeForModal,
+                subTheme: subThemeForModal,
+                category: cat,
+                dateStr: day.dateStr,
+                utcTimeRange: isStruct ? (ev.timeRange || 'All Day (UTC)') : (timeMatch ? `${timeMatch[1]} UTC` : 'All Day'),
+                localTimeStr: localTimeStr || 'Matches daily reset',
+                repeatDays: isStruct ? (Number(ev.repeatDays) || 0) : 0,
+                startMs: evStartMs,
+                startUtcStr: timeMatch ? `${timeMatch[1]} UTC` : ''
+              });
+
+              html += `<li onclick="window.openCalendarEventDetailsModal(${detailIdx})" style="padding:7px 0; font-size:13px; color:var(--text-main); display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;" title="Click for event details">
                          ${rowBodyHtml}
                          ${calRemBtn}
                        </li>`;
@@ -47478,6 +47527,96 @@ window.resetBearTrapEvent = async () => {
 
       window.renderTabs = renderTabs;
       renderTabs();
+
+      window.closeCalendarEventDetailsModal = function() {
+        const existing = document.getElementById('calendarEventDetailsModal');
+        if (existing) existing.remove();
+      };
+
+      window.openCalendarEventDetailsModal = function(idx) {
+        const cache = Array.isArray(window._calendarEventDetailsCache) ? window._calendarEventDetailsCache : [];
+        const item = cache[idx];
+        if (!item) return;
+
+        window.closeCalendarEventDetailsModal();
+
+        let repeatLabel = 'One-time Event';
+        if (item.repeatDays === 2) repeatLabel = 'Every 2 Days (48h Cycle)';
+        else if (item.repeatDays === 7) repeatLabel = 'Weekly (Every 7 Days)';
+        else if (item.repeatDays === 14) repeatLabel = 'Every 14 Days';
+        else if (item.repeatDays === 28) repeatLabel = 'Every 28 Days';
+        else if (item.repeatDays > 0) repeatLabel = `Every ${item.repeatDays} Days`;
+        else if (String(item.category || '').toLowerCase() !== 'events') repeatLabel = `${item.category || 'Schedule'} Item`;
+
+        const canSetRem = item.startMs && item.startMs > Date.now() && typeof window.openEventReminderModal === 'function';
+        const isRemSet = canSetRem && typeof window.isEventReminderSet === 'function' && window.isEventReminderSet(item.cleanName, item.startMs);
+
+        const modal = document.createElement('div');
+        modal.id = 'calendarEventDetailsModal';
+        modal.style.cssText = 'position:fixed; inset:0; z-index:100060; background:rgba(2,6,23,0.78); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:16px;';
+        modal.onclick = function(e) {
+          if (e.target === modal) window.closeCalendarEventDetailsModal();
+        };
+
+        modal.innerHTML = `
+          <div style="width:100%; max-width:430px; background:linear-gradient(180deg, rgba(15,23,42,0.98), rgba(10,16,32,0.99)); border:1px solid rgba(56,189,248,0.45); border-radius:18px; box-shadow:0 24px 60px rgba(0,0,0,0.65), 0 0 28px rgba(16,185,129,0.16); overflow:hidden; color:#f8fafc;">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(56,189,248,0.06);">
+              <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                <span style="font-size:22px; line-height:1; flex-shrink:0;">${item.emoji || '✨'}</span>
+                <div style="min-width:0;">
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <h3 style="margin:0; font-size:18px; font-weight:800; color:#f8fafc; line-height:1.25;">${escapeHTML(item.title)}</h3>
+                    ${item.dayBadge ? `<span style="font-size:11px; font-weight:800; padding:2px 8px; border-radius:999px; background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.4); color:#38bdf8;">${escapeHTML(item.dayBadge)}</span>` : ''}
+                  </div>
+                  ${item.subTheme ? `<div style="margin-top:4px; font-size:12.5px; font-weight:700; color:#a5b4fc;">${escapeHTML(item.subTheme)}</div>` : ''}
+                </div>
+              </div>
+              <button id="calDetailsCloseXBtn" type="button" aria-label="Close" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">✕</button>
+            </div>
+
+            <div style="padding:16px 20px; display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.07);">
+                <span style="font-size:13px; color:#94a3b8; font-weight:600;">📅 Date</span>
+                <span style="font-size:13.5px; color:#f8fafc; font-weight:700; text-align:right;">${escapeHTML(item.dateStr)}</span>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.07);">
+                <span style="font-size:13px; color:#94a3b8; font-weight:600;">🌐 Game Time (UTC)</span>
+                <span style="font-size:13.5px; color:#38bdf8; font-weight:700; text-align:right;">${escapeHTML(item.utcTimeRange)}</span>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.07);">
+                <span style="font-size:13px; color:#94a3b8; font-weight:600;">🕒 Your Local Time</span>
+                <span style="font-size:13.5px; color:#e2e8f0; font-weight:700; text-align:right;">${escapeHTML(item.localTimeStr)}</span>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                <span style="font-size:13px; color:#94a3b8; font-weight:600;">🔄 Schedule</span>
+                <span style="font-size:13.5px; color:#10b981; font-weight:700; text-align:right;">${escapeHTML(repeatLabel)}</span>
+              </div>
+            </div>
+
+            <div style="padding:14px 20px 18px; display:flex; align-items:center; gap:10px; border-top:1px solid rgba(255,255,255,0.07); background:rgba(15,23,42,0.5);">
+              ${canSetRem ? `<button id="calDetailsSetRemBtn" type="button" style="flex:1; padding:10px 14px; border-radius:10px; border:1px solid ${isRemSet ? 'rgba(16,185,129,0.5)' : 'rgba(56,189,248,0.5)'}; background:${isRemSet ? 'rgba(16,185,129,0.2)' : 'linear-gradient(135deg, #0ea5e9, #38bdf8)'}; color:${isRemSet ? '#34d399' : '#082f49'}; font-weight:800; font-size:13.5px; cursor:pointer;">${isRemSet ? '✓ Reminder Set' : '🔔 Set Reminder'}</button>` : ''}
+              <button id="calDetailsCloseBtn" type="button" style="flex:${canSetRem ? '0 0 auto' : '1'}; min-width:100px; padding:10px 16px; border-radius:10px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); color:#e2e8f0; font-weight:700; font-size:13.5px; cursor:pointer;">Close</button>
+            </div>
+          </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const closeX = document.getElementById('calDetailsCloseXBtn');
+        if (closeX) closeX.onclick = () => window.closeCalendarEventDetailsModal();
+        const closeBtn = document.getElementById('calDetailsCloseBtn');
+        if (closeBtn) closeBtn.onclick = () => window.closeCalendarEventDetailsModal();
+
+        if (canSetRem) {
+          const remBtn = document.getElementById('calDetailsSetRemBtn');
+          if (remBtn) {
+            remBtn.onclick = function() {
+              window.closeCalendarEventDetailsModal();
+              window.openEventReminderModal(item.cleanName, item.startMs, item.emoji || '✨', item.dateStr, item.startUtcStr);
+            };
+          }
+        }
+      };
 
     } catch(e) { renderError(e.message); }
   },
