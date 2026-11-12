@@ -465,6 +465,17 @@ async function runHeadlessBrowserVerification() {
     assert(recurringCheck.listRowText.includes('Every 2d'), 'Left list row must render 🔁 Every 2d badge');
     console.log('  ✅ Recurring / Auto-Reschedule UI verified (Bear Trap Every 2d -> 4 occurrences in 8-day schedule)');
 
+    // Close modal & switch to Calendar View to verify Bear Trap renders across 8-day Calendar View
+    await page.click('#schModalCloseBtn');
+    await page.evaluate(() => {
+      if (typeof window.switchScheduleTab === 'function') window.switchScheduleTab('calendar');
+    });
+    const calendarBtCount = await page.$$eval('#schedule-content ul li', lis =>
+      lis.filter(li => li.textContent.includes('Bear Trap')).length
+    );
+    assert.strictEqual(calendarBtCount, 4, `Calendar View must render 4 Bear Trap entries from schedule_live, got ${calendarBtCount}`);
+    console.log('  ✅ Calendar View verified: renders all 4 recurring Bear Trap dates from website database!');
+
     // Responsive Layout Audit across 375px, 768px, 1280px with modal open
     const viewports = [
       { width: 375, height: 667, name: 'Mobile (375px)' },

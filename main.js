@@ -47167,7 +47167,8 @@ window.resetBearTrapEvent = async () => {
           const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
           let days = [];
 
-          const data = weeklyData;
+          const useLiveEditorDb = Boolean(liveSched && liveSched.fromRewardsEditor);
+          const data = !useLiveEditorDb ? weeklyData : null;
           if (data && Array.isArray(data) && data.length > 0) {
             let dateRowIdx = -1;
             for (let r = 0; r < data.length; r++) {
@@ -47242,18 +47243,27 @@ window.resetBearTrapEvent = async () => {
             }
           }
 
-          if (days.length === 0 && liveSched && Array.isArray(liveSched.events) && liveSched.events.length > 0) {
-            for (let d = 0; d < 7; d++) {
+          if (days.length === 0 && liveSched && (Array.isArray(liveSched.events) || liveSched.rewardsByDay)) {
+            const weekdaysCal = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            for (let d = 0; d < 8; d++) {
               const dayObj = new Date(todayDate);
               dayObj.setDate(todayDate.getDate() + d);
+              const dayIso = `${dayObj.getFullYear()}-${String(dayObj.getMonth() + 1).padStart(2, '0')}-${String(dayObj.getDate()).padStart(2, '0')}`;
               const dayStr = dayObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
               const isToday = d === 0;
               const categories = {};
 
-              const matchingEvents = liveSched.events.filter(ev => {
+              const matchingEvents = (liveSched.events || []).filter(ev => {
+                if (!ev || !ev.eventName) return false;
+                if (ev.isoDate && /^\d{4}-\d{2}-\d{2}$/.test(ev.isoDate)) {
+                  const sIso = ev.isoDate;
+                  const eIso = (ev.endIsoDate && /^\d{4}-\d{2}-\d{2}$/.test(ev.endIsoDate)) ? ev.endIsoDate : sIso;
+                  return dayIso >= sIso && dayIso <= eIso;
+                }
                 const evDate = window.parseScheduleEventDate(ev.dateStr);
                 if (!evDate) return false;
-                return evDate.toDateString() === dayObj.toDateString();
+                const evUtcIso = `${evDate.getUTCFullYear()}-${String(evDate.getUTCMonth() + 1).padStart(2, '0')}-${String(evDate.getUTCDate()).padStart(2, '0')}`;
+                return evUtcIso === dayIso;
               });
 
               if (matchingEvents.length > 0) {
@@ -47270,10 +47280,22 @@ window.resetBearTrapEvent = async () => {
                 });
               }
 
+              // Populate 8-day Rewards from rewardsByDay if available
+              const dayPrefix = d === 0 ? 'Today' : (d === 1 ? 'Tomorrow' : weekdaysCal[dayObj.getDay()]);
+              const rKey = `${dayPrefix} ${dayObj.getMonth() + 1}-${dayObj.getDate()}`;
+              const dayRewards = (liveSched.rewardsByDay && Array.isArray(liveSched.rewardsByDay[rKey]))
+                ? liveSched.rewardsByDay[rKey]
+                : (isToday && Array.isArray(liveSched.rewards) ? liveSched.rewards : []);
+              if (dayRewards.length > 0) {
+                categories['Rewards'] = dayRewards;
+              }
+
               if (isToday) {
-                if (liveSched.rewards && liveSched.rewards.length > 0) categories['Rewards'] = liveSched.rewards;
+                const calAllWeek = Array.isArray(liveSched.allWeek)
+                  ? liveSched.allWeek.filter(w => !window.isScheduleJunkItem(w) && w.length >= 3)
+                  : [];
                 if (liveSched.signups && liveSched.signups.length > 0) categories['Sign-Ups'] = liveSched.signups;
-                if (allWeek && allWeek.length > 0) categories['All Week'] = allWeek;
+                if (calAllWeek.length > 0) categories['All Week'] = calAllWeek;
                 if (liveSched.holidays && liveSched.holidays.length > 0) categories['Holidays'] = liveSched.holidays;
               }
 

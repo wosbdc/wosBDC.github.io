@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.160] - 2026-11-12
+- 📅 **Calendar Sync**: Calendar View now reads website schedule database first.
+- 🕒 **Timezone Fix**: Fixed 1-day UTC date shift on Calendar View events.
+
 ## [3.3.159] - 2026-11-12
 - 🔁 **Recurring Events**: Added 2d, 7d, 14d, 28d, and custom repeat.
 - 🐻 **Bear Trap Cycle**: Set once to auto-reschedule every 48 hours.

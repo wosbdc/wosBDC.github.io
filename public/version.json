@@ -1,13 +1,13 @@
 {
-  "version": "3.3.159",
+  "version": "3.3.160",
   "releaseDate": "2026-11-12",
-  "title": "What's New in v3.3.159",
+  "title": "What's New in v3.3.160",
   "notes": [
-    "Added Recurring / Auto-Reschedule intervals (48h BT, Weekly, Bi-Weekly, Custom).",
-    "Recurring events automatically roll forward and populate the 8-day schedule."
+    "Fixed Calendar View to read live website schedule database first.",
+    "Fixed UTC-to-local date shift on Calendar View events."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.159",
+    "version": "3.3.160",
     "latestChanges": [
       "v3.3.158: Removed redundant bottom Step 2: Schedule button from Championship Signups tab",
       "v3.3.157: Updated Alliance Championship Auto-Fill to pull season dates directly from the website schedule database",
