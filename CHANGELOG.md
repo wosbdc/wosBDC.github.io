@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [3.3.161] - 2026-11-12
+- ⚔️ **Showdown Themes**: Schedule and Home automatically show Day 1–6 themes.
+
 ## [3.3.160] - 2026-11-12
 - 📅 **Calendar Sync**: Calendar View now reads website schedule database first.
 - 🕒 **Timezone Fix**: Fixed 1-day UTC date shift on Calendar View events.

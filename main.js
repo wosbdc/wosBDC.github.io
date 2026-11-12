@@ -31095,7 +31095,17 @@ window.getUnifiedScheduleEvents = () => {
       const durationMs = exactEnd.getTime() - exactStart.getTime();
 
       const displayUtcStr = `${String(startT.h).padStart(2,'0')}:${String(startT.m).padStart(2,'0')}${ev.endUtcStr ? ' - ' + ev.endUtcStr : ''} UTC`;
-      addEvent(ev.eventName, exactStart, exactEnd, durationMs, displayUtcStr, ev.pdtVal, ev.emoji, ev.dateStr);
+      const startIsoForLabel = (ev.isoDate && /^\d{4}-\d{2}-\d{2}$/.test(ev.isoDate))
+        ? ev.isoDate
+        : `${exactStart.getUTCFullYear()}-${String(exactStart.getUTCMonth() + 1).padStart(2, '0')}-${String(exactStart.getUTCDate()).padStart(2, '0')}`;
+      const todayUtcIsoForLabel = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
+      const targetIsoForLabel = (now >= exactStart && now <= exactEnd) ? todayUtcIsoForLabel : startIsoForLabel;
+      const formattedEventName = (typeof window.formatShowdownEventTitle === 'function')
+        ? window.formatShowdownEventTitle(ev.eventName, startIsoForLabel, targetIsoForLabel)
+        : ev.eventName;
+      const isShowdownEv = String(ev.eventName || '').toLowerCase().includes('showdown');
+      const finalEvEmoji = (isShowdownEv && (!ev.emoji || ev.emoji === '✨')) ? '⚔️' : ev.emoji;
+      addEvent(formattedEventName, exactStart, exactEnd, durationMs, displayUtcStr, ev.pdtVal, finalEvEmoji, ev.dateStr);
     });
   }
 
@@ -47258,6 +47268,10 @@ window.resetBearTrapEvent = async () => {
                 if (ev.isoDate && /^\d{4}-\d{2}-\d{2}$/.test(ev.isoDate)) {
                   const sIso = ev.isoDate;
                   const eIso = (ev.endIsoDate && /^\d{4}-\d{2}-\d{2}$/.test(ev.endIsoDate)) ? ev.endIsoDate : sIso;
+                  const isShowdown = String(ev.eventName || '').toLowerCase().includes('showdown');
+                  if (isShowdown && ev.endUtcStr === '00:00' && eIso > sIso) {
+                    return dayIso >= sIso && dayIso < eIso;
+                  }
                   return dayIso >= sIso && dayIso <= eIso;
                 }
                 const evDate = window.parseScheduleEventDate(ev.dateStr);
@@ -47276,7 +47290,13 @@ window.resetBearTrapEvent = async () => {
                     if (endT) tStr += ` - ${String(endT.h).padStart(2, '0')}:${String(endT.m).padStart(2, '0')}`;
                     tStr += ' UTC)';
                   }
-                  return `${ev.emoji || '✨'} ${ev.eventName}${tStr}`;
+                  const isShowdown = String(ev.eventName || '').toLowerCase().includes('showdown');
+                  const evStartIso = (ev.isoDate && /^\d{4}-\d{2}-\d{2}$/.test(ev.isoDate)) ? ev.isoDate : dayIso;
+                  const displayTitle = (typeof window.formatShowdownEventTitle === 'function')
+                    ? window.formatShowdownEventTitle(ev.eventName, evStartIso, dayIso)
+                    : ev.eventName;
+                  const evEmoji = (isShowdown && (!ev.emoji || ev.emoji === '✨')) ? '⚔️' : (ev.emoji || '✨');
+                  return `${evEmoji} ${displayTitle}${tStr}`;
                 });
               }
 
@@ -48141,6 +48161,34 @@ window.expandRecurringCatalogOccurrences = (startDate, endDate, repeatDays, toda
     });
   }
   return out;
+};
+
+window.formatShowdownEventTitle = (eventName, startIso, targetIso = '') => {
+  const cleanName = String(eventName || '').trim();
+  if (!cleanName || !cleanName.toLowerCase().includes('showdown')) return cleanName;
+  const sIso = String(startIso || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(sIso)) return cleanName;
+  const tIso = (targetIso && /^\d{4}-\d{2}-\d{2}$/.test(targetIso)) ? targetIso : sIso;
+  const parseMs = (iso) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  const dayNum = Math.round((parseMs(tIso) - parseMs(sIso)) / 86400000) + 1;
+  const titlesMap = (typeof window !== 'undefined' && window.SHOWDOWN_DAY_TITLES) || {
+    1: 'Rise of the city',
+    2: 'Hero Development',
+    3: 'Pet Training',
+    4: 'Gear Enhancement',
+    5: 'Trade Dominion',
+    6: 'Full-Scale Competition'
+  };
+  if (dayNum >= 1 && dayNum <= 6 && titlesMap[dayNum]) {
+    return `${cleanName} — Day ${dayNum}: ${titlesMap[dayNum]}`;
+  }
+  if (dayNum === 7) {
+    return `${cleanName} — Results & Wrap-Up`;
+  }
+  return cleanName;
 };
 
 window.formatDataSheetDateISO = (rawVal) => {

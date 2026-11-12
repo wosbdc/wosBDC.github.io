@@ -46,6 +46,7 @@ function runStaticAndUnitVerification() {
   assert(code.includes('window.computeScheduleLiveFromRewardsCatalog ='), 'Must define computeScheduleLiveFromRewardsCatalog');
   assert(code.includes('window.advanceRecurringDates ='), 'Must define advanceRecurringDates');
   assert(code.includes('window.expandRecurringCatalogOccurrences ='), 'Must define expandRecurringCatalogOccurrences');
+  assert(code.includes('window.formatShowdownEventTitle ='), 'Must define formatShowdownEventTitle');
   assert(code.includes('window.fetchRewardsEditorCatalog ='), 'Must define fetchRewardsEditorCatalog');
   assert(code.includes('window.syncRewardsCatalogChangeEverywhere ='), 'Must define syncRewardsCatalogChangeEverywhere');
   assert(code.includes('window.sanitizeFirebaseObject ='), 'Must define sanitizeFirebaseObject for RTDB safety');
@@ -172,6 +173,13 @@ function runStaticAndUnitVerification() {
   assert.strictEqual(recComputed.events.length, 4, 'Recurring 48h Bear Trap must expand to 4 upcoming occurrences in 8-day window');
   assert.strictEqual(recComputed.catalogItems[0].status, 'active', 'Recurring Bear Trap catalog item must auto-advance and stay active');
   console.log('  ✅ Recurring / Auto-Reschedule roll-forward & 8-day expansion unit tests verified');
+
+  // Test Automatic Showdown Day 1-6 Phase Titles
+  assert.strictEqual(sandbox.window.formatShowdownEventTitle('Alliance ShowDown', '2026-11-09', '2026-11-09'), 'Alliance ShowDown — Day 1: Rise of the city');
+  assert.strictEqual(sandbox.window.formatShowdownEventTitle('Alliance ShowDown', '2026-11-09', '2026-11-12'), 'Alliance ShowDown — Day 4: Gear Enhancement');
+  assert.strictEqual(sandbox.window.formatShowdownEventTitle('Alliance ShowDown', '2026-11-09', '2026-11-14'), 'Alliance ShowDown — Day 6: Full-Scale Competition');
+  assert.strictEqual(sandbox.window.formatShowdownEventTitle('Bear Trap', '2026-11-09', '2026-11-12'), 'Bear Trap');
+  console.log('  ✅ Automatic Showdown Day 1–6 theme title resolution verified');
 }
 
 async function runHeadlessBrowserVerification() {
@@ -475,6 +483,33 @@ async function runHeadlessBrowserVerification() {
     );
     assert.strictEqual(calendarBtCount, 4, `Calendar View must render 4 Bear Trap entries from schedule_live, got ${calendarBtCount}`);
     console.log('  ✅ Calendar View verified: renders all 4 recurring Bear Trap dates from website database!');
+
+    // Verify Calendar View renders automatic Showdown Day 1–6 theme titles
+    const sdStartObj = new Date();
+    sdStartObj.setDate(sdStartObj.getDate() - 3);
+    const sdEndObj = new Date();
+    sdEndObj.setDate(sdEndObj.getDate() + 3);
+    const fmtLocalIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const sdStartIso = fmtLocalIso(sdStartObj);
+    const sdEndIso = fmtLocalIso(sdEndObj);
+    await page.evaluate(async (sIso, eIso) => {
+      window._cachedScheduleLive.events.push({
+        id: 'ev_sd_test',
+        row: 22,
+        eventName: 'Alliance ShowDown',
+        isoDate: sIso,
+        endIsoDate: eIso,
+        utcStr: '00:00',
+        endUtcStr: '00:00',
+        emoji: '✨'
+      });
+      await window.views.schedule();
+    }, sdStartIso, sdEndIso);
+    const calText = await page.$eval('#schedule-content', el => el.textContent);
+    assert(calText.includes('Alliance ShowDown — Day 4: Gear Enhancement'), 'Calendar View must display Day 4: Gear Enhancement for today');
+    assert(calText.includes('Alliance ShowDown — Day 5: Trade Dominion'), 'Calendar View must display Day 5: Trade Dominion for tomorrow');
+    assert(calText.includes('Alliance ShowDown — Day 6: Full-Scale Competition'), 'Calendar View must display Day 6: Full-Scale Competition');
+    console.log('  ✅ Calendar View Showdown Day 4–6 theme titles verified in live DOM!');
 
     // Responsive Layout Audit across 375px, 768px, 1280px with modal open
     const viewports = [
