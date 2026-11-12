@@ -506,10 +506,11 @@ async function runHeadlessBrowserVerification() {
       await window.views.schedule();
     }, sdStartIso, sdEndIso);
     const calText = await page.$eval('#schedule-content', el => el.textContent);
-    assert(calText.includes('Alliance ShowDown — Day 4: Gear Enhancement'), 'Calendar View must display Day 4: Gear Enhancement for today');
-    assert(calText.includes('Alliance ShowDown — Day 5: Trade Dominion'), 'Calendar View must display Day 5: Trade Dominion for tomorrow');
-    assert(calText.includes('Alliance ShowDown — Day 6: Full-Scale Competition'), 'Calendar View must display Day 6: Full-Scale Competition');
-    console.log('  ✅ Calendar View Showdown Day 4–6 theme titles verified in live DOM!');
+    assert(calText.includes('Alliance ShowDown') && calText.includes('Day 4') && calText.includes('Gear Enhancement'), 'Calendar View must display Day 4 + Gear Enhancement for today');
+    assert(calText.includes('Day 5') && calText.includes('Trade Dominion'), 'Calendar View must display Day 5 + Trade Dominion for tomorrow');
+    assert(calText.includes('Day 6') && calText.includes('Full-Scale Competition'), 'Calendar View must display Day 6 + Full-Scale Competition');
+    assert(!calText.includes('00:00 - 00:00 UTC'), 'Calendar View must not display messy (00:00 - 00:00 UTC) text');
+    console.log('  ✅ Calendar View Showdown Day 4–6 clean 2-line layout verified in live DOM!');
 
     // Responsive Layout Audit across 375px, 768px, 1280px with modal open
     const viewports = [

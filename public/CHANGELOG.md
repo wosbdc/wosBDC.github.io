@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [3.3.162] - 2026-11-12
+- ✨ **Clean Calendar Cards**: Formatted Calendar View events into crisp 2-line rows.
+
 ## [3.3.161] - 2026-11-12
 - ⚔️ **Showdown Themes**: Schedule and Home automatically show Day 1–6 themes.
 

@@ -47284,11 +47284,12 @@ window.resetBearTrapEvent = async () => {
                 categories['Events'] = matchingEvents.map(ev => {
                   const startT = window.parseScheduleEventTime(ev.utcStr, ev.pdtVal);
                   const endT = window.parseScheduleEventTime(ev.endUtcStr, ev.endPdtVal);
-                  let tStr = '';
+                  let timeRange = '';
                   if (startT) {
-                    tStr = ` (${String(startT.h).padStart(2, '0')}:${String(startT.m).padStart(2, '0')}`;
-                    if (endT) tStr += ` - ${String(endT.h).padStart(2, '0')}:${String(endT.m).padStart(2, '0')}`;
-                    tStr += ' UTC)';
+                    const sStr = `${String(startT.h).padStart(2, '0')}:${String(startT.m).padStart(2, '0')}`;
+                    const eStr = endT ? `${String(endT.h).padStart(2, '0')}:${String(endT.m).padStart(2, '0')}` : '';
+                    const isAllDayZero = (sStr === '00:00' && (!eStr || eStr === '00:00' || eStr === '24:00'));
+                    timeRange = isAllDayZero ? 'All Day (UTC)' : (eStr ? `${sStr} – ${eStr} UTC` : `${sStr} UTC`);
                   }
                   const isShowdown = String(ev.eventName || '').toLowerCase().includes('showdown');
                   const evStartIso = (ev.isoDate && /^\d{4}-\d{2}-\d{2}$/.test(ev.isoDate)) ? ev.isoDate : dayIso;
@@ -47296,7 +47297,14 @@ window.resetBearTrapEvent = async () => {
                     ? window.formatShowdownEventTitle(ev.eventName, evStartIso, dayIso)
                     : ev.eventName;
                   const evEmoji = (isShowdown && (!ev.emoji || ev.emoji === '✨')) ? '⚔️' : (ev.emoji || '✨');
-                  return `${evEmoji} ${displayTitle}${tStr}`;
+                  return {
+                    isStructuredEvent: true,
+                    emoji: evEmoji,
+                    rawTitle: ev.eventName,
+                    displayTitle,
+                    timeRange,
+                    startUtcForRem: startT ? `${String(startT.h).padStart(2, '0')}:${String(startT.m).padStart(2, '0')}` : ''
+                  };
                 });
               }
 
@@ -47397,13 +47405,17 @@ window.resetBearTrapEvent = async () => {
               <ul style="list-style:none; padding:0; margin:0; margin-bottom:12px;">`;
 
             day.categories[cat].forEach((ev) => {
-              let isBt = ev.includes('Bear Trap') || ev.includes('🪤') || ev.includes('🐻');
+              const isStruct = ev && typeof ev === 'object' && ev.isStructuredEvent;
+              const evStr = isStruct ? ev.displayTitle : String(ev || '');
+              let isBt = evStr.includes('Bear Trap') || evStr.includes('🪤') || evStr.includes('🐻');
               let isSignupCat = catLower.includes('signup') || catLower.includes('sign-up') || catLower.includes('sign up');
-              let bullet = isSignupCat ? '<span style="color:#10b981; font-weight:bold; font-size:11px;">🟢</span>' : (isBt ? '🪤' : '✨');
+              let bullet = isStruct ? ev.emoji : (isSignupCat ? '<span style="color:#10b981; font-weight:bold; font-size:11px;">🟢</span>' : (isBt ? '🪤' : '✨'));
               
-              let timeMatch = ev.match(/\((\d{1,2}:\d{2})/);
+              let timeMatch = isStruct ? (ev.startUtcForRem ? [null, ev.startUtcForRem] : null) : evStr.match(/\((\d{1,2}:\d{2})/);
               let calRemBtn = '';
-              const evCleanName = ev.replace(/\([^\)]*\)/g, '').replace(/^[^\w\s]+/g, '').trim();
+              const evCleanName = isStruct
+                ? String(ev.rawTitle || ev.displayTitle || '').trim()
+                : evStr.replace(/\([^\)]*\)/g, '').replace(/^[^\w\s]+/g, '').trim();
 
               if (timeMatch && day.dateObj) {
                 const parts = timeMatch[1].split(':');
@@ -47412,18 +47424,43 @@ window.resetBearTrapEvent = async () => {
                 if (evStart.getTime() > Date.now()) {
                   const isRemSet = (typeof window.isEventReminderSet === 'function') && window.isEventReminderSet(evCleanName, evStart.getTime());
                   calRemBtn = `
-                    <button onclick="window.openEventReminderModal('${escapeHTML(evCleanName)}', ${evStart.getTime()}, '${isBt ? '🪤' : '✨'}', '${escapeHTML(day.dateStr)}', '${timeMatch[1]} UTC')" style="background:${isRemSet ? 'rgba(16,185,129,0.2)' : 'rgba(56,189,248,0.12)'}; border:1px solid ${isRemSet ? '#10b981' : 'rgba(56,189,248,0.35)'}; color:${isRemSet ? '#10b981' : '#38bdf8'}; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:2px; margin-left:auto;" title="Set Event Reminder">
+                    <button onclick="event.stopPropagation(); window.openEventReminderModal('${escapeHTML(evCleanName)}', ${evStart.getTime()}, '${isStruct ? ev.emoji : (isBt ? '🪤' : '✨')}', '${escapeHTML(day.dateStr)}', '${timeMatch[1]} UTC')" style="background:${isRemSet ? 'rgba(16,185,129,0.2)' : 'rgba(56,189,248,0.12)'}; border:1px solid ${isRemSet ? '#10b981' : 'rgba(56,189,248,0.35)'}; color:${isRemSet ? '#10b981' : '#38bdf8'}; padding:3px 7px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:2px; margin-left:auto; flex-shrink:0;" title="Set Event Reminder">
                       <span>${isRemSet ? '✓' : '🔔'}</span>
                     </button>
                   `;
                 }
               }
 
-              html += `<li onclick="if(window.showToast) window.showToast('📅 &quot;${escapeHTML(evCleanName)}&quot; is listed for ${escapeHTML(day.dateStr)}.', 'info');" style="padding:6px 0; font-size:13px; color:var(--text-main); display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;" title="Click for details">
-                         <div style="display:flex; align-items:center; gap:8px;">
-                           <span>${bullet}</span>
-                           <span>${ev}</span>
-                         </div>
+              let rowBodyHtml = '';
+              if (isStruct) {
+                const phaseMatch = evStr.match(/^(.*?)\s+—\s+(Day\s+\d+|Results[^:]*):\s*(.*)$/i);
+                const mainTitle = phaseMatch ? phaseMatch[1].trim() : evStr;
+                const dayBadge = phaseMatch ? phaseMatch[2].trim() : '';
+                const subTheme = phaseMatch ? phaseMatch[3].trim() : '';
+                const subMeta = [subTheme, ev.timeRange].filter(Boolean).join(' • ');
+                rowBodyHtml = `
+                  <div style="display:flex; align-items:flex-start; gap:8px; min-width:0; flex:1;">
+                    <span style="font-size:14px; line-height:1.3; flex-shrink:0;">${bullet}</span>
+                    <div style="min-width:0; flex:1;">
+                      <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <span style="font-weight:700; font-size:13px; color:var(--text-main); line-height:1.3;">${escapeHTML(mainTitle)}</span>
+                        ${dayBadge ? `<span style="font-size:10px; font-weight:800; padding:1px 6px; border-radius:999px; background:rgba(56,189,248,0.16); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; white-space:nowrap;">${escapeHTML(dayBadge)}</span>` : ''}
+                      </div>
+                      ${subMeta ? `<div style="font-size:11.5px; color:${subTheme ? '#a5b4fc' : 'var(--text-muted)'}; font-weight:600; margin-top:2px; line-height:1.3;">${escapeHTML(subMeta)}</div>` : ''}
+                    </div>
+                  </div>
+                `;
+              } else {
+                rowBodyHtml = `
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span>${bullet}</span>
+                    <span>${evStr}</span>
+                  </div>
+                `;
+              }
+
+              html += `<li onclick="if(window.showToast) window.showToast('📅 &quot;${escapeHTML(evCleanName)}&quot; is listed for ${escapeHTML(day.dateStr)}.', 'info');" style="padding:7px 0; font-size:13px; color:var(--text-main); display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;" title="Click for details">
+                         ${rowBodyHtml}
                          ${calRemBtn}
                        </li>`;
             });

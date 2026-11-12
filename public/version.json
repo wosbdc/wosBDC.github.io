@@ -1,12 +1,12 @@
 {
-  "version": "3.3.161",
+  "version": "3.3.162",
   "releaseDate": "2026-11-12",
-  "title": "What's New in v3.3.161",
+  "title": "What's New in v3.3.162",
   "notes": [
-    "Added automatic Day 1-6 Alliance Showdown theme titles across Schedule and Home."
+    "Cleaned up Calendar View event cards into structured 2-line rows with Day pills."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.161",
+    "version": "3.3.162",
     "latestChanges": [
       "v3.3.158: Removed redundant bottom Step 2: Schedule button from Championship Signups tab",
       "v3.3.157: Updated Alliance Championship Auto-Fill to pull season dates directly from the website schedule database",
