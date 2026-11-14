@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [3.3.164] - 2026-11-13
+- 🤖 **Auto-Expanding Bot Radar**: Automatically displays new bot accounts added in BotHub.
+
 ## [3.3.163] - 2026-11-12
 - 🧹 **Zero Card Clutter**: Removed inline times from Calendar View cards.
 - 🔍 **Event Details Popup**: Click any calendar event for times and reminders.

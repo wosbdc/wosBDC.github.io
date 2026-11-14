@@ -1,12 +1,12 @@
 {
-  "version": "3.3.163",
-  "releaseDate": "2026-11-12",
-  "title": "What's New in v3.3.163",
+  "version": "3.3.164",
+  "releaseDate": "2026-11-13",
+  "title": "What's New in v3.3.164",
   "notes": [
-    "Removed inline times from Calendar View cards and added a click-to-view Event Details Popup."
+    "Bot Fleet Radar now auto-adds new bot accounts from BotHub."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.163",
+    "version": "3.3.164",
     "latestChanges": [
       "v3.3.158: Removed redundant bottom Step 2: Schedule button from Championship Signups tab",
       "v3.3.157: Updated Alliance Championship Auto-Fill to pull season dates directly from the website schedule database",

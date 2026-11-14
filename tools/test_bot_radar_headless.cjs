@@ -624,6 +624,26 @@ server.listen(PORT, async () => {
       const busyPillH = document.getElementById('bot-fleet-busy-count')?.textContent?.trim();
       const safePillH = document.getElementById('bot-fleet-safe-count')?.textContent?.trim();
 
+      // Step I: Auto-Expanding Fleet for Newly Discovered Instance 17+ Bot (vs Placeholder Rejection)
+      const rejectsBot17 = window.isAllianceBotOrActive({ name: 'Bot 17', instance: 17 }) === false;
+      const rejectsGatekeeper = window.isAllianceBotOrActive({ name: 'GateKeeper', instance: 19 }) === false;
+      const acceptsFrostWalker = window.isAllianceBotOrActive({ name: 'FrostWalker', instance: 17, status: 'STANDBY' }) === true;
+      window.latestBotStatus = {
+        ...window.latestBotStatus,
+        fleet: [
+          ...window.latestBotStatus.fleet,
+          { name: 'FrostWalker', instance: 17, status: 'STANDBY', detail: 'Idle / Standby' },
+          { name: 'Bot 18', instance: 18, status: 'STANDBY', detail: 'Placeholder' }
+        ]
+      };
+      window.updateBotOperationsRadarDom();
+      const fleetItemsI = document.querySelectorAll('.bot-fleet-item');
+      const countI = fleetItemsI.length;
+      const frostCardI = document.getElementById('bot-fleet-item-frostwalker');
+      const frostInstI = frostCardI?.querySelector('.bot-fleet-inst')?.textContent?.trim();
+      const frostNameI = frostCardI?.querySelector('.bot-fleet-name')?.textContent?.trim();
+      const hasBot18I = Array.from(fleetItemsI).some(el => el.textContent.includes('Bot 18'));
+
       return {
         accountA,
         runnerDisplayA,
@@ -694,7 +714,14 @@ server.listen(PORT, async () => {
         safePillH,
         creampuffActivityH,
         bisquickActivityH,
-        sentinelActivityH
+        sentinelActivityH,
+        rejectsBot17,
+        rejectsGatekeeper,
+        acceptsFrostWalker,
+        countI,
+        frostInstI,
+        frostNameI,
+        hasBot18I
       };
     });
 
@@ -790,6 +817,12 @@ server.listen(PORT, async () => {
     }
     if (!mutationResult.sentinelActivityH || !mutationResult.sentinelActivityH.includes('2h ago')) {
       throw new Error(`Assertion Failed: Sentinel Frost must display relative elapsed time '2h ago'! Found: "${mutationResult.sentinelActivityH}"`);
+    }
+    if (!mutationResult.rejectsBot17 || !mutationResult.rejectsGatekeeper || !mutationResult.acceptsFrostWalker) {
+      throw new Error(`Assertion Failed: Instance 17+ filter checks failed! Result: ${JSON.stringify({ rejectsBot17: mutationResult.rejectsBot17, rejectsGatekeeper: mutationResult.rejectsGatekeeper, acceptsFrostWalker: mutationResult.acceptsFrostWalker })}`);
+    }
+    if (mutationResult.countI !== 18 || mutationResult.frostNameI !== 'FrostWalker' || mutationResult.frostInstI !== 'Inst 17' || mutationResult.hasBot18I) {
+      throw new Error(`Assertion Failed: Dynamic Instance 17 bot rendering failed! Result: ${JSON.stringify({ countI: mutationResult.countI, frostNameI: mutationResult.frostNameI, frostInstI: mutationResult.frostInstI, hasBot18I: mutationResult.hasBot18I })}`);
     }
     console.log(`  ✅ Verified: Fleet Login Safety Matrix dynamically responds to bot rotation:`);
     console.log(`     1. ${mutationResult.accountA} -> Occupied: ${mutationResult.angryTagA}, Safe: ${mutationResult.bisquickTagA} (${mutationResult.busyPillA}, ${mutationResult.safePillA})`);

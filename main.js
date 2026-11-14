@@ -7452,28 +7452,37 @@ window.matchesAccount = (accStr, b) => {
   return false;
 };
 
+window.normalizeDynamicBotEntry = (f) => {
+  if (!f || typeof f !== 'object') return f;
+  const cleanName = String(f.name || '').trim();
+  const normId = f.id || cleanName.toLowerCase().replace(/[^a-z0-9]/g, '') || (f.instance !== undefined ? `inst${f.instance}` : 'bot');
+  const normInst = f.inst || (f.instance !== undefined && f.instance !== null ? `Inst ${f.instance}` : '');
+  return { ...f, name: cleanName, id: normId, inst: normInst };
+};
+
 window.isAllianceBotOrActive = (bot, activeAccount = '', cooldownAccount = '') => {
   if (!bot) return false;
   const name = (bot.name || '').trim();
   const shortName = (bot.short || '').trim();
   const inst = (bot.instance !== undefined && bot.instance !== null) ? Number(bot.instance) : null;
+  const rawStatus = (bot.status || '').toUpperCase();
 
-  // Explicitly purge generic placeholder bot names (e.g. "Bot 17", "Bot 18", "Bot 19", instances 17+)
-  if (/^Bot\s*(?:17|18|\d{2,})$/i.test(name)) return false;
-  if (/^Bot\s*\d+$/i.test(name) && inst !== 3) return false;
-  if (inst !== null && inst > 16) return false;
+  // Strictly block Disabled bots, GateKeeper (Inst 19), and generic placeholder names (e.g. "Bot 17", "LDPlayer-17", "NewPlayer")
+  if (rawStatus === 'DISABLED' || inst === 19 || /gatekeeper|disabled/i.test(name)) return false;
+  if (!name || /^(?:Bot\s*\d+|LDPlayer(?:-\d+)?|NewPlayer)$/i.test(name)) {
+    if (!(inst === 3 && /^Bot\s*3$/i.test(name))) return false;
+  }
 
   // Always keep any bot currently executing duty or in cooldown hold
-  const rawStatus = (bot.status || '').toUpperCase();
   if (rawStatus === 'ACTIVE' || rawStatus === 'COOLDOWN') return true;
   if (window.matchesAccount(activeAccount, bot) || window.matchesAccount(cooldownAccount, bot)) return true;
 
-  // Real Alliance Fleet instances: 0 through 16 (17 total accounts)
-  if (inst !== null) {
-    return inst >= 0 && inst <= 16;
+  // Real named Alliance Fleet instances (0..18, 20+, excluding GateKeeper Inst 19)
+  if (inst !== null && !Number.isNaN(inst)) {
+    return inst >= 0 && inst !== 19;
   }
 
-  // Recognized Alliance Fleet names / stems
+  // Recognized Alliance Fleet names / stems when instance is absent
   const lower = `${name} ${shortName}`.toLowerCase();
   const ALLIANCE_KEYWORDS = [
     'briandcox', 'guardian', 'sentinel', 'licker',
@@ -7508,7 +7517,7 @@ onValue(ref(db, 'bot_status'), (snap) => {
             (m.instance !== undefined && f.instance !== undefined && Number(m.instance) === Number(f.instance))
           );
           if (!exists) {
-            window.ALLIANCE_BOT_ROSTER.push(f);
+            window.ALLIANCE_BOT_ROSTER.push(window.normalizeDynamicBotEntry(f));
           }
         }
         if (f && f.name && (f.lastActiveEpoch || f.lastActiveTime) && typeof window.recordBotLastActiveTime === 'function') {
@@ -7722,7 +7731,7 @@ window.getBotFleetSafetyHtml = () => {
         (m.instance !== undefined && f.instance !== undefined && Number(m.instance) === Number(f.instance))
       );
       if (!exists) {
-        mergedRoster.push(f);
+        mergedRoster.push(window.normalizeDynamicBotEntry(f));
       }
     }
   });
