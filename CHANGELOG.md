@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [3.3.165] - 2026-11-16
+- ⚔️ **Exact Scout Level**: Enter any 0–25 level directly in Mercenary Tracker.
+
 ## [3.3.164] - 2026-11-13
 - 🤖 **Auto-Expanding Bot Radar**: Automatically displays new bot accounts added in BotHub.
 

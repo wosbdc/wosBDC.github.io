@@ -342,6 +342,49 @@ async function runHeadlessBrowserTests() {
     assert.strictEqual(visibleAllRows, 6, 'All filter must show all 6 members');
     console.log('  ✅ Quick Filter Pills (All | Needs Push | Completed 25) verified.');
 
+    // 7b. Test Exact Scout Level Input (e.g., 9 between 5 and 10)
+    const exactLvlState = await page.evaluate(async () => {
+      const row = document.querySelector('.merc-row');
+      const input = row ? row.querySelector('.merc-exact-lvl-input') : null;
+      if (!row || !input) return { hasInput: false };
+      const origUpdate = window.updateMercenaryScoutLevel;
+      const recordedCalls = [];
+      window.updateMercenaryScoutLevel = async (gid, lvl) => {
+        recordedCalls.push({ gid, lvl });
+        return true;
+      };
+      try {
+        input.value = '9';
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 30));
+        const lvlAfterInput = row.getAttribute('data-scout-level');
+        const signedAfterInput = row.getAttribute('data-signed');
+        const activePillsAfter9 = row.querySelectorAll('.merc-milestone-pill.active').length;
+        const pill15 = row.querySelector('.merc-milestone-pill[data-level="15"]');
+        if (pill15) pill15.click();
+        await new Promise(r => setTimeout(r, 30));
+        return {
+          hasInput: true,
+          lvlAfterInput,
+          signedAfterInput,
+          activePillsAfter9,
+          inputValAfterPill15: input.value,
+          lvlAfterPill15: row.getAttribute('data-scout-level'),
+          recordedCalls
+        };
+      } finally {
+        window.updateMercenaryScoutLevel = origUpdate;
+      }
+    });
+    assert(exactLvlState.hasInput, 'Each mercenary row must render .merc-exact-lvl-input');
+    assert.strictEqual(exactLvlState.lvlAfterInput, '9', 'Entering 9 must update data-scout-level to 9');
+    assert.strictEqual(exactLvlState.signedAfterInput, 'no', 'Level 9 must remain Needs Push (data-signed="no")');
+    assert.strictEqual(exactLvlState.activePillsAfter9, 0, 'No milestone pill should be falsely active when level is 9');
+    assert.strictEqual(exactLvlState.inputValAfterPill15, '15', 'Clicking pill 15 must sync .merc-exact-lvl-input to 15');
+    assert.strictEqual(exactLvlState.lvlAfterPill15, '15', 'Clicking pill 15 must update data-scout-level to 15');
+    assert.strictEqual(exactLvlState.recordedCalls[0]?.lvl, 9, 'Entering 9 must call updateMercenaryScoutLevel with 9');
+    console.log('  ✅ Exact Scout Level input (0–25, e.g. 9) and bidirectional pill sync verified.');
+
     // 8. Test Public View views.mercenary()
     console.log('  Testing Public View views.mercenary()...');
     await page.evaluate(async () => {

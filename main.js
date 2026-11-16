@@ -4952,12 +4952,25 @@ window.onMercScoutLevelSelect = async (gameId, level, clickedBtn) => {
     if (!row) return;
 
     const prevLevel = parseInt(row.getAttribute('data-scout-level')) || 0;
-    const targetLevel = parseInt(level) || 0;
+    const rawParsed = parseInt(level, 10);
+    const targetLevel = Number.isFinite(rawParsed) ? Math.max(0, Math.min(25, rawParsed)) : 0;
     const willBeDone = (targetLevel >= 25);
 
-    // Optimistic UI updates on row pills
+    // Optimistic UI updates on row pills & exact level input
     row.setAttribute('data-scout-level', targetLevel);
     row.setAttribute('data-signed', willBeDone ? 'yes' : 'no');
+
+    const exactInput = row.querySelector('.merc-exact-lvl-input');
+    if (exactInput) {
+        exactInput.value = targetLevel;
+        const isInBetween = targetLevel > 0 && targetLevel < 25 && targetLevel % 5 !== 0;
+        exactInput.style.color = isInBetween ? '#60a5fa' : (targetLevel >= 25 ? '#facc15' : 'var(--text-main)');
+        const wrapLabel = exactInput.closest('label');
+        if (wrapLabel) {
+            wrapLabel.style.borderColor = isInBetween ? '#3b82f6' : 'var(--border)';
+            wrapLabel.style.boxShadow = isInBetween ? '0 0 0 1px rgba(59,130,246,0.35)' : 'none';
+        }
+    }
 
     const pills = row.querySelectorAll('.merc-milestone-pill');
     pills.forEach(p => {
@@ -4997,6 +5010,7 @@ window.onMercScoutLevelSelect = async (gameId, level, clickedBtn) => {
         // Revert on write error
         row.setAttribute('data-scout-level', prevLevel);
         row.setAttribute('data-signed', prevLevel >= 25 ? 'yes' : 'no');
+        if (exactInput) exactInput.value = prevLevel;
         if (typeof window.updateMercStatsUI === 'function') window.updateMercStatsUI();
         if (typeof window.filterMercTable === 'function') window.filterMercTable();
         if (window.showToast) window.showToast("Failed to save scout level", "error");
@@ -40928,6 +40942,10 @@ const views = {
                                     </button>
                                   `;
                               }).join('')}
+                              <label style="display:inline-flex; align-items:center; gap:3px; margin-left:4px; padding:2px 6px; border-radius:6px; background:var(--bg-main); border:1px solid ${(scoutLvl > 0 && scoutLvl < 25 && scoutLvl % 5 !== 0) ? '#3b82f6' : 'var(--border)'}; box-shadow:${(scoutLvl > 0 && scoutLvl < 25 && scoutLvl % 5 !== 0) ? '0 0 0 1px rgba(59,130,246,0.35)' : 'none'};" title="Enter exact scout level (0–25)">
+                                <span style="font-size:10px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Lv</span>
+                                <input type="number" min="0" max="25" step="1" class="merc-exact-lvl-input" value="${scoutLvl}" aria-label="Exact Scout Level for ${escapeHTML(p.name)}" onchange="window.onMercScoutLevelSelect('${gIdStr}', this.value, this)" onkeydown="if(event.key==='Enter'){ event.preventDefault(); this.blur(); }" style="width:40px; background:transparent; border:none; outline:none; color:${(scoutLvl > 0 && scoutLvl < 25 && scoutLvl % 5 !== 0) ? '#60a5fa' : (scoutLvl >= 25 ? '#facc15' : 'var(--text-main)')}; font-weight:bold; font-size:12px; text-align:center; padding:2px 0;" />
+                              </label>
                             </div>
                           </td>
                         </tr>

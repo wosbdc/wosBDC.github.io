@@ -1,12 +1,12 @@
 {
-  "version": "3.3.164",
-  "releaseDate": "2026-11-13",
-  "title": "What's New in v3.3.164",
+  "version": "3.3.165",
+  "releaseDate": "2026-11-16",
+  "title": "What's New in v3.3.165",
   "notes": [
-    "Bot Fleet Radar now auto-adds new bot accounts from BotHub."
+    "Added exact Scout Level number input (0–25) to Mercenary Prestige Tracker rows."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.164",
+    "version": "3.3.165",
     "latestChanges": [
       "v3.3.158: Removed redundant bottom Step 2: Schedule button from Championship Signups tab",
       "v3.3.157: Updated Alliance Championship Auto-Fill to pull season dates directly from the website schedule database",
