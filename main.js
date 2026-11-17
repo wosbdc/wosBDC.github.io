@@ -7273,13 +7273,32 @@ window.getBotAutomationHealth = (data = window.latestBotStatus || {}) => {
   const now = Date.now();
   const status = (data.status || 'OFFLINE').toUpperCase();
   const ts = Number(data.timestamp || data.receivedAt || 0);
-  const isStale = Boolean(ts > 0 && (now - ts > 60000));
+  const elapsedSecs = ts > 0 ? Math.max(0, Math.floor((now - ts) / 1000)) : 0;
+
+  const isBlackout = Boolean(status === 'EVENT_BLACKOUT' || (data.stage && /event\s*blackout/i.test(data.stage)));
+  let cdSecs = Number(data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft !== null ? data.cooldownSecondsLeft : (data.secondsLeft || 0));
+  if (!cdSecs && Array.isArray(data.fleet)) {
+    data.fleet.forEach(f => {
+      const fSecs = Number(f.cooldownSecondsLeft !== undefined && f.cooldownSecondsLeft !== null ? f.cooldownSecondsLeft : (f.secondsLeft || 0));
+      if (((f.status || '').toUpperCase() === 'COOLDOWN' || fSecs > 0) && fSecs > cdSecs) {
+        cdSecs = fSecs;
+      }
+    });
+  }
+  const remCdSecs = Math.max(0, cdSecs - elapsedSecs);
+  const inScheduledRest = Boolean(
+    data.bothubOnline !== false &&
+    status !== 'OFFLINE' &&
+    ts > 0 &&
+    (isBlackout || ((status === 'COOLDOWN' || Boolean(data.isCooldownRunning) || cdSecs > 0) && remCdSecs > 0))
+  );
+
+  // During scheduled cooldown/blackout rest, BotHub intentionally pauses heartbeats until cooldown expires.
+  const isStale = Boolean(ts > 0 && !inScheduledRest && (now - ts > 60000));
   const isHeartbeatStale = isStale;
   
   const isHubOnline = Boolean(data.bothubOnline !== false && !isStale && ts > 0);
-  const isBlackout = Boolean(status === 'EVENT_BLACKOUT' || (data.stage && /event\s*blackout/i.test(data.stage)));
-  const cdSecs = Number(data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft !== null ? data.cooldownSecondsLeft : (data.secondsLeft || 0));
-  const isCooldownRest = Boolean(isHubOnline && !isBlackout && (status === 'COOLDOWN' || Boolean(data.isCooldownRunning && cdSecs > 0)));
+  const isCooldownRest = Boolean(isHubOnline && !isBlackout && (status === 'COOLDOWN' || Boolean(data.isCooldownRunning && cdSecs > 0) || remCdSecs > 0));
   const isServerOnline = Boolean(isHubOnline && data.serverOnline === true && status !== 'OFFLINE');
   // When an alliance event blackout OR managed master cooldown is active, BotHub intentionally parks bots.
   // The system is fully operational and executing scheduled rest/blackout protection.
@@ -7438,11 +7457,64 @@ window.getBotCooldownInfo = (data = window.latestBotStatus || {}) => {
     accountDisplay = 'All Bot Accounts';
   }
 
+  if (!rawCdAcc && rawAcc !== 'All Bot Accounts' && accountDisplay === 'All Bot Accounts' && !isBlackout && Array.isArray(data.fleet)) {
+    const cdBot = data.fleet.find(f => (f.status || '').toUpperCase() === 'COOLDOWN' && (Number(f.secondsLeft || f.cooldownSecondsLeft || 0) > 0));
+    if (cdBot && cdBot.name) {
+      accountDisplay = window.cleanBotRadarName(cdBot.name) || accountDisplay;
+    }
+  }
+
   return {
     eventName,
     subText,
     accountDisplay,
     isBlackout
+  };
+};
+
+/** Computes unified cooldown state, remaining seconds, and HH:MM:SS clock text for Bot Radar. */
+window.computeBotRadarCooldownState = (data = {}, health = {}, cdInfo = {}) => {
+  const status = (health.status || data.status || 'OFFLINE').toUpperCase();
+  const isOffline = Boolean(health.isOffline);
+  const fleetArr = Array.isArray(data.fleet) ? data.fleet : [];
+
+  let totalSecs = (data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft !== null)
+    ? Number(data.cooldownSecondsLeft)
+    : Number(data.secondsLeft || 0);
+
+  const fleetCdBots = fleetArr.filter(f => {
+    const fSecs = Number(f.cooldownSecondsLeft !== undefined && f.cooldownSecondsLeft !== null ? f.cooldownSecondsLeft : (f.secondsLeft || 0));
+    return (f.status || '').toUpperCase() === 'COOLDOWN' && fSecs > 0;
+  });
+  const fleetHasCooldown = fleetCdBots.length > 0;
+
+  if (!totalSecs && fleetHasCooldown) {
+    totalSecs = Math.max(...fleetCdBots.map(f => Number(f.cooldownSecondsLeft !== undefined && f.cooldownSecondsLeft !== null ? f.cooldownSecondsLeft : (f.secondsLeft || 0))));
+  }
+
+  const hasCooldown = !isOffline && (
+    totalSecs > 0 ||
+    (status === 'COOLDOWN' || status === 'EVENT_BLACKOUT') ||
+    Boolean(data.isCooldownRunning) ||
+    fleetHasCooldown ||
+    Boolean(cdInfo.isBlackout)
+  );
+
+  if (!hasCooldown) {
+    return { hasCooldown: false, remainingSecs: 0, timerText: '' };
+  }
+
+  const anchorTs = Number(data.receivedAt || data.timestamp || Date.now());
+  const elapsedSecs = Math.max(0, Math.floor((Date.now() - anchorTs) / 1000));
+  const rem = Math.max(0, totalSecs - elapsedSecs);
+  const h = Math.floor(rem / 3600).toString().padStart(2, '0');
+  const m = Math.floor((rem % 3600) / 60).toString().padStart(2, '0');
+  const s = (rem % 60).toString().padStart(2, '0');
+
+  return {
+    hasCooldown: true,
+    remainingSecs: rem,
+    timerText: `${h}:${m}:${s}`
   };
 };
 
@@ -7904,12 +7976,8 @@ window.getBotOperationsRadarHtml = () => {
     : { eventName: '', subText: 'Routine Rotation Rest', accountDisplay: 'All Bot Accounts', isBlackout: false };
 
   // Decouple Active Runner vs Cooldown Hold Queue
-  const hasCooldown = !isOffline && (
-    ((data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft > 0) ||
-     (data.secondsLeft > 0 && (status === 'COOLDOWN' || status === 'EVENT_BLACKOUT')) ||
-     Boolean(data.isCooldownRunning) ||
-     cdInfo.isBlackout)
-  );
+  const cdState = window.computeBotRadarCooldownState(data, health, cdInfo);
+  const hasCooldown = cdState.hasCooldown;
   const rawCdAccount = isOffline ? 'None' : (hasCooldown ? cdInfo.accountDisplay : 'None');
   const cdAccount = (rawCdAccount === 'None' || rawCdAccount === 'All Bot Accounts') ? rawCdAccount : window.cleanBotRadarName(rawCdAccount);
 
@@ -7957,25 +8025,8 @@ window.getBotOperationsRadarHtml = () => {
     </div>
   `;
 
-  let timerText = '';
-  let cdSubText = '';
-  
-  if (isOffline) {
-    timerText = '';
-    cdSubText = '';
-  } else if (hasCooldown) {
-    const totalSecs = (data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft !== null) ? data.cooldownSecondsLeft : (data.secondsLeft || 0);
-    const elapsedSecs = Math.floor((Date.now() - (data.receivedAt || Date.now())) / 1000);
-    const rem = Math.max(0, totalSecs - elapsedSecs);
-    const h = Math.floor(rem / 3600).toString().padStart(2, '0');
-    const m = Math.floor((rem % 3600) / 60).toString().padStart(2, '0');
-    const s = (rem % 60).toString().padStart(2, '0');
-    timerText = `${h}:${m}:${s}`;
-    cdSubText = cdInfo.subText;
-  } else {
-    timerText = '';
-    cdSubText = '';
-  }
+  const timerText = isOffline ? '' : cdState.timerText;
+  const cdSubText = (!isOffline && hasCooldown) ? cdInfo.subText : '';
 
   const cooldownPillText = isOffline ? 'OFFLINE' : (hasCooldown ? '● ON' : '⚪ IDLE');
   const cooldownPillClass = isOffline ? 'offline' : (hasCooldown ? 'cooldown' : 'idle');
@@ -8014,7 +8065,7 @@ window.getBotOperationsRadarHtml = () => {
         </div>
 
         <!-- Compartment 2: Cooldown Hold Queue -->
-        <div id="bot-radar-cooldown-compartment" class="bot-radar-compartment cooldown-card ${isOffline ? 'is-offline' : ''}" style="${(hasCooldown && !hasActiveRunner && !isOffline) ? '' : 'display:none;'}">
+        <div id="bot-radar-cooldown-compartment" class="bot-radar-compartment cooldown-card ${isOffline ? 'is-offline' : ''}" style="${(hasCooldown && !isOffline) ? '' : 'display:none;'}">
           <div class="bot-radar-comp-header">
             <span id="bot-radar-comp-badge-cooldown" class="bot-radar-comp-badge cooldown ${isOffline ? 'is-offline' : ''}">⏳ COOLDOWN</span>
             <div style="display:flex; align-items:center; gap:8px;">
@@ -8062,12 +8113,8 @@ window.updateBotOperationsRadarDom = () => {
     ? window.getBotCooldownInfo(data)
     : { eventName: '', subText: 'Routine Rotation Rest', accountDisplay: 'All Bot Accounts', isBlackout: false };
 
-  const hasCooldown = !isOffline && (
-    ((data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft > 0) ||
-     (data.secondsLeft > 0 && (status === 'COOLDOWN' || status === 'EVENT_BLACKOUT')) ||
-     Boolean(data.isCooldownRunning) ||
-     cdInfo.isBlackout)
-  );
+  const cdState = window.computeBotRadarCooldownState(data, health, cdInfo);
+  const hasCooldown = cdState.hasCooldown;
   const rawCdAccount = isOffline ? 'None' : (hasCooldown ? cdInfo.accountDisplay : 'None');
   const cdAccount = (rawCdAccount === 'None' || rawCdAccount === 'All Bot Accounts') ? rawCdAccount : window.cleanBotRadarName(rawCdAccount);
 
@@ -8128,7 +8175,7 @@ window.updateBotOperationsRadarDom = () => {
   if (accValEl) accValEl.textContent = activeRunner;
 
   const showRunner = hasActiveRunner || !hasCooldown;
-  const showCooldown = hasCooldown && !hasActiveRunner && !isOffline;
+  const showCooldown = hasCooldown && !isOffline;
 
   const runnerCompEl = document.getElementById('bot-radar-runner-compartment');
   if (runnerCompEl) {
@@ -8193,15 +8240,9 @@ window.updateBotOperationsRadarDom = () => {
     }
     cdSubText = '';
   } else if (hasCooldown) {
-    const totalSecs = (data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft !== null) ? data.cooldownSecondsLeft : (data.secondsLeft || 0);
-    const elapsedSecs = Math.floor((Date.now() - (data.receivedAt || Date.now())) / 1000);
-    const rem = Math.max(0, totalSecs - elapsedSecs);
-    const h = Math.floor(rem / 3600).toString().padStart(2, '0');
-    const m = Math.floor((rem % 3600) / 60).toString().padStart(2, '0');
-    const s = (rem % 60).toString().padStart(2, '0');
     if (clockEl) {
       clockEl.style.display = 'inline-block';
-      clockEl.textContent = `${h}:${m}:${s}`;
+      clockEl.textContent = cdState.timerText;
     }
     cdSubText = cdInfo.subText;
   } else {
@@ -8249,12 +8290,8 @@ if (!window._botRadarInterval) {
       ? window.getBotCooldownInfo(data)
       : { subText: 'Routine Rotation Rest', isBlackout: false };
 
-    const hasCooldown = !isOffline && (
-      ((data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft > 0) ||
-       (data.secondsLeft > 0 && ((data.status || '').toUpperCase() === 'COOLDOWN' || (data.status || '').toUpperCase() === 'EVENT_BLACKOUT')) ||
-       Boolean(data.isCooldownRunning) ||
-       cdInfo.isBlackout)
-    );
+    const cdState = window.computeBotRadarCooldownState(data, health, cdInfo);
+    const hasCooldown = cdState.hasCooldown;
 
     const cooldownPillText = isOffline ? 'OFFLINE' : (hasCooldown ? '● ON' : '⚪ IDLE');
     const cooldownPillClass = isOffline ? 'offline' : (hasCooldown ? 'cooldown' : 'idle');
@@ -8274,16 +8311,9 @@ if (!window._botRadarInterval) {
         if (cdSubEl.textContent !== '') cdSubEl.textContent = '';
       }
     } else if (hasCooldown) {
-      const totalSecs = (data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft !== null) ? data.cooldownSecondsLeft : (data.secondsLeft || 0);
-      const elapsedSecs = Math.floor((Date.now() - (data.receivedAt || Date.now())) / 1000);
-      const rem = Math.max(0, totalSecs - elapsedSecs);
-      const h = Math.floor(rem / 3600).toString().padStart(2, '0');
-      const m = Math.floor((rem % 3600) / 60).toString().padStart(2, '0');
-      const s = (rem % 60).toString().padStart(2, '0');
-      
       if (clockEl) {
         if (clockEl.style.display !== 'inline-block') clockEl.style.display = 'inline-block';
-        clockEl.textContent = `${h}:${m}:${s}`;
+        clockEl.textContent = cdState.timerText;
       }
       if (cdSubEl) {
         if (cdSubEl.style.display !== 'none') cdSubEl.style.display = 'none';
@@ -8305,7 +8335,7 @@ if (!window._botRadarInterval) {
     const runnerBadgeEl = document.getElementById('bot-radar-runner-badge');
     const hasActiveRunner = !isOffline && runnerBadgeEl && runnerBadgeEl.classList.contains('active');
     const showRunner = hasActiveRunner || !hasCooldown;
-    const showCooldown = hasCooldown && !hasActiveRunner && !isOffline;
+    const showCooldown = hasCooldown && !isOffline;
 
     if (runnerCompEl && runnerCompEl.style.display !== (showRunner ? '' : 'none')) {
       runnerCompEl.style.display = showRunner ? '' : 'none';
@@ -31053,7 +31083,10 @@ window.getUnifiedScheduleEvents = () => {
       // Skip past events that ended more than 24 hours ago
       if (exactEnd.getTime() < (now.getTime() - 24 * 3600000)) return;
 
-      const displayUtcStr = `${String(startT.h).padStart(2,'0')}:${String(startT.m).padStart(2,'0')}${endT ? ' - ' + String(endT.h).padStart(2,'0') + ':' + String(endT.m).padStart(2,'0') : ''} UTC`;
+      const sUtc = `${String(startT.h).padStart(2,'0')}:${String(startT.m).padStart(2,'0')}`;
+      const eUtc = endT ? `${String(endT.h).padStart(2,'0')}:${String(endT.m).padStart(2,'0')}` : '';
+      const isAllDayUtc = (sUtc === '00:00' && (!eUtc || eUtc === '00:00' || eUtc === '24:00'));
+      const displayUtcStr = isAllDayUtc ? 'All Day (UTC)' : `${sUtc}${eUtc ? ' - ' + eUtc : ''} UTC`;
       addEvent(title, exactStart, exactEnd, durationMs, displayUtcStr, startTimeVal, '✨', startDateVal);
     });
   }
@@ -31123,7 +31156,10 @@ window.getUnifiedScheduleEvents = () => {
 
       const durationMs = exactEnd.getTime() - exactStart.getTime();
 
-      const displayUtcStr = `${String(startT.h).padStart(2,'0')}:${String(startT.m).padStart(2,'0')}${ev.endUtcStr ? ' - ' + ev.endUtcStr : ''} UTC`;
+      const sUtc = `${String(startT.h).padStart(2,'0')}:${String(startT.m).padStart(2,'0')}`;
+      const eUtc = String(ev.endUtcStr || '').trim();
+      const isAllDayUtc = (sUtc === '00:00' && (!eUtc || eUtc === '00:00' || eUtc === '24:00'));
+      const displayUtcStr = isAllDayUtc ? 'All Day (UTC)' : `${sUtc}${eUtc ? ' - ' + eUtc : ''} UTC`;
       const startIsoForLabel = (ev.isoDate && /^\d{4}-\d{2}-\d{2}$/.test(ev.isoDate))
         ? ev.isoDate
         : `${exactStart.getUTCFullYear()}-${String(exactStart.getUTCMonth() + 1).padStart(2, '0')}-${String(exactStart.getUTCDate()).padStart(2, '0')}`;

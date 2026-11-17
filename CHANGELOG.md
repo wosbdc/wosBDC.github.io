@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.168] - 2026-11-17
+- ⏳ **Cooldown Timer**: Restored countdown clock alongside active bots.
+- 🗓️ **All-Day Labels**: Replaced 00:00 ranges with All Day.
+
 ## [3.3.167] - 2026-11-16
 - 🛡️ **Exact Bot Matching**: Stopped ShrimpLeprechaun and Shrimpdwarf from sharing active status.
 

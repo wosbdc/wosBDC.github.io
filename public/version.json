@@ -1,12 +1,13 @@
 {
-  "version": "3.3.167",
-  "releaseDate": "2026-11-16",
-  "title": "What's New in v3.3.167",
+  "version": "3.3.168",
+  "releaseDate": "2026-11-17",
+  "title": "What's New in v3.3.168",
   "notes": [
-    "Fixed Bot Radar name prefix collision between ShrimpLeprechaun and Shrimpdwarf."
+    "Restored Bot Radar cooldown countdown clock and dual compartment display.",
+    "Formatted all-day schedule events cleanly as All Day (UTC)."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.167",
+    "version": "3.3.168",
     "latestChanges": [
       "v3.3.158: Removed redundant bottom Step 2: Schedule button from Championship Signups tab",
       "v3.3.157: Updated Alliance Championship Auto-Fill to pull season dates directly from the website schedule database",

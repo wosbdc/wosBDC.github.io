@@ -690,6 +690,31 @@ server.listen(PORT, async () => {
       const shrimpdwarfSafeK = document.getElementById('bot-fleet-item-shrimpdwarf')?.classList?.contains('safe');
       const busyPillK = document.getElementById('bot-fleet-busy-count')?.textContent?.trim();
 
+      // Step L: Long Cooldown Rest (> 60s heartbeat age while cooldown is still active)
+      const tenMinsAgo = Date.now() - 600 * 1000;
+      window.latestBotStatus = {
+        status: 'COOLDOWN',
+        activeAccount: '',
+        account: 'None',
+        cooldownAccount: 'Dwarfdaddy (Inst 16)',
+        cooldownSecondsLeft: 3600,
+        secondsLeft: 3600,
+        isCooldownRunning: true,
+        serverOnline: false,
+        bothubOnline: true,
+        timestamp: tenMinsAgo,
+        receivedAt: tenMinsAgo,
+        fleet: [
+          { name: 'Dwarfdaddy', instance: 16, status: 'COOLDOWN', secondsLeft: 3600, safeToLogin: true }
+        ]
+      };
+      window.updateBotOperationsRadarDom();
+      const cdDisplayL = document.getElementById('bot-radar-cooldown-compartment')?.style?.display;
+      const clockDisplayL = document.getElementById('bot-radar-clock')?.style?.display;
+      const clockL = document.getElementById('bot-radar-clock')?.textContent?.trim();
+      const cdAccountL = document.getElementById('bot-radar-cooldown-val')?.textContent?.trim();
+      const isOfflineL = window.getBotAutomationHealth(window.latestBotStatus).isOffline;
+
       return {
         accountA,
         runnerDisplayA,
@@ -774,7 +799,12 @@ server.listen(PORT, async () => {
         busyPillJ,
         shrimpOccupiedK,
         shrimpdwarfSafeK,
-        busyPillK
+        busyPillK,
+        cdDisplayL,
+        clockDisplayL,
+        clockL,
+        cdAccountL,
+        isOfflineL
       };
     });
 
@@ -853,8 +883,11 @@ server.listen(PORT, async () => {
     if (mutationResult.runnerDisplayC !== 'none' || mutationResult.cdDisplayC === 'none') {
       throw new Error(`Assertion Failed: Active runner must be hidden and cooldown visible when only cooldown is active! Got runner: "${mutationResult.runnerDisplayC}", cd: "${mutationResult.cdDisplayC}"`);
     }
-    if (mutationResult.runnerDisplayD === 'none' || mutationResult.cdDisplayD !== 'none') {
-      throw new Error(`Assertion Failed: Only Active Runner compartment must be visible when runner is active! Got runner: "${mutationResult.runnerDisplayD}", cd: "${mutationResult.cdDisplayD}"`);
+    if (mutationResult.runnerDisplayD === 'none' || mutationResult.cdDisplayD === 'none') {
+      throw new Error(`Assertion Failed: Both Active Runner and Cooldown compartments must be visible when both are active! Got runner: "${mutationResult.runnerDisplayD}", cd: "${mutationResult.cdDisplayD}"`);
+    }
+    if (mutationResult.isOfflineL || mutationResult.cdDisplayL === 'none' || mutationResult.clockDisplayL === 'none' || mutationResult.clockL !== '00:50:00' || mutationResult.cdAccountL !== 'Dwarfdaddy') {
+      throw new Error(`Assertion Failed: Long cooldown rest (> 60s heartbeat) must keep cooldown clock visible and ticking! Got: ${JSON.stringify({ isOfflineL: mutationResult.isOfflineL, cdDisplayL: mutationResult.cdDisplayL, clockDisplayL: mutationResult.clockDisplayL, clockL: mutationResult.clockL, cdAccountL: mutationResult.cdAccountL })}`);
     }
     if (mutationResult.countG !== 3 || mutationResult.disabledExistsG || mutationResult.bdcInstG !== 'Inst 0' || mutationResult.sentinelInstG !== 'Inst 2') {
       throw new Error(`Assertion Failed: Dynamic Live Fleet payload failed! Result: ${JSON.stringify({ countG: mutationResult.countG, disabledExistsG: mutationResult.disabledExistsG, bdcInstG: mutationResult.bdcInstG, sentinelInstG: mutationResult.sentinelInstG })}`);
