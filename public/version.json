@@ -1,12 +1,12 @@
 {
-  "version": "3.3.166",
+  "version": "3.3.167",
   "releaseDate": "2026-11-16",
-  "title": "What's New in v3.3.166",
+  "title": "What's New in v3.3.167",
   "notes": [
-    "Bot Radar now strictly reflects live BotHub fleet accounts and accurate idle/active status."
+    "Fixed Bot Radar name prefix collision between ShrimpLeprechaun and Shrimpdwarf."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.166",
+    "version": "3.3.167",
     "latestChanges": [
       "v3.3.158: Removed redundant bottom Step 2: Schedule button from Championship Signups tab",
       "v3.3.157: Updated Alliance Championship Auto-Fill to pull season dates directly from the website schedule database",

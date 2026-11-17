@@ -7459,10 +7459,11 @@ window.matchesAccount = (accStr, b) => {
   const bName = (b.name || '').trim().toLowerCase();
   const bShort = (b.short || '').trim().toLowerCase();
   const targetInst = window.extractBotInstance(accStr);
-  if (targetInst !== null && b.instance !== undefined && Number(b.instance) === targetInst) return true;
-  if (bName && (cleanAcc.includes(bName) || bName.includes(cleanAcc))) return true;
-  if (bShort && (cleanAcc.includes(bShort) || bShort.includes(cleanAcc))) return true;
-  if (bName.length >= 5 && cleanAcc.length >= 5 && (bName.startsWith(cleanAcc.slice(0, 6)) || cleanAcc.startsWith(bName.slice(0, 6)))) return true;
+  if (targetInst !== null && b.instance !== undefined && b.instance !== null) {
+    return Number(b.instance) === targetInst;
+  }
+  if (bName && cleanAcc === bName) return true;
+  if (bShort && cleanAcc === bShort) return true;
   return false;
 };
 
@@ -7783,7 +7784,7 @@ window.getBotFleetSafetyHtml = () => {
       (fleetItem && (fleetItem.status || '').toUpperCase() === 'ACTIVE') ||
       (!fleetSaysStandby && status === 'ACTIVE' && matchesAccount(activeAccount, bot)) ||
       (!isExplicitlyIdle && !fleetSaysStandby && status === 'ACTIVE' && matchesAccount(data.account, bot)) ||
-      matchesAccount(data.activeAccount, bot)
+      (!fleetSaysStandby && matchesAccount(data.activeAccount, bot))
     );
       
     const isWholeFleetParked = Boolean(!health.isServerOnline && (health.isCooldownRest || health.isBlackout)) || cooldownAccount === 'All Bot Accounts';

@@ -669,6 +669,27 @@ server.listen(PORT, async () => {
       const activeAccountJ = document.getElementById('bot-radar-account-val')?.textContent?.trim();
       const busyPillJ = document.getElementById('bot-fleet-busy-count')?.textContent?.trim();
 
+      // Step K: Name Prefix Isolation (ShrimpLeprechaun ACTIVE must NOT mark Shrimpdwarf ACTIVE)
+      window.latestBotStatus = {
+        status: 'ACTIVE',
+        account: 'ShrimpLeprechaun',
+        activeAccount: 'ShrimpLeprechaun',
+        activeStage: 'Wilderness / Routine Tasks',
+        isExecutingTasks: true,
+        serverOnline: true,
+        bothubOnline: true,
+        timestamp: Date.now(),
+        receivedAt: Date.now(),
+        fleet: [
+          { name: 'ShrimpLeprechaun', instance: 14, status: 'ACTIVE', safeToLogin: false, detail: 'Running Wilderness / Daily Tasks' },
+          { name: 'Shrimpdwarf', instance: 17, status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby' }
+        ]
+      };
+      window.updateBotOperationsRadarDom();
+      const shrimpOccupiedK = document.getElementById('bot-fleet-item-shrimp')?.classList?.contains('occupied');
+      const shrimpdwarfSafeK = document.getElementById('bot-fleet-item-shrimpdwarf')?.classList?.contains('safe');
+      const busyPillK = document.getElementById('bot-fleet-busy-count')?.textContent?.trim();
+
       return {
         accountA,
         runnerDisplayA,
@@ -750,7 +771,10 @@ server.listen(PORT, async () => {
         countJ,
         shrimpdwarfSafeJ,
         activeAccountJ,
-        busyPillJ
+        busyPillJ,
+        shrimpOccupiedK,
+        shrimpdwarfSafeK,
+        busyPillK
       };
     });
 
@@ -855,6 +879,9 @@ server.listen(PORT, async () => {
     }
     if (mutationResult.countJ !== 3 || !mutationResult.shrimpdwarfSafeJ || mutationResult.activeAccountJ !== 'None' || !mutationResult.busyPillJ?.includes('0')) {
       throw new Error(`Assertion Failed: Step J idle standby with stale data.account failed! Result: ${JSON.stringify({ countJ: mutationResult.countJ, shrimpdwarfSafeJ: mutationResult.shrimpdwarfSafeJ, activeAccountJ: mutationResult.activeAccountJ, busyPillJ: mutationResult.busyPillJ })}`);
+    }
+    if (!mutationResult.shrimpOccupiedK || !mutationResult.shrimpdwarfSafeK || !mutationResult.busyPillK?.includes('1 OCCUPIED')) {
+      throw new Error(`Assertion Failed: Step K ShrimpLeprechaun vs Shrimpdwarf isolation failed! Result: ${JSON.stringify({ shrimpOccupiedK: mutationResult.shrimpOccupiedK, shrimpdwarfSafeK: mutationResult.shrimpdwarfSafeK, busyPillK: mutationResult.busyPillK })}`);
     }
     console.log(`  ✅ Verified: Fleet Login Safety Matrix dynamically responds to bot rotation:`);
     console.log(`     1. ${mutationResult.accountA} -> Occupied: ${mutationResult.angryTagA}, Safe: ${mutationResult.bisquickTagA} (${mutationResult.busyPillA}, ${mutationResult.safePillA})`);
