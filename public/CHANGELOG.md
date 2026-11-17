@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.166] - 2026-11-16
+- 🤖 **Live Fleet Sync**: Bot Radar shows only active BotHub accounts.
+- 🟢 **Idle Accuracy**: Fixed false active warnings during idle standby.
+
 ## [3.3.165] - 2026-11-16
 - ⚔️ **Exact Scout Level**: Enter any 0–25 level directly in Mercenary Tracker.
 

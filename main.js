@@ -7469,7 +7469,14 @@ window.matchesAccount = (accStr, b) => {
 window.normalizeDynamicBotEntry = (f) => {
   if (!f || typeof f !== 'object') return f;
   const cleanName = String(f.name || '').trim();
-  const normId = f.id || cleanName.toLowerCase().replace(/[^a-z0-9]/g, '') || (f.instance !== undefined ? `inst${f.instance}` : 'bot');
+  let aliasId = cleanName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (aliasId.includes('babyangry')) aliasId = 'babyangry';
+  else if (aliasId.includes('angry')) aliasId = 'angry';
+  else if (aliasId.includes('shrimpdwarf')) aliasId = 'shrimpdwarf';
+  else if (aliasId.includes('shrimp')) aliasId = 'shrimp';
+  else if (aliasId.includes('sentinel')) aliasId = 'sentinel';
+  else if (aliasId.includes('bisquick')) aliasId = 'bisquick';
+  const normId = (f.id && !String(f.id).startsWith('bot_')) ? f.id : (aliasId || f.id || (f.instance !== undefined ? `inst${f.instance}` : 'bot'));
   const normInst = f.inst || (f.instance !== undefined && f.instance !== null ? `Inst ${f.instance}` : '');
   return { ...f, name: cleanName, id: normId, inst: normInst };
 };
@@ -7514,32 +7521,23 @@ onValue(ref(db, 'bot_status'), (snap) => {
     const val = snap.val();
     window.latestBotStatus = { ...window.latestBotStatus, ...val, receivedAt: Date.now() };
     if (val.fleet && Array.isArray(val.fleet) && val.fleet.length > 0) {
-      const activeAcc = val.activeAccount || val.account || '';
+      const activeAcc = val.activeAccount || (val.isExecutingTasks === false && !val.activeAccount ? '' : (val.account || ''));
       const coolAcc = val.cooldownAccount || '';
-      window.ALLIANCE_BOT_ROSTER = window.ALLIANCE_BOT_ROSTER.map(baseBot => {
-        const liveMatch = val.fleet.find(f => 
-          window.matchesAccount(baseBot.name, f) || 
-          window.matchesAccount(f.name, baseBot) || 
-          (f.instance !== undefined && baseBot.instance !== undefined && Number(f.instance) === Number(baseBot.instance))
-        );
-        return liveMatch ? { ...baseBot, ...liveMatch, id: baseBot.id, name: baseBot.name, instance: baseBot.instance, inst: baseBot.inst } : baseBot;
-      });
+      const liveFiltered = val.fleet
+        .filter(f => window.isAllianceBotOrActive(f, activeAcc, coolAcc))
+        .map(f => window.normalizeDynamicBotEntry(f));
+      if (liveFiltered.length > 0) {
+        window.ALLIANCE_BOT_ROSTER = liveFiltered;
+      }
       val.fleet.forEach(f => {
-        if (window.isAllianceBotOrActive(f, activeAcc, coolAcc)) {
-          const exists = window.ALLIANCE_BOT_ROSTER.some(m => 
-            window.matchesAccount(m.name, f) || 
-            (m.instance !== undefined && f.instance !== undefined && Number(m.instance) === Number(f.instance))
-          );
-          if (!exists) {
-            window.ALLIANCE_BOT_ROSTER.push(window.normalizeDynamicBotEntry(f));
-          }
-        }
         if (f && f.name && (f.lastActiveEpoch || f.lastActiveTime) && typeof window.recordBotLastActiveTime === 'function') {
           window.recordBotLastActiveTime(f.name, f.lastActiveEpoch, f.lastActiveTime);
         }
       });
     }
-    const liveActAcc = val.activeAccount || (val.status === 'ACTIVE' ? val.account : '');
+    const fleetHasActive = Array.isArray(val.fleet) && val.fleet.some(f => (f.status || '').toUpperCase() === 'ACTIVE');
+    const isIdlePayload = Boolean(val.isExecutingTasks === false && !val.activeAccount && (/idle|standby/i.test(val.activeStage || '') || (Array.isArray(val.fleet) && val.fleet.length > 0 && !fleetHasActive)));
+    const liveActAcc = isIdlePayload ? '' : (val.activeAccount || (val.status === 'ACTIVE' ? val.account : ''));
     if (liveActAcc && !val.isOffline && val.serverOnline !== false && val.status !== 'OFFLINE' && typeof window.recordBotLastActiveTime === 'function') {
       window.recordBotLastActiveTime(liveActAcc, Math.floor(Date.now() / 1000));
     }
@@ -7685,7 +7683,14 @@ window.getBotFleetSafetyHtml = () => {
   const isOffline = health.isOffline;
 
   const status = (data.status || 'STANDBY').toUpperCase();
-  const activeAccount = data.activeAccount || (status === 'ACTIVE' ? (data.account || '') : '');
+  const telemetryFleet = (data.fleet && Array.isArray(data.fleet) && data.fleet.length > 0) ? data.fleet : [];
+  const fleetHasExplicitActive = telemetryFleet.some(f => (f.status || '').toUpperCase() === 'ACTIVE');
+  const isExplicitlyIdle = Boolean(
+    data.isExecutingTasks === false &&
+    !data.activeAccount &&
+    (/idle|standby/i.test(data.activeStage || '') || (telemetryFleet.length > 0 && !fleetHasExplicitActive))
+  );
+  const activeAccount = isExplicitlyIdle ? '' : (data.activeAccount || (status === 'ACTIVE' ? (data.account || '') : ''));
   const cooldownAccount = data.cooldownAccount || (status === 'COOLDOWN' ? (data.account || '') : '');
   const secondsLeft = (data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft !== null) ? data.cooldownSecondsLeft : (data.secondsLeft || 0);
   
@@ -7726,29 +7731,10 @@ window.getBotFleetSafetyHtml = () => {
     ? window.ALLIANCE_BOT_ROSTER
     : masterBase;
 
-  // Seamlessly merge live telemetry from data.fleet onto the 17 alliance accounts
-  const telemetryFleet = (data.fleet && Array.isArray(data.fleet) && data.fleet.length > 0) ? data.fleet : [];
-
-  const mergedRoster = baseRoster.map(baseBot => {
-    const liveMatch = telemetryFleet.find(f => 
-      window.matchesAccount(baseBot.name, f) || 
-      window.matchesAccount(f.name, baseBot) || 
-      (f.instance !== undefined && baseBot.instance !== undefined && Number(f.instance) === Number(baseBot.instance))
-    );
-    return liveMatch ? { ...baseBot, ...liveMatch, id: baseBot.id, name: baseBot.name, instance: baseBot.instance, inst: baseBot.inst } : baseBot;
-  });
-
-  telemetryFleet.forEach(f => {
-    if (window.isAllianceBotOrActive(f, activeAccount, cooldownAccount)) {
-      const exists = mergedRoster.some(m => 
-        window.matchesAccount(m.name, f) || 
-        (m.instance !== undefined && f.instance !== undefined && Number(m.instance) === Number(f.instance))
-      );
-      if (!exists) {
-        mergedRoster.push(window.normalizeDynamicBotEntry(f));
-      }
-    }
-  });
+  // Use live telemetryFleet as the authoritative roster when present so removed/disabled bots disappear immediately
+  const mergedRoster = (telemetryFleet.length > 0)
+    ? telemetryFleet.map(f => window.normalizeDynamicBotEntry(f))
+    : baseRoster;
 
   const roster = mergedRoster.filter(b => window.isAllianceBotOrActive(b, activeAccount, cooldownAccount));
 
@@ -7792,10 +7778,11 @@ window.getBotFleetSafetyHtml = () => {
       ? (String(bot.instance).toLowerCase().startsWith('inst') ? String(bot.instance) : `Inst ${bot.instance}`)
       : (bot.inst || '');
 
+    const fleetSaysStandby = Boolean(fleetItem && (fleetItem.status || '').toUpperCase() === 'STANDBY' && fleetItem.safeToLogin !== false);
     const isBotActive = !isOffline && (
-      (fleetItem && fleetItem.status === 'ACTIVE') ||
-      (status === 'ACTIVE' && matchesAccount(activeAccount, bot)) ||
-      (status === 'ACTIVE' && matchesAccount(data.account, bot)) ||
+      (fleetItem && (fleetItem.status || '').toUpperCase() === 'ACTIVE') ||
+      (!fleetSaysStandby && status === 'ACTIVE' && matchesAccount(activeAccount, bot)) ||
+      (!isExplicitlyIdle && !fleetSaysStandby && status === 'ACTIVE' && matchesAccount(data.account, bot)) ||
       matchesAccount(data.activeAccount, bot)
     );
       
@@ -7934,9 +7921,18 @@ window.getBotOperationsRadarHtml = () => {
     acc.toLowerCase() !== 'none'
   );
 
-  const candidateActive = isCandidateValid(data.activeAccount)
-    ? data.activeAccount
-    : ((status === 'ACTIVE' && isCandidateValid(data.account)) ? data.account : '');
+  const fleetArr = Array.isArray(data.fleet) ? data.fleet : [];
+  const fleetHasActive = fleetArr.some(f => (f.status || '').toUpperCase() === 'ACTIVE');
+  const isExplicitlyIdleRadar = Boolean(
+    data.isExecutingTasks === false &&
+    !isCandidateValid(data.activeAccount) &&
+    (/idle|standby/i.test(data.activeStage || '') || (fleetArr.length > 0 && !fleetHasActive))
+  );
+  const candidateActive = isExplicitlyIdleRadar
+    ? ''
+    : (isCandidateValid(data.activeAccount)
+        ? data.activeAccount
+        : ((status === 'ACTIVE' && isCandidateValid(data.account)) ? data.account : ''));
 
   const cleanCandidate = window.cleanBotRadarName(candidateActive);
   const hasActiveRunner = !isOffline && Boolean(
@@ -8083,9 +8079,18 @@ window.updateBotOperationsRadarDom = () => {
     acc.toLowerCase() !== 'none'
   );
 
-  const candidateActive = isCandidateValid(data.activeAccount)
-    ? data.activeAccount
-    : ((status === 'ACTIVE' && isCandidateValid(data.account)) ? data.account : '');
+  const fleetArr = Array.isArray(data.fleet) ? data.fleet : [];
+  const fleetHasActive = fleetArr.some(f => (f.status || '').toUpperCase() === 'ACTIVE');
+  const isExplicitlyIdleRadar = Boolean(
+    data.isExecutingTasks === false &&
+    !isCandidateValid(data.activeAccount) &&
+    (/idle|standby/i.test(data.activeStage || '') || (fleetArr.length > 0 && !fleetHasActive))
+  );
+  const candidateActive = isExplicitlyIdleRadar
+    ? ''
+    : (isCandidateValid(data.activeAccount)
+        ? data.activeAccount
+        : ((status === 'ACTIVE' && isCandidateValid(data.account)) ? data.account : ''));
 
   const cleanCandidate = window.cleanBotRadarName(candidateActive);
   const hasActiveRunner = !isOffline && Boolean(
