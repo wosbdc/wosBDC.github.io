@@ -3568,12 +3568,16 @@ export const refreshIdToNameMap = async (force = false) => {
     }
     _idMapInFlight = (async () => {
     try {
+        const withTimeout = (p, ms = 6000) => Promise.race([
+            p.catch(() => null),
+            new Promise(resolve => setTimeout(() => resolve(null), ms))
+        ]);
         const [rosterRawData, giftcodebotData, usersSnap, gcBotSnap, altsSnap] = await Promise.all([
-            window.fetchRoster().catch(() => null),
-            fetchSheet("giftcodebot").catch(() => null),
-            get(ref(db, 'users')).catch(() => null),
-            get(ref(db, 'giftcode_bot')).catch(() => null),
-            get(ref(db, 'users_alts')).catch(() => null)
+            withTimeout(window.fetchRoster()),
+            withTimeout(fetchSheet("giftcodebot")),
+            withTimeout(get(ref(db, 'users'))),
+            withTimeout(get(ref(db, 'giftcode_bot'))),
+            withTimeout(get(ref(db, 'users_alts')))
         ]);
         
         // 1. Map Firebase Registered Users (Highest Priority for newly registered members)
