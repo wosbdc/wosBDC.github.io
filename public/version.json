@@ -1,13 +1,13 @@
 {
-  "version": "3.3.168",
+  "version": "3.3.169",
   "releaseDate": "2026-11-17",
-  "title": "What's New in v3.3.168",
+  "title": "What's New in v3.3.169",
   "notes": [
-    "Restored Bot Radar cooldown countdown clock and dual compartment display.",
-    "Formatted all-day schedule events cleanly as All Day (UTC)."
+    "Stopped redundant Firebase user listeners from draining monthly bandwidth.",
+    "Fixed online visitor counter by ignoring and pruning stale presence ghosts."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.168",
+    "version": "3.3.169",
     "latestChanges": [
       "v3.3.158: Removed redundant bottom Step 2: Schedule button from Championship Signups tab",
       "v3.3.157: Updated Alliance Championship Auto-Fill to pull season dates directly from the website schedule database",

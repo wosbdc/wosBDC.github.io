@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, onValue, onDisconnect, set, push, runTransaction, get, increment, update } from "firebase/database";
+import { getDatabase, ref, onValue, onDisconnect, set, push, remove, serverTimestamp, runTransaction, get, increment, update } from "firebase/database";
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
@@ -35,21 +35,67 @@ export function initPresence() {
   
   if (!onlineEl || !viewsEl) return;
 
-  // 1. Manage "Currently Online"
-  const myConnectionsRef = push(ref(db, 'presence'));
-  onDisconnect(myConnectionsRef).remove();
+  // 1. Manage "Currently Online" with stable visitor ID, proper onDisconnect, and 2m TTL heartbeat
+  let visitorId = '';
+  try {
+    visitorId = localStorage.getItem('wos_presence_visitor_id') || '';
+    if (!visitorId || !/^[a-zA-Z0-9_-]{8,64}$/.test(visitorId)) {
+      visitorId = 'v_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+      localStorage.setItem('wos_presence_visitor_id', visitorId);
+    }
+  } catch (e) {
+    visitorId = 'v_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+  }
 
+  const myConnectionsRef = ref(db, `presence/${visitorId}`);
+  const PRESENCE_TTL_MS = 120000; // 2 minutes
+  let serverTimeOffsetMs = 0;
+
+  onValue(ref(db, '.info/serverTimeOffset'), (offsetSnap) => {
+    serverTimeOffsetMs = Number(offsetSnap.val() || 0);
+  });
+
+  const writePresenceHeartbeat = () => {
+    set(myConnectionsRef, { ts: serverTimestamp() }).catch(() => null);
+  };
+
+  let isConnected = false;
   const connectedRef = ref(db, '.info/connected');
   onValue(connectedRef, (snap) => {
-    if (snap.val() === true) {
-      set(myConnectionsRef, true);
+    isConnected = snap.val() === true;
+    if (isConnected) {
+      // Register onDisconnect inside .info/connected BEFORE writing so reconnects never orphan entries
+      onDisconnect(myConnectionsRef).remove().then(() => {
+        writePresenceHeartbeat();
+      }).catch(() => {
+        writePresenceHeartbeat();
+      });
     }
   });
 
+  if (!window._wosPresenceHeartbeatInterval) {
+    window._wosPresenceHeartbeatInterval = setInterval(() => {
+      if (isConnected && document.visibilityState !== 'hidden') {
+        writePresenceHeartbeat();
+      }
+    }, 45000);
+  }
+
   const presenceRef = ref(db, 'presence');
   onValue(presenceRef, (snapshot) => {
+    const serverNow = Date.now() + serverTimeOffsetMs;
     let count = 0;
-    snapshot.forEach(() => { count++; });
+    snapshot.forEach((childSnap) => {
+      const val = childSnap.val();
+      const ts = (val && typeof val === 'object') ? Number(val.ts || 0) : 0;
+      const isFresh = ts > 0 && (serverNow - ts) < PRESENCE_TTL_MS;
+      if (isFresh) {
+        count++;
+      } else {
+        // Prune legacy boolean `true` or expired ghost entries
+        remove(ref(db, `presence/${childSnap.key}`)).catch(() => null);
+      }
+    });
     onlineEl.textContent = count;
   });
 

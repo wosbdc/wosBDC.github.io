@@ -3558,7 +3558,15 @@ export let idToNameMap = {};
 export let nameToIdMap = {};
 export let enrolledGameIds = new Set();
 
-export const refreshIdToNameMap = async () => {
+let _lastIdMapRefreshMs = 0;
+let _idMapInFlight = null;
+export const refreshIdToNameMap = async (force = false) => {
+    const nowMs = Date.now();
+    if (!force && _idMapInFlight) return _idMapInFlight;
+    if (!force && _lastIdMapRefreshMs > 0 && (nowMs - _lastIdMapRefreshMs) < 60000 && Object.keys(idToNameMap).length > 0) {
+        return;
+    }
+    _idMapInFlight = (async () => {
     try {
         const [rosterRawData, giftcodebotData, usersSnap, gcBotSnap, altsSnap] = await Promise.all([
             window.fetchRoster().catch(() => null),
@@ -3680,28 +3688,16 @@ export const refreshIdToNameMap = async () => {
         if (typeof window.updateNavbarUserIndicator === 'function' && currentUser) {
             window.updateNavbarUserIndicator(currentUser);
         }
+        _lastIdMapRefreshMs = Date.now();
     } catch(e) { console.error("Error refreshing ID map:", e); }
+    finally { _idMapInFlight = null; }
+    })();
+    return _idMapInFlight;
 };
 window.refreshIdToNameMap = refreshIdToNameMap;
 
-// Real-Time Firebase Listeners for Master Store & Filter Reactivity
-onValue(ref(db, 'users'), () => {
-    window._cachedAllUsers = null;
-    refreshIdToNameMap().then(() => {
-        if (typeof window.filterAdminUsersList === 'function' && document.querySelector('.admin-user-row')) {
-            window.filterAdminUsersList();
-        }
-    });
-});
-
-onValue(ref(db, 'giftcode_bot'), () => {
-    window.giftcodeCache = null;
-    refreshIdToNameMap().then(() => {
-        if (typeof window.filterAdminUsersList === 'function' && document.querySelector('.admin-user-row')) {
-            window.filterAdminUsersList();
-        }
-    });
-});
+// Initial one-time ID map hydration (deferred 1 tick so all module bindings initialize cleanly; replaces eager global onValue listeners)
+setTimeout(() => refreshIdToNameMap(), 0);
 
 // Fetch all Gift Code enrollments natively from Firebase Realtime Database
 window.fetchGiftcodeEnrollments = async () => {

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.169] - 2026-11-17
+- 🚀 **Bandwidth Fix**: Removed eager global Firebase listeners draining database quota.
+- 🟢 **Live Visitor Counter**: Pruned stale ghost entries from online count.
+
 ## [3.3.168] - 2026-11-17
 - ⏳ **Cooldown Timer**: Restored countdown clock alongside active bots.
 - 🗓️ **All-Day Labels**: Replaced 00:00 ranges with All Day.
