@@ -91,9 +91,6 @@ export function initPresence() {
       const isFresh = ts > 0 && (serverNow - ts) < PRESENCE_TTL_MS;
       if (isFresh) {
         count++;
-      } else {
-        // Prune legacy boolean `true` or expired ghost entries
-        remove(ref(db, `presence/${childSnap.key}`)).catch(() => null);
       }
     });
     onlineEl.textContent = count;

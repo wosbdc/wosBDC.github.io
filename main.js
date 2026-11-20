@@ -52164,6 +52164,12 @@ if (document.readyState === 'loading') {
       const data = await res.json();
       if (data && data.version) {
         if (isVersionOutdated(CURRENT_BUILD_VERSION, data.version)) {
+          const lastAutoReload = parseInt(localStorage.getItem('wos_last_auto_reload_ts') || '0', 10);
+          if ((data.forceReload === true || document.visibilityState === 'hidden') && (Date.now() - lastAutoReload) > 60000) {
+            try { localStorage.setItem('wos_last_auto_reload_ts', String(Date.now())); } catch (e) {}
+            window.location.reload();
+            return;
+          }
           showUpdateBanner(data);
           if (btn) {
             btn.innerHTML = '✨ Update Available!';

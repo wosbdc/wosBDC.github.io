@@ -1,12 +1,14 @@
 {
-  "version": "3.3.170",
-  "releaseDate": "2026-11-17",
-  "title": "What's New in v3.3.170",
+  "version": "3.3.171",
+  "releaseDate": "2026-11-20",
+  "forceReload": true,
+  "title": "What's New in v3.3.171",
   "notes": [
-    "Fixed online visitor counter by ignoring and pruning stale presence ghosts."
+    "Fixed infinite presence WebSocket loop draining Firebase quota.",
+    "Added automatic reload for stale background tabs."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.170",
+    "version": "3.3.171",
     "latestChanges": [
       "v3.3.158: Removed redundant bottom Step 2: Schedule button from Championship Signups tab",
       "v3.3.157: Updated Alliance Championship Auto-Fill to pull season dates directly from the website schedule database",

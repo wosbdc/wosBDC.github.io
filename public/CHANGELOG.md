@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.171] - 2026-11-20
+- 🚀 **Loop Fix**: Stopped presence listener from endlessly deleting expired entries.
+- 🔄 **Auto-Reload**: Added automatic reload for stale background tabs.
+
 ## [3.3.170] - 2026-11-17
 - 🟢 **Live Visitor Counter**: Pruned stale ghost entries from online count.
 
